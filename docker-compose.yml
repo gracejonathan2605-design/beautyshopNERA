@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nera
+      POSTGRES_PASSWORD: nera_dev_local
+      POSTGRES_DB: nera_beaute
+    ports:
+      - "5432:5432"
+    volumes:
+      - nera_pg:/var/lib/postgresql/data
+
+volumes:
+  nera_pg:
