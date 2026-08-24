@@ -4,6 +4,7 @@ import { getCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
+import { BrandLockup, BrandLogo } from "@/components/brand/logo";
 
 function WhatsAppIcon() {
   return (
@@ -38,7 +39,6 @@ export async function ShopHeader() {
     categories = [];
   }
   const count = cart.reduce((s, i) => s + i.quantity, 0);
-  const brand = settings.name.replace(" & Shop", "");
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#eee0e6] bg-white/80 backdrop-blur-xl">
@@ -46,14 +46,9 @@ export async function ShopHeader() {
       <p className="hidden bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.22em] text-wine sm:block">
         Yaoundé · Retrait boutique · Livraison · Mobile Money
       </p>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        <Link href="/" className="min-w-0">
-          <span className="block font-serif text-[2rem] leading-none tracking-[0.18em] text-wine">
-            {brand}
-          </span>
-          <span className="mt-1 block text-[10px] uppercase tracking-[0.32em] text-gold">
-            Beauté & Shop
-          </span>
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <Link href="/" className="min-w-0" aria-label={settings.name}>
+          <BrandLockup size="sm" priority />
         </Link>
         <form action="/boutique" className="hidden flex-1 md:block">
           <input
@@ -115,7 +110,8 @@ export async function ShopFooter() {
       <footer className="mt-20 border-t border-[#eee0e6] bg-white/75">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
-            <p className="font-serif text-3xl tracking-[0.12em] text-wine">{settings.name}</p>
+            <BrandLogo size="lg" />
+            <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{settings.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{settings.slogan}</p>
           </div>

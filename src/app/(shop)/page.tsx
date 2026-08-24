@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
 import { productCardInclude } from "@/lib/product-query";
+import { BrandLogo } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +23,7 @@ export default async function HomePage() {
     return (
       <section className="hero-light px-4 py-24">
         <div className="mx-auto max-w-6xl">
+          <BrandLogo size="hero" priority className="mb-6" />
           <p className="text-sm uppercase tracking-[0.32em] text-gold">Yaoundé · Cameroun</p>
           <h1 className="mt-4 font-serif text-6xl text-wine">NERA Beauté & Shop</h1>
           <p className="mt-4 max-w-xl text-lg text-black/65">
@@ -58,6 +60,7 @@ export default async function HomePage() {
     <div>
       <section className="hero-light px-4 py-20 md:py-28">
         <div className="mx-auto max-w-6xl">
+          <BrandLogo size="hero" priority className="mb-6" />
           <p className="text-sm uppercase tracking-[0.35em] text-gold">Maison de beauté · Yaoundé</p>
           <h1 className="mt-5 max-w-3xl font-serif text-5xl leading-[1.05] text-wine md:text-7xl">
             {settings.name}

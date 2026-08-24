@@ -12,6 +12,10 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "NERA Beauté & Shop",
   description: "Boutique en ligne — beauté, cheveux et mode à Yaoundé, Cameroun",
+  icons: {
+    icon: "/brand/nera-logo.jpg",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

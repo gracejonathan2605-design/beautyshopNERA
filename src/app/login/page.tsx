@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { loginStaff } from "@/app/actions/auth";
 import { getStaffSession } from "@/lib/auth";
 import { defaultStaffPath } from "@/lib/permissions";
+import { BrandLogo } from "@/components/brand/logo";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -25,9 +26,12 @@ export default async function LoginPage({
   return (
     <div className="hero-light flex min-h-screen items-center justify-center px-4">
       <form action={loginStaff} className="w-full max-w-md rounded-[2rem] border border-[#eee0e6] bg-white/90 p-8 shadow-[0_24px_60px_-36px_rgba(58,36,48,0.35)]">
-        <p className="text-xs uppercase tracking-[0.28em] text-gold">Équipe</p>
-        <p className="mt-2 font-serif text-5xl text-wine">NERA</p>
-        <h1 className="mt-2 text-lg text-black/70">Connexion caisse & administration</h1>
+        <div className="flex justify-center">
+          <BrandLogo size="lg" priority />
+        </div>
+        <p className="mt-5 text-center text-xs uppercase tracking-[0.28em] text-gold">Équipe</p>
+        <h1 className="mt-2 text-center font-serif text-4xl text-wine">Connexion</h1>
+        <p className="mt-2 text-center text-lg text-black/70">Caisse & administration</p>
         <p className="mt-2 text-sm text-black/50">
           Réservé à la vendeuse et à l’administratrice. Les clientes se connectent via Compte.
         </p>

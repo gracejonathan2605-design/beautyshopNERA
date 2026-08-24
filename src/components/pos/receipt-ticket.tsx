@@ -9,6 +9,7 @@ import {
   whatsappReceiptUrl,
   type ReceiptData,
 } from "@/lib/receipt";
+import { ReceiptLogo } from "@/components/brand/logo";
 
 export function ReceiptTicket({
   data,
@@ -45,6 +46,7 @@ export function ReceiptTicket({
         </p>
         <article className="receipt-paper mx-auto mt-3 w-[72mm] bg-white px-2 py-3 font-mono text-[11px] leading-4 text-black">
           <header className="text-center">
+            <ReceiptLogo />
             <p className="font-serif text-lg leading-5 tracking-[0.18em]">{data.shop.name}</p>
             {data.shop.slogan ? <p className="mt-1 opacity-80">{data.shop.slogan}</p> : null}
             {data.shop.address ? <p>{data.shop.address}</p> : null}

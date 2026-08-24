@@ -78,6 +78,15 @@ textarea:focus {
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
+.receipt-logo {
+  display: block;
+  width: 28mm;
+  height: 28mm;
+  margin: 0 auto 3mm;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 a.bg-brown,
 button.bg-brown {
   background-image: linear-gradient(180deg, #d46e86 0%, #c45c74 100%);
