@@ -54,12 +54,12 @@ export default async function CategoryPage({ params }: Props) {
       ) : null}
 
       {category.children.length > 0 ? (
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-1.5">
           {category.children.map((child) => (
             <Link
               key={child.id}
               href={`/categorie/${child.slug}`}
-              className="rounded-full border border-black/10 bg-cream px-4 py-1.5 text-sm hover:border-brown"
+              className="max-w-full rounded-full border border-black/10 bg-cream px-3 py-1.5 text-xs hover:border-brown sm:text-sm"
             >
               {child.name}
             </Link>

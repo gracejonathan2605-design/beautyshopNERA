@@ -30,7 +30,6 @@ export async function ShopHeader() {
       prisma.category.findMany({
         where: { isActive: true, parentId: null, deletedAt: null },
         orderBy: { sortOrder: "asc" },
-        take: 12,
         select: { id: true, name: true, slug: true },
       }),
     ]);
@@ -41,23 +40,23 @@ export async function ShopHeader() {
   const count = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#eee0e6] bg-white/80 backdrop-blur-xl">
+    <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
       <StaffToolbar />
       <p className="hidden bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.22em] text-wine sm:block">
         Yaoundé · Retrait boutique · Livraison · Mobile Money
       </p>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="min-w-0" aria-label={settings.name}>
+      <div className="mx-auto flex max-w-6xl min-w-0 items-center justify-between gap-3 px-4 py-3">
+        <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
           <BrandLockup size="sm" priority />
         </Link>
-        <form action="/boutique" className="hidden flex-1 md:block">
+        <form action="/boutique" className="hidden min-w-0 flex-1 md:block">
           <input
             name="q"
             placeholder="Rechercher un produit, une mèche, un parfum…"
             className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-5 py-2.5 text-sm"
           />
         </form>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex shrink-0 items-center gap-3 text-sm">
           <Link href="/boutique" className="hidden text-wine/80 hover:text-wine sm:inline">
             Boutique
           </Link>
@@ -77,12 +76,12 @@ export async function ShopHeader() {
         />
       </form>
       {categories.length ? (
-        <nav className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3">
+        <nav className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
           {categories.map((c) => (
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
-              className="shrink-0 rounded-full border border-[#eee0e6] bg-white/80 px-3 py-1 text-xs text-wine hover:border-gold hover:bg-blush"
+              className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
             >
               {c.name}
             </Link>

@@ -2,6 +2,7 @@ import Image from "next/image";
 
 export const BRAND_LOGO_SRC = "/brand/nera-logo.jpg";
 export const BRAND_RECEIPT_SRC = "/brand/nera-receipt.png";
+export const BRAND_HERO_SRC = "/brand/nera-hero-products.jpg";
 export const BRAND_NAME = "NERA Beauté & Shop";
 
 type Size = "sm" | "md" | "lg" | "hero";
@@ -75,5 +76,23 @@ export function ReceiptLogo() {
       height={112}
       className="receipt-logo"
     />
+  );
+}
+
+export function HeroProducts({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[2rem] border border-[#eee0e6] shadow-[0_28px_60px_-32px_rgba(58,36,48,0.45)] ${className}`}
+    >
+      <Image
+        src={BRAND_HERO_SRC}
+        alt="Parfums, mèches, maquillage et mode NERA Beauté"
+        width={1600}
+        height={1200}
+        priority
+        className="h-full w-full object-cover"
+        sizes="(max-width: 768px) 100vw, 50vw"
+      />
+    </div>
   );
 }
