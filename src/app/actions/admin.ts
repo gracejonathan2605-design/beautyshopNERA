@@ -13,23 +13,109 @@ import { DEFAULT_SETTINGS, saveShopSettings, type ShopSettings } from "@/lib/set
 import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
 import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
+import { categoryDeleteBlocker } from "@/lib/categories";
 
-export async function saveCategory(formData: FormData) {
-  const session = await requireStaff("categories.create");
-  const name = String(formData.get("name") ?? "").trim();
-  const parentId = String(formData.get("parentId") ?? "") || null;
-  if (!name) throw new Error("Nom requis");
-  await prisma.category.create({
-    data: {
-      name,
-      slug: `${slugify(name)}-${Date.now().toString().slice(-4)}`,
-      parentId,
-      description: String(formData.get("description") ?? "") || null,
-    },
-  });
-  await writeAudit({ userId: session.userId, action: "CATEGORY_CREATE", entity: "Category", after: { name } });
+export type CategoryActionState = { ok: boolean; error?: string };
+
+function refreshCategories() {
   revalidatePath("/admin/categories");
+  revalidatePath("/admin/produits");
   revalidatePath("/");
+  revalidatePath("/boutique");
+}
+
+export async function saveCategory(formData: FormData): Promise<CategoryActionState> {
+  try {
+    const session = await requireStaff("categories.create");
+    const name = String(formData.get("name") ?? "").trim();
+    const parentId = String(formData.get("parentId") ?? "") || null;
+    if (!name) return { ok: false, error: "Indiquez le nom du rayon." };
+    if (parentId) {
+      const parent = await prisma.category.findUnique({ where: { id: parentId } });
+      if (!parent || parent.deletedAt) return { ok: false, error: "Rayon parent introuvable." };
+      if (parent.parentId) return { ok: false, error: "Un sous-rayon ne peut pas contenir d’autre sous-rayon." };
+    }
+    const siblings = await prisma.category.count({
+      where: { parentId, deletedAt: null },
+    });
+    await prisma.category.create({
+      data: {
+        name,
+        slug: `${slugify(name) || "rayon"}-${Date.now().toString().slice(-4)}`,
+        parentId,
+        description: String(formData.get("description") ?? "") || null,
+        sortOrder: siblings,
+      },
+    });
+    await writeAudit({ userId: session.userId, action: "CATEGORY_CREATE", entity: "Category", after: { name, parentId } });
+    refreshCategories();
+    return { ok: true };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false, error: err instanceof Error ? err.message : "Ajout impossible." };
+  }
+}
+
+export async function updateCategory(formData: FormData): Promise<CategoryActionState> {
+  try {
+    const session = await requireStaff("categories.update");
+    const id = String(formData.get("id") ?? "");
+    const name = String(formData.get("name") ?? "").trim();
+    if (!id || !name) return { ok: false, error: "Nom requis." };
+    const current = await prisma.category.findUnique({ where: { id } });
+    if (!current || current.deletedAt) return { ok: false, error: "Rayon introuvable." };
+    await prisma.category.update({ where: { id }, data: { name } });
+    await writeAudit({
+      userId: session.userId,
+      action: "CATEGORY_UPDATE",
+      entity: "Category",
+      entityId: id,
+      before: { name: current.name },
+      after: { name },
+    });
+    refreshCategories();
+    return { ok: true };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false, error: err instanceof Error ? err.message : "Modification impossible." };
+  }
+}
+
+export async function deleteCategory(formData: FormData): Promise<CategoryActionState> {
+  try {
+    const session = await requireStaff("categories.delete");
+    const id = String(formData.get("id") ?? "");
+    if (!id) return { ok: false, error: "Rayon manquant." };
+    const current = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        children: { where: { deletedAt: null }, select: { id: true } },
+        _count: { select: { products: { where: { deletedAt: null } } } },
+      },
+    });
+    if (!current || current.deletedAt) return { ok: false, error: "Rayon introuvable." };
+    const blocked = categoryDeleteBlocker({
+      childCount: current.children.length,
+      productCount: current._count.products,
+    });
+    if (blocked) return { ok: false, error: blocked };
+    await prisma.category.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
+    });
+    await writeAudit({
+      userId: session.userId,
+      action: "CATEGORY_DELETE",
+      entity: "Category",
+      entityId: id,
+      after: { name: current.name, soft: true },
+    });
+    refreshCategories();
+    return { ok: true };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false, error: err instanceof Error ? err.message : "Suppression impossible." };
+  }
 }
 
 export async function installNeraCatalog() {
@@ -344,9 +430,36 @@ export async function saveStockAdjust(formData: FormData) {
   revalidatePath("/admin/stocks");
 }
 
-export async function changeOrderStatus(orderId: string, status: OrderStatus) {
+export async function changeOrderStatus(formData: FormData) {
   const session = await requireStaff("orders.update");
+  const orderId = String(formData.get("orderId") ?? "");
+  const status = String(formData.get("status") ?? "") as OrderStatus;
+  if (!orderId || !status) throw new Error("Commande ou statut manquant");
   await updateOrderStatus({ orderId, status, userId: session.userId });
+  revalidatePath("/admin/commandes");
+}
+
+export async function collectOrderPayment(formData: FormData) {
+  const session = await requireStaff("orders.update");
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!orderId) throw new Error("Commande manquante");
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payments: true },
+  });
+  if (!order) throw new Error("Commande introuvable");
+  const pending = order.payments.find((p) => p.status === "PENDING");
+  if (!pending) throw new Error("Aucun paiement en attente sur cette commande");
+  await prisma.payment.update({
+    where: { id: pending.id },
+    data: {
+      status: "COMPLETED",
+      note: `Encaissé par ${session.firstName} ${session.lastName}`.trim(),
+    },
+  });
+  if (order.status === "PENDING") {
+    await updateOrderStatus({ orderId, status: "CONFIRMED", userId: session.userId });
+  }
   revalidatePath("/admin/commandes");
 }
 

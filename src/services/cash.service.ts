@@ -6,10 +6,15 @@ export async function openCashSession(input: {
   userId: string;
   openingFloat: number;
 }) {
+  const mine = await prisma.cashSession.findFirst({
+    where: { registerId: input.registerId, status: "OPEN", openedById: input.userId },
+  });
+  if (mine) return mine;
+
   const existing = await prisma.cashSession.findFirst({
     where: { registerId: input.registerId, status: "OPEN" },
   });
-  if (existing) throw new Error("Une session est déjà ouverte sur cette caisse");
+  if (existing) return existing;
 
   const session = await prisma.cashSession.create({
     data: {
@@ -89,10 +94,37 @@ export async function closeCashSession(input: {
   });
 }
 
+const sessionInclude = { register: { include: { location: true } } } as const;
+
 export async function getOpenSessionForUser(userId: string) {
-  return prisma.cashSession.findFirst({
+  const mine = await prisma.cashSession.findFirst({
     where: { status: "OPEN", openedById: userId },
-    include: { register: { include: { location: true } } },
+    include: sessionInclude,
     orderBy: { openedAt: "desc" },
+  });
+  if (mine) return mine;
+  return prisma.cashSession.findFirst({
+    where: { status: "OPEN", register: { isActive: true } },
+    include: sessionInclude,
+    orderBy: { openedAt: "desc" },
+  });
+}
+
+export async function ensureOpenCashSession(userId: string, openingFloat = 0) {
+  const open = await getOpenSessionForUser(userId);
+  if (open) return open;
+  const register = await prisma.cashRegister.findFirst({
+    where: { isActive: true },
+    include: { location: true },
+  });
+  if (!register) throw new Error("Aucune caisse configurée");
+  const created = await openCashSession({
+    registerId: register.id,
+    userId,
+    openingFloat,
+  });
+  return prisma.cashSession.findUniqueOrThrow({
+    where: { id: created.id },
+    include: sessionInclude,
   });
 }

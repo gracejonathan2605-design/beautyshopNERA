@@ -1,60 +1,50 @@
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
-import { saveCategory, installNeraCatalog } from "@/app/actions/admin";
+import { installNeraCatalog } from "@/app/actions/admin";
+import { CategoriesAdmin, type CategoryCard } from "@/components/admin/categories-admin";
+import { hasPermission } from "@/lib/permissions";
 
 export default async function CategoriesAdminPage() {
-  await requireStaff("categories.view");
+  const session = await requireStaff("categories.view");
   const categories = await prisma.category.findMany({
     where: { isActive: true, deletedAt: null },
-    include: { parent: true, _count: { select: { products: true, children: true } } },
+    include: { _count: { select: { products: { where: { deletedAt: null } }, children: { where: { deletedAt: null } } } } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
-  const roots = categories.filter((c) => !c.parentId);
+  const toCard = (c: (typeof categories)[number]): CategoryCard => ({
+    id: c.id,
+    name: c.name,
+    productCount: c._count.products,
+    childCount: c._count.children,
+  });
+  const roots = categories.filter((c) => !c.parentId).map(toCard);
+  const childrenByParent: Record<string, CategoryCard[]> = {};
+  for (const c of categories) {
+    if (!c.parentId) continue;
+    (childrenByParent[c.parentId] ??= []).push(toCard(c));
+  }
   return (
     <div>
-      <h1 className="font-serif text-4xl">Catégories</h1>
+      <h1 className="font-serif text-4xl">Rayons</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
-        Le catalogue NERA est déjà prévu. Cliquez sur « Installer le catalogue » pour créer tous les rayons
-        et sous-rayons. Ensuite, à la création d’un produit, il suffit de choisir la catégorie.
+        Un <strong>rayon</strong> est une grande catégorie. Dans chaque rayon, ajoutez des{" "}
+        <strong>sous-rayons</strong>. La suppression est verrouillée : il faut taper le nom exact, et un rayon qui
+        contient encore des produits ou des sous-rayons ne peut pas être effacé.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
         <form action={installNeraCatalog}>
-          <button className="rounded-full bg-brown px-5 py-2 text-cream">Installer / mettre à jour le catalogue NERA</button>
+          <button className="rounded-full border border-[#eee0e6] bg-white px-5 py-2 text-wine">
+            Installer / mettre à jour le catalogue NERA
+          </button>
         </form>
       </div>
-      <form action={saveCategory} className="mt-6 flex flex-wrap gap-3 rounded-2xl bg-cream p-5">
-        <input name="name" required placeholder="Nom (rayon ou sous-rayon)" className="rounded-xl border px-3 py-2" />
-        <select name="parentId" className="rounded-xl border px-3 py-2">
-          <option value="">Nouveau rayon (racine)</option>
-          {roots.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <button className="rounded-full bg-brown px-5 py-2 text-cream">Ajouter</button>
-      </form>
-      <div className="mt-8 space-y-6">
-        {roots.map((root) => {
-          const children = categories.filter((c) => c.parentId === root.id);
-          return (
-            <section key={root.id} className="rounded-2xl bg-cream p-5">
-              <h2 className="font-serif text-2xl">
-                {root.name}{" "}
-                <span className="text-sm font-sans text-black/40">
-                  {root._count.products} produit(s) · {children.length} sous-rayons
-                </span>
-              </h2>
-              <ul className="mt-3 columns-1 gap-2 sm:columns-2 md:columns-3">
-                {children.map((c) => (
-                  <li key={c.id} className="break-inside-avoid py-1 text-sm">
-                    {c.name}
-                    {c._count.products ? <span className="text-black/40"> · {c._count.products}</span> : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-      </div>
+      <CategoriesAdmin
+        roots={roots}
+        childrenByParent={childrenByParent}
+        canCreate={hasPermission(session, "categories.create")}
+        canUpdate={hasPermission(session, "categories.update")}
+        canDelete={hasPermission(session, "categories.delete")}
+      />
     </div>
   );
 }

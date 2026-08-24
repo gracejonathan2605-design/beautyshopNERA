@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import type { Prisma } from "@prisma/client";
 
 export type ShopSettings = {
   name: string;
@@ -42,8 +43,10 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   },
 };
 
-export async function getShopSettings(): Promise<ShopSettings> {
-  const row = await prisma.setting.findUnique({ where: { key: "shop" } });
+type Db = Prisma.TransactionClient | typeof prisma;
+
+export async function getShopSettings(db: Db = prisma): Promise<ShopSettings> {
+  const row = await db.setting.findUnique({ where: { key: "shop" } });
   if (!row) return DEFAULT_SETTINGS;
   return { ...DEFAULT_SETTINGS, ...(row.value as Partial<ShopSettings>) };
 }

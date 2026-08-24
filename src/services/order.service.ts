@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
-import { notify, writeAudit } from "@/lib/audit";
+import { notify } from "@/lib/audit";
 
 const OPEN_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PREPARING", "READY"];
 
@@ -24,7 +24,7 @@ export async function createOnlineOrder(input: {
   const locationId = await getDefaultLocationId();
 
   const order = await prisma.$transaction(async (tx) => {
-    const settings = await getShopSettings();
+    const settings = await getShopSettings(tx);
     const seq = await nextSequence(tx, "order");
     const number = formatRef(settings.prefixes.order, seq.year, seq.value);
 
@@ -211,13 +211,15 @@ export async function updateOrderStatus(input: {
       data: { status: to },
     });
 
-    await writeAudit({
-      userId: input.userId,
-      action: "ORDER_STATUS",
-      entity: "Order",
-      entityId: order.id,
-      before: { status: from },
-      after: { status: to },
+    await tx.auditLog.create({
+      data: {
+        userId: input.userId,
+        action: "ORDER_STATUS",
+        entity: "Order",
+        entityId: order.id,
+        before: { status: from },
+        after: { status: to },
+      },
     });
 
     return updated;

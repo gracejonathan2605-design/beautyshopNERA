@@ -1,11 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { PaymentMethod } from "@prisma/client";
 import { requireStaff } from "@/lib/guard";
 import { createPosSale } from "@/services/sale.service";
-import { closeCashSession, getOpenSessionForUser, openCashSession } from "@/services/cash.service";
+import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser } from "@/services/cash.service";
 import { prisma } from "@/lib/prisma";
-import { getDefaultLocationId } from "@/lib/settings";
 
 export async function searchPosProducts(query: string) {
   await requireStaff("pos.access");
@@ -46,13 +47,8 @@ export async function searchPosProducts(query: string) {
 
 export async function openRegister(formData: FormData) {
   const session = await requireStaff("pos.access");
-  const register = await prisma.cashRegister.findFirst({ where: { isActive: true } });
-  if (!register) throw new Error("Aucune caisse configurée");
-  await openCashSession({
-    registerId: register.id,
-    userId: session.userId,
-    openingFloat: Number(formData.get("openingFloat") ?? 0),
-  });
+  await ensureOpenCashSession(session.userId, Number(formData.get("openingFloat") ?? 0));
+  revalidatePath("/pos");
 }
 
 export async function closeRegister(formData: FormData) {
@@ -65,7 +61,15 @@ export async function closeRegister(formData: FormData) {
     actualCash: Number(formData.get("actualCash") ?? 0),
     notes: String(formData.get("notes") ?? "") || undefined,
   });
+  revalidatePath("/pos");
 }
+
+export type PosSaleResult =
+  | {
+      ok: true;
+      sale: Awaited<ReturnType<typeof createPosSale>>;
+    }
+  | { ok: false; error: string };
 
 export async function submitPosSale(input: {
   customerId?: string;
@@ -73,20 +77,29 @@ export async function submitPosSale(input: {
   notes?: string;
   lines: { variantId: string; quantity: number; unitPrice?: number }[];
   payments: { method: PaymentMethod; amount: number }[];
-}) {
-  const session = await requireStaff("sales.create");
-  const open = await getOpenSessionForUser(session.userId);
-  const locationId = open?.register.locationId ?? (await getDefaultLocationId());
-  return createPosSale({
-    cashierId: session.userId,
-    locationId,
-    cashSessionId: open?.id,
-    customerId: input.customerId,
-    discount: input.discount,
-    notes: input.notes,
-    lines: input.lines,
-    payments: input.payments,
-  });
+}): Promise<PosSaleResult> {
+  try {
+    const session = await requireStaff("pos.access");
+    if (!input.lines.length) return { ok: false, error: "Ajoutez au moins un produit au ticket." };
+    const open = await ensureOpenCashSession(session.userId);
+    const locationId = open.register.locationId;
+    const sale = await createPosSale({
+      cashierId: session.userId,
+      locationId,
+      cashSessionId: open.id,
+      customerId: input.customerId,
+      discount: input.discount,
+      notes: input.notes,
+      lines: input.lines,
+      payments: input.payments,
+    });
+    revalidatePath("/pos");
+    revalidatePath("/admin/ventes");
+    return { ok: true, sale };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false, error: err instanceof Error ? err.message : "Encaissement impossible." };
+  }
 }
 
 export async function findCustomerByPhone(phone: string) {
