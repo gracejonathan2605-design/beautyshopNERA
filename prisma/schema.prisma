@@ -181,6 +181,7 @@ model CashSession {
   openedAt     DateTime          @default(now())
   closedAt     DateTime?
   sales        Sale[]
+  expenses     Expense[]
 
   @@index([registerId, status])
 }
@@ -496,15 +497,19 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  categoryId  String
-  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
-  amount      Int
-  date        DateTime
-  description String?
-  userId      String?
-  user        User?           @relation(fields: [userId], references: [id])
-  createdAt   DateTime        @default(now())
+  id            String          @id @default(cuid())
+  categoryId    String
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
+  amount        Int
+  date          DateTime
+  description   String?
+  userId        String?
+  user          User?           @relation(fields: [userId], references: [id])
+  cashSessionId String?
+  cashSession   CashSession?    @relation(fields: [cashSessionId], references: [id], onDelete: SetNull)
+  createdAt     DateTime        @default(now())
+
+  @@index([cashSessionId])
 }
 
 model Promotion {

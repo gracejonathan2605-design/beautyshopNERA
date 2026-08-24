@@ -1,18 +1,32 @@
 import { requireStaff } from "@/lib/guard";
 import { searchPosProducts } from "@/app/actions/pos";
-import { getOpenSessionForUser } from "@/services/cash.service";
+import { getOpenSessionForUser, getTillSnapshot } from "@/services/cash.service";
 import { PosClient } from "@/components/pos/pos-client";
+import { TillBoard } from "@/components/pos/till-board";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { getShopSettings } from "@/lib/settings";
 import { BrandLockup } from "@/components/brand/logo";
+import { prisma } from "@/lib/prisma";
 
-export default async function PosPage() {
+export default async function PosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erreur?: string; ok?: string }>;
+}) {
   const session = await requireStaff("pos.access");
-  const [products, open, settings] = await Promise.all([
+  const q = await searchParams;
+  const notice = q.erreur
+    ? ({ kind: "erreur" as const, text: q.erreur })
+    : q.ok
+      ? ({ kind: "ok" as const, text: q.ok })
+      : null;
+  const [products, open, settings, expenseCategories] = await Promise.all([
     searchPosProducts(""),
     getOpenSessionForUser(session.userId),
     getShopSettings(),
+    prisma.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
   ]);
+  const snapshot = open ? await getTillSnapshot(open.id) : null;
   return (
     <div className="min-h-screen bg-background">
       <StaffToolbar />
@@ -22,7 +36,20 @@ export default async function PosPage() {
         <p className="mt-1 text-sm text-black/60">
           {session.firstName} {session.lastName}
         </p>
-        <div className="mt-6">
+        {notice ? (
+          <p
+            className={`mt-4 rounded-xl px-4 py-3 text-sm ${
+              notice.kind === "erreur"
+                ? "border border-red-200 bg-red-50 text-red-800"
+                : "border border-emerald-200 bg-emerald-50 text-emerald-800"
+            }`}
+            role={notice.kind === "erreur" ? "alert" : "status"}
+          >
+            {notice.text}
+          </p>
+        ) : null}
+        <div className="mt-6 space-y-6">
+          {snapshot ? <TillBoard snapshot={snapshot} categories={expenseCategories} /> : null}
           <PosClient
             initial={products}
             openSession={open ? { id: open.id, openingFloat: open.openingFloat } : null}

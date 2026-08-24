@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
-import { closeRegister, openRegister, searchPosProducts, submitPosSale } from "@/app/actions/pos";
+import { openRegister, searchPosProducts, submitPosSale } from "@/app/actions/pos";
 import { PaymentMethod } from "@prisma/client";
 import { PAYMENT_LABELS, saleToReceipt, type ReceiptData, type ReceiptShop } from "@/lib/receipt";
 import { ReceiptTicket } from "@/components/pos/receipt-ticket";
@@ -90,11 +90,20 @@ export function PosClient({
         <form action={openRegister} className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-6 lg:col-span-2">
           <h2 className="font-serif text-2xl text-wine">Ouvrir la caisse</h2>
           <p className="mt-1 text-sm text-black/50">
-            Indiquez le fond de caisse du matin. Vous pouvez aussi encaisser directement : la caisse s’ouvre toute
-            seule.
+            Indiquez l’argent déjà dans le tiroir ce matin. Ce montant restera affiché toute la journée.
           </p>
-          <input name="openingFloat" type="number" defaultValue={0} className="mt-4 rounded-xl border border-[#eee0e6] px-3 py-2" />
-          <button className="ml-3 rounded-full bg-brown px-5 py-2 text-cream">Ouvrir</button>
+          <label className="mt-4 block text-sm text-black/60" htmlFor="openingFloat">
+            Fond d’ouverture (FCFA)
+          </label>
+          <input
+            id="openingFloat"
+            name="openingFloat"
+            type="number"
+            min={0}
+            defaultValue={0}
+            className="mt-1 rounded-xl border border-[#eee0e6] px-3 py-2"
+          />
+          <button className="ml-3 rounded-full bg-brown px-5 py-2 text-cream">Ouvrir la caisse</button>
         </form>
       ) : null}
       <section>
@@ -189,12 +198,6 @@ export function PosClient({
         >
           {pending ? "Encaissement…" : "Encaisser"}
         </button>
-        {openSession ? (
-          <form action={closeRegister} className="mt-6 border-t border-[#eee0e6] pt-4">
-            <input name="actualCash" type="number" placeholder="Espèces réelles" className="w-full rounded-xl border border-[#eee0e6] px-3 py-2" />
-            <button className="mt-2 text-sm text-wine underline">Fermer la caisse</button>
-          </form>
-        ) : null}
       </aside>
       {ticket ? <ReceiptTicket data={ticket} onClose={() => setTicket(null)} /> : null}
     </div>

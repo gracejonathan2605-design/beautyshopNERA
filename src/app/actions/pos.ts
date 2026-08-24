@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { unstable_rethrow } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { PaymentMethod } from "@prisma/client";
 import { requireStaff } from "@/lib/guard";
 import { createPosSale } from "@/services/sale.service";
-import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser } from "@/services/cash.service";
+import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser, recordTillExpense } from "@/services/cash.service";
 import { prisma } from "@/lib/prisma";
 
 export async function searchPosProducts(query: string) {
@@ -45,23 +45,61 @@ export async function searchPosProducts(query: string) {
   });
 }
 
+function bouncePos(kind: "ok" | "erreur", message?: string): never {
+  const q = new URLSearchParams();
+  if (message) q.set(kind, message);
+  redirect(`/pos${q.toString() ? `?${q}` : ""}`);
+}
+
 export async function openRegister(formData: FormData) {
   const session = await requireStaff("pos.access");
   await ensureOpenCashSession(session.userId, Number(formData.get("openingFloat") ?? 0));
   revalidatePath("/pos");
+  bouncePos("ok", "Caisse ouverte.");
 }
 
 export async function closeRegister(formData: FormData) {
-  const session = await requireStaff("pos.access");
-  const open = await getOpenSessionForUser(session.userId);
-  if (!open) throw new Error("Aucune session ouverte");
-  await closeCashSession({
-    sessionId: open.id,
-    userId: session.userId,
-    actualCash: Number(formData.get("actualCash") ?? 0),
-    notes: String(formData.get("notes") ?? "") || undefined,
-  });
-  revalidatePath("/pos");
+  try {
+    const session = await requireStaff("pos.access");
+    const open = await getOpenSessionForUser(session.userId);
+    if (!open) bouncePos("erreur", "Aucune session ouverte.");
+    const raw = String(formData.get("actualCash") ?? "").trim();
+    const actualCash = raw === "" ? null : Number(raw);
+    await closeCashSession({
+      sessionId: open.id,
+      userId: session.userId,
+      actualCash,
+      notes: String(formData.get("notes") ?? "") || undefined,
+    });
+    revalidatePath("/pos");
+    revalidatePath("/admin/ventes");
+    revalidatePath("/admin/depenses");
+    bouncePos("ok", "Caisse fermée.");
+  } catch (err) {
+    unstable_rethrow(err);
+    bouncePos("erreur", err instanceof Error ? err.message : "Fermeture impossible.");
+  }
+}
+
+export async function addTillExpense(formData: FormData) {
+  try {
+    const session = await requireStaff("pos.access");
+    const amount = Number(String(formData.get("amount") ?? "").replace(/\s/g, "").replace(",", "."));
+    const description = String(formData.get("description") ?? "").trim();
+    if (!description) bouncePos("erreur", "Indiquez le motif de la dépense (taxi, eau, etc.).");
+    await recordTillExpense({
+      userId: session.userId,
+      amount,
+      description,
+      categoryId: String(formData.get("categoryId") ?? "") || null,
+    });
+    revalidatePath("/pos");
+    revalidatePath("/admin/depenses");
+    bouncePos("ok", "Dépense enregistrée et déduite des recettes.");
+  } catch (err) {
+    unstable_rethrow(err);
+    bouncePos("erreur", err instanceof Error ? err.message : "Dépense impossible.");
+  }
 }
 
 export type PosSaleResult =
