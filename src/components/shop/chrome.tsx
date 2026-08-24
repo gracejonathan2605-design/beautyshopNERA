@@ -4,15 +4,25 @@ import { getCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 
 export async function ShopHeader() {
-  const [settings, cart, categories] = await Promise.all([
-    getShopSettings(),
-    getCart(),
-    prisma.category.findMany({
-      where: { isActive: true, parentId: null, deletedAt: null },
-      orderBy: { sortOrder: "asc" },
-      take: 8,
-    }),
-  ]);
+  let settings = (await getShopSettings().catch(() => null)) ?? {
+    name: "NERA Beauté & Shop",
+  };
+  let cart: Awaited<ReturnType<typeof getCart>> = [];
+  let categories: { id: string; name: string; slug: string }[] = [];
+  try {
+    [cart, categories] = await Promise.all([
+      getCart(),
+      prisma.category.findMany({
+        where: { isActive: true, parentId: null, deletedAt: null },
+        orderBy: { sortOrder: "asc" },
+        take: 8,
+        select: { id: true, name: true, slug: true },
+      }),
+    ]);
+  } catch {
+    cart = [];
+    categories = [];
+  }
   const count = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
@@ -41,7 +51,15 @@ export async function ShopHeader() {
 }
 
 export async function ShopFooter() {
-  const settings = await getShopSettings();
+  const settings = (await getShopSettings().catch(() => null)) ?? {
+    name: "NERA Beauté & Shop",
+    slogan: "Beauté, cheveux & mode — Yaoundé",
+    address: "Marché Central",
+    city: "Yaoundé",
+    country: "Cameroun",
+    phone: "",
+    terms: "",
+  };
   return (
     <footer className="mt-16 border-t border-black/10 bg-brown text-cream">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-3">
