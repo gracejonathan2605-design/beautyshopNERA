@@ -13,7 +13,8 @@ async function main() {
   const cashierEmail = process.env.SEED_CASHIER_EMAIL ?? "caisse@nerabeaute.cm";
   const cashierPassword = process.env.SEED_CASHIER_PASSWORD ?? "Caisse2026!";
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(
+    async (tx) => {
     for (const permission of PERMISSION_CATALOG) {
       await tx.permission.upsert({
         where: { code: permission.code },
@@ -462,7 +463,9 @@ async function main() {
         maxUses: 100,
       },
     });
-  });
+    },
+    { maxWait: 30_000, timeout: 180_000 },
+  );
 
   console.log("Seed NERA terminé.");
   console.log(`Admin: ${adminEmail} / ${adminPassword}`);

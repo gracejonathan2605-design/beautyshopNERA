@@ -10,29 +10,24 @@ Next.js 16 · TypeScript · Tailwind CSS · PostgreSQL (Supabase) · Prisma · A
 
 Le projet est branché sur `https://lqlfciaelhmaozxwunun.supabase.co` :
 
-- **Postgres** : Prisma (`DATABASE_URL` pooler transactionnel + `DIRECT_URL` session pour les migrations)
+- **Postgres** : Prisma via le pooler session `aws-1-eu-west-3` (port 5432 — les ventes/stock ont besoin de transactions interactives)
 - **Storage** : bucket public `product-images` (photos catalogue)
 - **Auth GoTrue** : non utilisé pour le staff (JWT httpOnly existant). Les clés anon / service_role servent à Storage.
 
 Les secrets (`SUPABASE_SERVICE_ROLE_KEY`, mot de passe Postgres) ne vont **jamais** dans git. Collez-les dans `.env` et dans Vercel.
 
-### Brancher Postgres (une fois)
-
-Le dashboard fournit l’URI (Database → Connect). Il faut le **mot de passe de la base**, distinct des clés API.
+Schéma, seed et RLS sont **déjà appliqués** sur ce projet. Pour une machine neuve :
 
 ```bash
-# .env — pooler transaction (app)
-DATABASE_URL="postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require"
-# .env — session (migrations)
-DIRECT_URL="postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require"
+# Session pooler (IPv4) — même URI pour DATABASE_URL et DIRECT_URL
+DATABASE_URL="postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-1-eu-west-3.pooler.supabase.com:5432/postgres?sslmode=require"
+DIRECT_URL="$DATABASE_URL"
 
 npx prisma migrate deploy
 npx prisma db seed
-# coller supabase/rls.sql dans SQL Editor (bloque anon/authenticated sur les tables métier)
+# supabase/rls.sql (bloque anon/authenticated sur les tables métier)
 npm run supabase:setup
 ```
-
-Si l’hôte `db.*.supabase.co` est en IPv6 only, utilisez le **pooler** (IPv4) ci-dessus, pas la connexion directe.
 
 ### Storage
 
