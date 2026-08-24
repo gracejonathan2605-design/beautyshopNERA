@@ -9,6 +9,7 @@ import { adjustStock, receivePurchase } from "@/services/inventory.service";
 import { updateOrderStatus } from "@/services/order.service";
 import { slugify } from "@/lib/pricing";
 import { DEFAULT_SETTINGS, saveShopSettings, type ShopSettings } from "@/lib/settings";
+import { uploadProductImage } from "@/lib/storage";
 
 export async function saveCategory(formData: FormData) {
   const session = await requireStaff("categories.create");
@@ -65,6 +66,13 @@ export async function saveProduct(formData: FormData) {
     },
     include: { variants: true },
   });
+  const image = formData.get("image");
+  if (image instanceof File && image.size > 0) {
+    const url = await uploadProductImage(image, product.id);
+    await prisma.productImage.create({
+      data: { productId: product.id, url, alt: name, sortOrder: 0 },
+    });
+  }
   if (stock) {
     await receivePurchase({
       variantId: product.variants[0].id,

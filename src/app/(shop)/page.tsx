@@ -2,23 +2,24 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
+import { productCardInclude } from "@/lib/product-query";
 
 export default async function HomePage() {
   const settings = await getShopSettings();
   const [featured, news, promos, categories] = await Promise.all([
     prisma.product.findMany({
       where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
-      include: { variants: { where: { isActive: true, deletedAt: null }, take: 1 } },
+      include: productCardInclude,
       take: 8,
     }),
     prisma.product.findMany({
       where: { status: "ACTIVE", onlineVisible: true, isNew: true, deletedAt: null },
-      include: { variants: { where: { isActive: true, deletedAt: null }, take: 1 } },
+      include: productCardInclude,
       take: 8,
     }),
     prisma.product.findMany({
       where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
-      include: { variants: { where: { isActive: true, deletedAt: null }, take: 1 } },
+      include: productCardInclude,
       take: 8,
     }),
     prisma.category.findMany({

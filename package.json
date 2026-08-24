@@ -12,6 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
+    "db:deploy": "prisma migrate deploy",
+    "supabase:setup": "tsx scripts/setup-supabase.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -19,6 +21,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@supabase/supabase-js": "^2.112.4",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

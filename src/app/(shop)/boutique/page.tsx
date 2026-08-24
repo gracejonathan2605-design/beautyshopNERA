@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/product-card";
+import { productCardInclude } from "@/lib/product-query";
 
 export default async function BoutiquePage({
   searchParams,
@@ -14,7 +15,7 @@ export default async function BoutiquePage({
       deletedAt: null,
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
     },
-    include: { variants: { where: { isActive: true, deletedAt: null }, take: 1 } },
+    include: productCardInclude,
     orderBy: { name: "asc" },
   });
 

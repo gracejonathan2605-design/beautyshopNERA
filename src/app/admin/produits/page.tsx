@@ -10,7 +10,7 @@ export default async function ProductsAdminPage() {
   const [products, categories] = await Promise.all([
     prisma.product.findMany({
       where: { deletedAt: null },
-      include: { variants: { where: { deletedAt: null }, take: 1 }, category: true },
+      include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, images: { take: 1 } },
       orderBy: { name: "asc" },
     }),
     prisma.category.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
@@ -18,12 +18,13 @@ export default async function ProductsAdminPage() {
   return (
     <div>
       <h1 className="font-serif text-4xl">Produits</h1>
-      <form action={saveProduct} className="mt-6 grid gap-3 rounded-2xl bg-cream p-5 md:grid-cols-4">
+      <form action={saveProduct} encType="multipart/form-data" className="mt-6 grid gap-3 rounded-2xl bg-cream p-5 md:grid-cols-4">
         <input name="name" required placeholder="Nom" className="rounded-xl border px-3 py-2" />
         <input name="sku" required placeholder="SKU" className="rounded-xl border px-3 py-2" />
         <input name="salePrice" type="number" required placeholder="Prix vente" className="rounded-xl border px-3 py-2" />
         <input name="costPrice" type="number" placeholder="Prix achat" className="rounded-xl border px-3 py-2" />
         <input name="stock" type="number" placeholder="Stock initial" className="rounded-xl border px-3 py-2" />
+        <input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="rounded-xl border px-3 py-2 text-sm" />
         <select name="categoryId" className="rounded-xl border px-3 py-2">
           <option value="">Catégorie</option>
           {categories.map((c) => (

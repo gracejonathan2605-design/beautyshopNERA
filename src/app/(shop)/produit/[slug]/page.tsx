@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
@@ -8,7 +9,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const product = await prisma.product.findUnique({
     where: { slug },
-    include: { variants: { where: { isActive: true, deletedAt: null } }, category: true },
+    include: {
+      variants: { where: { isActive: true, deletedAt: null } },
+      category: true,
+      images: { orderBy: { sortOrder: "asc" } },
+    },
   });
   if (!product || product.deletedAt || !product.onlineVisible) notFound();
   const variant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
@@ -21,8 +26,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-2">
-      <div className="flex min-h-80 items-end rounded-[2rem] bg-linear-to-br from-[#e8dcc8] to-[#c4a574] p-8">
-        <h1 className="font-serif text-5xl text-brown">{product.name}</h1>
+      <div className="relative flex min-h-80 items-end overflow-hidden rounded-[2rem] bg-linear-to-br from-[#e8dcc8] to-[#c4a574] p-8">
+        {product.images[0] ? (
+          <Image
+            src={product.images[0].url}
+            alt={product.images[0].alt ?? product.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
+            priority
+          />
+        ) : null}
+        <h1 className="relative font-serif text-5xl text-brown drop-shadow-sm">{product.name}</h1>
       </div>
       <div>
         <p className="text-sm uppercase tracking-widest text-black/50">{product.category?.name}</p>

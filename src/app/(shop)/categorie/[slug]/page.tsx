@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/product-card";
+import { productCardInclude } from "@/lib/product-query";
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -10,7 +11,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       children: true,
       products: {
         where: { status: "ACTIVE", onlineVisible: true, deletedAt: null },
-        include: { variants: { where: { isActive: true, deletedAt: null }, take: 1 } },
+        include: productCardInclude,
       },
     },
   });

@@ -4,7 +4,43 @@ Système unique (boutique en ligne + POS + administration) pour **NERA Beauté &
 
 ## Stack
 
-Next.js 16 · TypeScript · Tailwind CSS · PostgreSQL · Prisma · Auth JWT httpOnly · Zod
+Next.js 16 · TypeScript · Tailwind CSS · PostgreSQL (Supabase) · Prisma · Auth JWT httpOnly · Storage Supabase · Zod
+
+## Supabase
+
+Le projet est branché sur `https://lqlfciaelhmaozxwunun.supabase.co` :
+
+- **Postgres** : Prisma (`DATABASE_URL` pooler transactionnel + `DIRECT_URL` session pour les migrations)
+- **Storage** : bucket public `product-images` (photos catalogue)
+- **Auth GoTrue** : non utilisé pour le staff (JWT httpOnly existant). Les clés anon / service_role servent à Storage.
+
+Les secrets (`SUPABASE_SERVICE_ROLE_KEY`, mot de passe Postgres) ne vont **jamais** dans git. Collez-les dans `.env` et dans Vercel.
+
+### Brancher Postgres (une fois)
+
+Le dashboard fournit l’URI (Database → Connect). Il faut le **mot de passe de la base**, distinct des clés API.
+
+```bash
+# .env — pooler transaction (app)
+DATABASE_URL="postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require"
+# .env — session (migrations)
+DIRECT_URL="postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require"
+
+npx prisma migrate deploy
+npx prisma db seed
+# coller supabase/rls.sql dans SQL Editor (bloque anon/authenticated sur les tables métier)
+npm run supabase:setup
+```
+
+Si l’hôte `db.*.supabase.co` est en IPv6 only, utilisez le **pooler** (IPv4) ci-dessus, pas la connexion directe.
+
+### Storage
+
+```bash
+npm run supabase:setup
+```
+
+Crée/met à jour `product-images` et supprime le bucket de sonde. L’admin produits envoie les images via le service_role (serveur uniquement).
 
 ## Démarrage local
 
