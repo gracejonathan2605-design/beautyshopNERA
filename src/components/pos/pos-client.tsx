@@ -112,6 +112,7 @@ export function PosClient({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {results.map((v) => (
             <button
+              type="button"
               key={v.id}
               onClick={() => add(v)}
               className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold"

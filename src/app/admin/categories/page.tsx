@@ -4,8 +4,18 @@ import { installNeraCatalog } from "@/app/actions/admin";
 import { CategoriesAdmin, type CategoryCard } from "@/components/admin/categories-admin";
 import { hasPermission } from "@/lib/permissions";
 
-export default async function CategoriesAdminPage() {
+export default async function CategoriesAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erreur?: string; ok?: string }>;
+}) {
   const session = await requireStaff("categories.view");
+  const q = await searchParams;
+  const notice = q.erreur
+    ? ({ kind: "erreur" as const, text: q.erreur })
+    : q.ok
+      ? ({ kind: "ok" as const, text: q.ok })
+      : null;
   const categories = await prisma.category.findMany({
     where: { isActive: true, deletedAt: null },
     include: { _count: { select: { products: { where: { deletedAt: null } }, children: { where: { deletedAt: null } } } } },
@@ -28,7 +38,7 @@ export default async function CategoriesAdminPage() {
       <h1 className="font-serif text-4xl">Rayons</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Un <strong>rayon</strong> est une grande catégorie. Dans chaque rayon, ajoutez des{" "}
-        <strong>sous-rayons</strong>. La suppression est verrouillée : il faut taper le nom exact, et un rayon qui
+        <strong>sous-rayons</strong>. Pour supprimer, ouvrez « Supprimer » puis tapez le nom exact. Un rayon qui
         contient encore des produits ou des sous-rayons ne peut pas être effacé.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
@@ -44,6 +54,7 @@ export default async function CategoriesAdminPage() {
         canCreate={hasPermission(session, "categories.create")}
         canUpdate={hasPermission(session, "categories.update")}
         canDelete={hasPermission(session, "categories.delete")}
+        notice={notice}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { unstable_rethrow } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
@@ -15,8 +15,6 @@ import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
 import { categoryDeleteBlocker } from "@/lib/categories";
 
-export type CategoryActionState = { ok: boolean; error?: string };
-
 function refreshCategories() {
   revalidatePath("/admin/categories");
   revalidatePath("/admin/produits");
@@ -24,16 +22,22 @@ function refreshCategories() {
   revalidatePath("/boutique");
 }
 
-export async function saveCategory(formData: FormData): Promise<CategoryActionState> {
+function bounceCategories(kind: "ok" | "erreur", message: string): never {
+  const q = new URLSearchParams();
+  q.set(kind, message);
+  redirect(`/admin/categories?${q.toString()}`);
+}
+
+export async function saveCategory(formData: FormData) {
   try {
     const session = await requireStaff("categories.create");
     const name = String(formData.get("name") ?? "").trim();
     const parentId = String(formData.get("parentId") ?? "") || null;
-    if (!name) return { ok: false, error: "Indiquez le nom du rayon." };
+    if (!name) bounceCategories("erreur", "Indiquez le nom du rayon.");
     if (parentId) {
       const parent = await prisma.category.findUnique({ where: { id: parentId } });
-      if (!parent || parent.deletedAt) return { ok: false, error: "Rayon parent introuvable." };
-      if (parent.parentId) return { ok: false, error: "Un sous-rayon ne peut pas contenir d’autre sous-rayon." };
+      if (!parent || parent.deletedAt) bounceCategories("erreur", "Rayon parent introuvable.");
+      if (parent.parentId) bounceCategories("erreur", "Un sous-rayon ne peut pas contenir d’autre sous-rayon.");
     }
     const siblings = await prisma.category.count({
       where: { parentId, deletedAt: null },
@@ -49,21 +53,21 @@ export async function saveCategory(formData: FormData): Promise<CategoryActionSt
     });
     await writeAudit({ userId: session.userId, action: "CATEGORY_CREATE", entity: "Category", after: { name, parentId } });
     refreshCategories();
-    return { ok: true };
+    bounceCategories("ok", parentId ? `Sous-rayon « ${name} » ajouté.` : `Rayon « ${name} » ajouté.`);
   } catch (err) {
     unstable_rethrow(err);
-    return { ok: false, error: err instanceof Error ? err.message : "Ajout impossible." };
+    bounceCategories("erreur", err instanceof Error ? err.message : "Ajout impossible.");
   }
 }
 
-export async function updateCategory(formData: FormData): Promise<CategoryActionState> {
+export async function updateCategory(formData: FormData) {
   try {
     const session = await requireStaff("categories.update");
     const id = String(formData.get("id") ?? "");
     const name = String(formData.get("name") ?? "").trim();
-    if (!id || !name) return { ok: false, error: "Nom requis." };
+    if (!id || !name) bounceCategories("erreur", "Nom requis.");
     const current = await prisma.category.findUnique({ where: { id } });
-    if (!current || current.deletedAt) return { ok: false, error: "Rayon introuvable." };
+    if (!current || current.deletedAt) bounceCategories("erreur", "Rayon introuvable.");
     await prisma.category.update({ where: { id }, data: { name } });
     await writeAudit({
       userId: session.userId,
@@ -74,18 +78,19 @@ export async function updateCategory(formData: FormData): Promise<CategoryAction
       after: { name },
     });
     refreshCategories();
-    return { ok: true };
+    bounceCategories("ok", `« ${name} » enregistré.`);
   } catch (err) {
     unstable_rethrow(err);
-    return { ok: false, error: err instanceof Error ? err.message : "Modification impossible." };
+    bounceCategories("erreur", err instanceof Error ? err.message : "Modification impossible.");
   }
 }
 
-export async function deleteCategory(formData: FormData): Promise<CategoryActionState> {
+export async function deleteCategory(formData: FormData) {
   try {
     const session = await requireStaff("categories.delete");
     const id = String(formData.get("id") ?? "");
-    if (!id) return { ok: false, error: "Rayon manquant." };
+    const confirmName = String(formData.get("confirmName") ?? "").trim();
+    if (!id) bounceCategories("erreur", "Rayon manquant.");
     const current = await prisma.category.findUnique({
       where: { id },
       include: {
@@ -93,12 +98,15 @@ export async function deleteCategory(formData: FormData): Promise<CategoryAction
         _count: { select: { products: { where: { deletedAt: null } } } },
       },
     });
-    if (!current || current.deletedAt) return { ok: false, error: "Rayon introuvable." };
+    if (!current || current.deletedAt) bounceCategories("erreur", "Rayon introuvable.");
     const blocked = categoryDeleteBlocker({
       childCount: current.children.length,
       productCount: current._count.products,
     });
-    if (blocked) return { ok: false, error: blocked };
+    if (blocked) bounceCategories("erreur", blocked);
+    if (confirmName !== current.name) {
+      bounceCategories("erreur", `Pour supprimer, tapez exactement : ${current.name}`);
+    }
     await prisma.category.update({
       where: { id },
       data: { deletedAt: new Date(), isActive: false },
@@ -111,10 +119,10 @@ export async function deleteCategory(formData: FormData): Promise<CategoryAction
       after: { name: current.name, soft: true },
     });
     refreshCategories();
-    return { ok: true };
+    bounceCategories("ok", `« ${current.name} » a été masqué.`);
   } catch (err) {
     unstable_rethrow(err);
-    return { ok: false, error: err instanceof Error ? err.message : "Suppression impossible." };
+    bounceCategories("erreur", err instanceof Error ? err.message : "Suppression impossible.");
   }
 }
 
