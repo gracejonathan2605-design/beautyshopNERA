@@ -15,10 +15,16 @@ export async function searchPosProducts(query: string) {
     deletedAt: null,
     product: { status: "ACTIVE" as const, deletedAt: null },
   };
+  const posInclude = {
+    product: {
+      include: { images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1 } },
+    },
+    inventories: true,
+  };
   if (!q) {
     return prisma.productVariant.findMany({
       where,
-      include: { product: true, inventories: true },
+      include: posInclude,
       take: 24,
       orderBy: { product: { name: "asc" } },
     });
@@ -33,7 +39,7 @@ export async function searchPosProducts(query: string) {
         { product: { name: { contains: q, mode: "insensitive" } } },
       ],
     },
-    include: { product: true, inventories: true },
+    include: posInclude,
     take: 30,
   });
 }

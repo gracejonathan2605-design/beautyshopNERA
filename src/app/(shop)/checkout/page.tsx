@@ -29,9 +29,10 @@ export default async function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10">
-      <h1 className="font-serif text-5xl">Checkout</h1>
-      <p className="mt-2">Total articles {formatCfa(subtotal)} + frais selon la zone</p>
-      <form action={submit} className="mt-8 space-y-4 rounded-3xl bg-cream p-6">
+      <p className="text-xs uppercase tracking-[0.28em] text-gold">Commande</p>
+      <h1 className="mt-2 font-serif text-5xl text-wine">Finaliser</h1>
+      <p className="mt-2 text-black/55">Articles {formatCfa(subtotal)} — les frais dépendent du retrait ou de la zone.</p>
+      <form action={submit} className="mt-8 space-y-4 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
         <select name="fulfillment" className="w-full rounded-xl border px-4 py-3" defaultValue="PICKUP">
           <option value="PICKUP">Retrait boutique</option>
           <option value="DELIVERY">Livraison</option>

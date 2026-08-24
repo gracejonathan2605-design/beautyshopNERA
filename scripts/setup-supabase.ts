@@ -17,27 +17,37 @@ const supabase = createClient(url, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+const PRODUCT_MEDIA_BUCKET_OPTIONS: {
+  public: boolean;
+  fileSizeLimit: number;
+  allowedMimeTypes: string[];
+} = {
+  public: true,
+  fileSizeLimit: 30 * 1024 * 1024,
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+  ],
+};
+
 async function ensureProductImagesBucket() {
   const { data: buckets, error: listError } = await supabase.storage.listBuckets();
   if (listError) throw listError;
 
   const existing = buckets?.find((b) => b.id === PRODUCT_IMAGES_BUCKET);
   if (!existing) {
-    const { error } = await supabase.storage.createBucket(PRODUCT_IMAGES_BUCKET, {
-      public: true,
-      fileSizeLimit: 5 * 1024 * 1024,
-      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-    });
+    const { error } = await supabase.storage.createBucket(PRODUCT_IMAGES_BUCKET, PRODUCT_MEDIA_BUCKET_OPTIONS);
     if (error) throw error;
-    console.log(`Bucket ${PRODUCT_IMAGES_BUCKET} créé (public).`);
+    console.log(`Bucket ${PRODUCT_IMAGES_BUCKET} créé (public, photos + vidéo).`);
   } else {
-    const { error } = await supabase.storage.updateBucket(PRODUCT_IMAGES_BUCKET, {
-      public: true,
-      fileSizeLimit: 5 * 1024 * 1024,
-      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-    });
+    const { error } = await supabase.storage.updateBucket(PRODUCT_IMAGES_BUCKET, PRODUCT_MEDIA_BUCKET_OPTIONS);
     if (error) throw error;
-    console.log(`Bucket ${PRODUCT_IMAGES_BUCKET} déjà présent, options mises à jour.`);
+    console.log(`Bucket ${PRODUCT_IMAGES_BUCKET} déjà présent, options mises à jour (30 Mo, mp4/webm).`);
   }
 }
 

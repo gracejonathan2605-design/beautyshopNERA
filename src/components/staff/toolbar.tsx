@@ -8,7 +8,7 @@ export async function StaffToolbar() {
   if (!session) return null;
 
   return (
-    <div className="bg-brown text-cream">
+    <div className="no-print border-b border-[#eee0e6] bg-blush/80 text-wine">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2 text-sm">
         <p>
           Connectée · {session.firstName} {session.lastName}
@@ -26,7 +26,7 @@ export async function StaffToolbar() {
             </Link>
           ) : null}
           <form action={logoutStaff}>
-            <button type="submit" className="text-gold">
+            <button type="submit" className="text-brown">
               Déconnexion
             </button>
           </form>

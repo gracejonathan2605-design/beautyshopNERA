@@ -1,11 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f1e8;
-  --foreground: #1a1a1a;
-  --gold: #c4a574;
-  --brown: #5c4033;
-  --cream: #fbf7f0;
+  /* Perle, champagne, rose poudré — maison de beauté, plus de marron café */
+  --background: #fffcfb;
+  --foreground: #2a1f24;
+  --gold: #b8956c;
+  --brown: #c45c74;
+  --cream: #ffffff;
+  --blush: #f8eef2;
+  --champagne: #f6efe3;
+  --wine: #3a2430;
 }
 
 @theme inline {
@@ -14,20 +18,130 @@
   --color-gold: var(--gold);
   --color-brown: var(--brown);
   --color-cream: var(--cream);
+  --color-blush: var(--blush);
+  --color-champagne: var(--champagne);
+  --color-wine: var(--wine);
   --font-sans: var(--font-outfit);
   --font-serif: var(--font-cormorant);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(1100px 520px at 6% -12%, rgba(248, 214, 224, 0.55), transparent 58%),
+    radial-gradient(900px 460px at 100% -4%, rgba(246, 239, 227, 0.7), transparent 54%),
+    radial-gradient(720px 360px at 50% 115%, rgba(245, 220, 228, 0.28), transparent 62%);
   color: var(--foreground);
   font-family: var(--font-outfit), sans-serif;
 }
 
-h1, h2, h3, .font-serif {
+h1,
+h2,
+h3,
+.font-serif {
   font-family: var(--font-cormorant), serif;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: #f3c5d0;
+  color: #2a1f24;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--brown) 40%, white);
+  outline-offset: 1px;
+}
+
+.hero-light {
+  background:
+    radial-gradient(820px 380px at 88% 8%, rgba(184, 149, 108, 0.16), transparent 58%),
+    radial-gradient(640px 340px at 8% 88%, rgba(196, 92, 116, 0.12), transparent 52%),
+    linear-gradient(180deg, #fffdfc 0%, #fff7f4 46%, #f8eef2 100%);
+}
+
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+a.bg-brown,
+button.bg-brown {
+  background-image: linear-gradient(180deg, #d46e86 0%, #c45c74 100%);
+  box-shadow: 0 14px 28px -16px rgba(196, 92, 116, 0.75);
+  letter-spacing: 0.02em;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+a.bg-brown:hover,
+button.bg-brown:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.wa-fab {
+  position: fixed;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 40;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @media print {
-  .no-print { display: none !important; }
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-paper,
+  .receipt-paper * {
+    visibility: visible;
+  }
+
+  .receipt-paper {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 72mm;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }

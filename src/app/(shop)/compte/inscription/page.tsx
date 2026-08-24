@@ -8,9 +8,10 @@ export default async function RegisterPage({
   const { error } = await searchParams;
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <h1 className="font-serif text-5xl">Inscription</h1>
+      <p className="text-xs uppercase tracking-[0.28em] text-gold">Bienvenue</p>
+      <h1 className="mt-2 font-serif text-5xl text-wine">Inscription</h1>
       {error ? <p className="mt-3 text-sm text-red-700">Impossible de créer le compte.</p> : null}
-      <form action={registerCustomer} className="mt-8 space-y-3">
+      <form action={registerCustomer} className="mt-8 space-y-3 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
         <input name="firstName" required placeholder="Prénom" className="w-full rounded-xl border px-4 py-3" />
         <input name="lastName" required placeholder="Nom" className="w-full rounded-xl border px-4 py-3" />
         <input name="email" type="email" required placeholder="Email" className="w-full rounded-xl border px-4 py-3" />

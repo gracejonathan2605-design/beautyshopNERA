@@ -20,27 +20,30 @@ const LINKS: { href: string; label: string; permission: PermissionCode }[] = [
 
 export function AdminShell({ session, children }: { session: StaffSession; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-[#f3ece3]">
-      <aside className="no-print hidden w-64 shrink-0 bg-brown p-6 text-cream md:block">
-        <p className="font-serif text-3xl">NERA</p>
+    <div className="flex min-h-screen bg-background">
+      <aside className="no-print hidden w-64 shrink-0 border-r border-[#eee0e6] bg-white/90 p-6 text-wine md:block">
+        <p className="font-serif text-3xl tracking-[0.16em]">NERA</p>
         <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gold">Administration</p>
-        <nav className="mt-8 flex flex-col gap-2 text-sm">
+        <div className="gold-rule mt-5" />
+        <nav className="mt-6 flex flex-col gap-1 text-sm">
           {LINKS.filter((l) => hasPermission(session, l.permission)).map((l) => (
-            <Link key={l.href} href={l.href} className="rounded-lg px-3 py-2 hover:bg-white/10">
+            <Link key={l.href} href={l.href} className="rounded-xl px-3 py-2 hover:bg-blush">
               {l.label}
             </Link>
           ))}
         </nav>
         <form action={logoutStaff} className="mt-10">
-          <button className="text-sm text-gold">Déconnexion</button>
+          <button className="text-sm text-brown">Déconnexion</button>
         </form>
       </aside>
       <div className="flex-1">
-        <header className="no-print flex items-center justify-between border-b border-black/10 px-6 py-4">
+        <header className="no-print flex items-center justify-between border-b border-[#eee0e6] bg-white/80 px-6 py-4 backdrop-blur">
           <p className="text-sm text-black/60">
             {session.firstName} {session.lastName} · {session.roleName}
           </p>
-          <Link href="/" className="text-sm">Voir la boutique</Link>
+          <Link href="/" className="text-sm text-brown">
+            Voir la boutique
+          </Link>
         </header>
         <main className="p-6">{children}</main>
       </div>
