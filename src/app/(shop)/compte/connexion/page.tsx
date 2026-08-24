@@ -1,4 +1,5 @@
 import { loginCustomer } from "@/app/actions/auth";
+import { BrandLogo } from "@/components/brand/logo";
 import Link from "next/link";
 
 export default async function CustomerLoginPage({
@@ -9,6 +10,9 @@ export default async function CustomerLoginPage({
   const { error } = await searchParams;
   return (
     <div className="mx-auto max-w-md px-4 py-16">
+      <div className="mb-4">
+        <BrandLogo size="md" />
+      </div>
       <p className="text-xs uppercase tracking-[0.28em] text-gold">Espace cliente</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Connexion</h1>
       {error ? <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p> : null}

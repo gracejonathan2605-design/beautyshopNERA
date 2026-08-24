@@ -4,6 +4,7 @@ import { getCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
+import { BrandLockup, BrandLogo } from "@/components/brand/logo";
 
 function WhatsAppIcon() {
   return (
@@ -29,7 +30,6 @@ export async function ShopHeader() {
       prisma.category.findMany({
         where: { isActive: true, parentId: null, deletedAt: null },
         orderBy: { sortOrder: "asc" },
-        take: 12,
         select: { id: true, name: true, slug: true },
       }),
     ]);
@@ -38,31 +38,25 @@ export async function ShopHeader() {
     categories = [];
   }
   const count = cart.reduce((s, i) => s + i.quantity, 0);
-  const brand = settings.name.replace(" & Shop", "");
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#eee0e6] bg-white/80 backdrop-blur-xl">
+    <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
       <StaffToolbar />
       <p className="hidden bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.22em] text-wine sm:block">
         Yaoundé · Retrait boutique · Livraison · Mobile Money
       </p>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        <Link href="/" className="min-w-0">
-          <span className="block font-serif text-[2rem] leading-none tracking-[0.18em] text-wine">
-            {brand}
-          </span>
-          <span className="mt-1 block text-[10px] uppercase tracking-[0.32em] text-gold">
-            Beauté & Shop
-          </span>
+      <div className="mx-auto flex max-w-6xl min-w-0 items-center justify-between gap-3 px-4 py-3">
+        <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
+          <BrandLockup size="sm" priority />
         </Link>
-        <form action="/boutique" className="hidden flex-1 md:block">
+        <form action="/boutique" className="hidden min-w-0 flex-1 md:block">
           <input
             name="q"
             placeholder="Rechercher un produit, une mèche, un parfum…"
             className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-5 py-2.5 text-sm"
           />
         </form>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex shrink-0 items-center gap-3 text-sm">
           <Link href="/boutique" className="hidden text-wine/80 hover:text-wine sm:inline">
             Boutique
           </Link>
@@ -82,12 +76,12 @@ export async function ShopHeader() {
         />
       </form>
       {categories.length ? (
-        <nav className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3">
+        <nav className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
           {categories.map((c) => (
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
-              className="shrink-0 rounded-full border border-[#eee0e6] bg-white/80 px-3 py-1 text-xs text-wine hover:border-gold hover:bg-blush"
+              className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
             >
               {c.name}
             </Link>
@@ -115,7 +109,8 @@ export async function ShopFooter() {
       <footer className="mt-20 border-t border-[#eee0e6] bg-white/75">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
-            <p className="font-serif text-3xl tracking-[0.12em] text-wine">{settings.name}</p>
+            <BrandLogo size="lg" />
+            <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{settings.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{settings.slogan}</p>
           </div>

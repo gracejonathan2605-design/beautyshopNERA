@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
 import { productCardInclude } from "@/lib/product-query";
+import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,13 +22,17 @@ export default async function HomePage() {
   } catch {
     return (
       <section className="hero-light px-4 py-24">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm uppercase tracking-[0.32em] text-gold">Yaoundé · Cameroun</p>
-          <h1 className="mt-4 font-serif text-6xl text-wine">NERA Beauté & Shop</h1>
-          <p className="mt-4 max-w-xl text-lg text-black/65">
-            La boutique est en ligne, mais la base n’est pas encore reliée à Vercel. Ajoutez
-            DATABASE_URL et DIRECT_URL (pooler session Supabase) dans Project → Settings → Environment Variables, puis redéployez.
-          </p>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+          <div>
+            <BrandLogo size="hero" priority className="mb-6" />
+            <p className="text-sm uppercase tracking-[0.32em] text-gold">Yaoundé · Cameroun</p>
+            <h1 className="mt-4 font-serif text-6xl text-wine">NERA Beauté & Shop</h1>
+            <p className="mt-4 max-w-xl text-lg text-black/65">
+              La boutique est en ligne, mais la base n’est pas encore reliée à Vercel. Ajoutez
+              DATABASE_URL et DIRECT_URL (pooler session Supabase) dans Project → Settings → Environment Variables, puis redéployez.
+            </p>
+          </div>
+          <HeroProducts />
         </div>
       </section>
     );
@@ -56,21 +61,25 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="hero-light px-4 py-20 md:py-28">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm uppercase tracking-[0.35em] text-gold">Maison de beauté · Yaoundé</p>
-          <h1 className="mt-5 max-w-3xl font-serif text-5xl leading-[1.05] text-wine md:text-7xl">
-            {settings.name}
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{settings.slogan}</p>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-cream">
-              Entrer dans la boutique
-            </Link>
-            <Link href="/compte" className="rounded-full border border-[#eee0e6] bg-white/85 px-8 py-3 text-wine">
-              Mon compte
-            </Link>
+      <section className="hero-light px-4 py-16 md:py-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+          <div>
+            <BrandLogo size="lg" priority className="mb-6" />
+            <p className="text-sm uppercase tracking-[0.35em] text-gold">Maison de beauté · Yaoundé</p>
+            <h1 className="mt-5 font-serif text-5xl leading-[1.05] text-wine md:text-6xl">
+              {settings.name}
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{settings.slogan}</p>
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-cream">
+                Entrer dans la boutique
+              </Link>
+              <Link href="/compte" className="rounded-full border border-[#eee0e6] bg-white/85 px-8 py-3 text-wine">
+                Mon compte
+              </Link>
+            </div>
           </div>
+          <HeroProducts />
         </div>
       </section>
 

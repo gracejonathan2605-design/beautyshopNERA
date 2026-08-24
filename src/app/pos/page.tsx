@@ -4,6 +4,7 @@ import { getOpenSessionForUser } from "@/services/cash.service";
 import { PosClient } from "@/components/pos/pos-client";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { getShopSettings } from "@/lib/settings";
+import { BrandLockup } from "@/components/brand/logo";
 
 export default async function PosPage() {
   const session = await requireStaff("pos.access");
@@ -16,8 +17,8 @@ export default async function PosPage() {
     <div className="min-h-screen bg-background">
       <StaffToolbar />
       <div className="p-4 md:p-8">
-        <p className="text-xs uppercase tracking-[0.28em] text-gold">Point de vente</p>
-        <h1 className="mt-1 font-serif text-4xl text-wine">Caisse NERA</h1>
+        <BrandLockup size="md" subtitle="Caisse · Point de vente" priority />
+        <h1 className="sr-only">Caisse NERA</h1>
         <p className="mt-1 text-sm text-black/60">
           {session.firstName} {session.lastName}
         </p>

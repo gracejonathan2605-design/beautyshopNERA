@@ -2,6 +2,7 @@ import Link from "next/link";
 import { logoutStaff } from "@/app/actions/auth";
 import type { StaffSession } from "@/lib/auth";
 import { hasPermission, type PermissionCode } from "@/lib/permissions";
+import { BrandLockup } from "@/components/brand/logo";
 
 const LINKS: { href: string; label: string; permission: PermissionCode }[] = [
   { href: "/admin", label: "Tableau de bord", permission: "dashboard.view" },
@@ -22,8 +23,9 @@ export function AdminShell({ session, children }: { session: StaffSession; child
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="no-print hidden w-64 shrink-0 border-r border-[#eee0e6] bg-white/90 p-6 text-wine md:block">
-        <p className="font-serif text-3xl tracking-[0.16em]">NERA</p>
-        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gold">Administration</p>
+        <Link href="/admin" aria-label="Administration NERA">
+          <BrandLockup size="sm" subtitle="Administration" />
+        </Link>
         <div className="gold-rule mt-5" />
         <nav className="mt-6 flex flex-col gap-1 text-sm">
           {LINKS.filter((l) => hasPermission(session, l.permission)).map((l) => (
@@ -38,9 +40,14 @@ export function AdminShell({ session, children }: { session: StaffSession; child
       </aside>
       <div className="flex-1">
         <header className="no-print flex items-center justify-between border-b border-[#eee0e6] bg-white/80 px-6 py-4 backdrop-blur">
-          <p className="text-sm text-black/60">
-            {session.firstName} {session.lastName} · {session.roleName}
-          </p>
+          <div className="flex items-center gap-3">
+            <span className="md:hidden">
+              <BrandLockup size="sm" subtitle="Admin" />
+            </span>
+            <p className="hidden text-sm text-black/60 sm:block">
+              {session.firstName} {session.lastName} · {session.roleName}
+            </p>
+          </div>
           <Link href="/" className="text-sm text-brown">
             Voir la boutique
           </Link>

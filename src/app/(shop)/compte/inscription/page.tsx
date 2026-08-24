@@ -1,4 +1,5 @@
 import { registerCustomer } from "@/app/actions/auth";
+import { BrandLogo } from "@/components/brand/logo";
 
 export default async function RegisterPage({
   searchParams,
@@ -8,6 +9,9 @@ export default async function RegisterPage({
   const { error } = await searchParams;
   return (
     <div className="mx-auto max-w-md px-4 py-16">
+      <div className="mb-4">
+        <BrandLogo size="md" />
+      </div>
       <p className="text-xs uppercase tracking-[0.28em] text-gold">Bienvenue</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Inscription</h1>
       {error ? <p className="mt-3 text-sm text-red-700">Impossible de créer le compte.</p> : null}
