@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
+import { summarizeTill, type TillSnapshot } from "@/lib/till";
 
 export async function openCashSession(input: {
   registerId: string;
   userId: string;
   openingFloat: number;
 }) {
+  const mine = await prisma.cashSession.findFirst({
+    where: { registerId: input.registerId, status: "OPEN", openedById: input.userId },
+  });
+  if (mine) return mine;
+
   const existing = await prisma.cashSession.findFirst({
     where: { registerId: input.registerId, status: "OPEN" },
   });
-  if (existing) throw new Error("Une session est déjà ouverte sur cette caisse");
+  if (existing) return existing;
 
   const session = await prisma.cashSession.create({
     data: {
@@ -30,10 +36,32 @@ export async function openCashSession(input: {
   return session;
 }
 
+export async function getTillSnapshot(sessionId: string): Promise<TillSnapshot | null> {
+  const session = await prisma.cashSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      sales: { include: { payments: true } },
+      expenses: { include: { category: true }, orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!session) return null;
+  return summarizeTill({
+    sessionId: session.id,
+    openingFloat: session.openingFloat,
+    sales: session.sales,
+    expenses: session.expenses.map((e) => ({
+      id: e.id,
+      amount: e.amount,
+      description: e.description,
+      categoryName: e.category.name,
+    })),
+  });
+}
+
 export async function closeCashSession(input: {
   sessionId: string;
   userId: string;
-  actualCash: number;
+  actualCash?: number | null;
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
@@ -41,26 +69,27 @@ export async function closeCashSession(input: {
       where: { id: input.sessionId },
       include: {
         sales: { include: { payments: true } },
+        expenses: { include: { category: true } },
       },
     });
     if (!session || session.status !== "OPEN") {
       throw new Error("Session introuvable ou déjà close");
     }
 
-    const cashIn = session.sales
-      .filter((s) => s.status === "COMPLETED")
-      .flatMap((s) => s.payments)
-      .filter((p) => p.method === "CASH" && p.status === "COMPLETED")
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const cashOut = session.sales
-      .filter((s) => s.status === "CANCELLED" || s.status === "REFUNDED")
-      .flatMap((s) => s.payments)
-      .filter((p) => p.method === "CASH")
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const expectedCash = session.openingFloat + cashIn - cashOut;
-    const difference = input.actualCash - expectedCash;
+    const snap = summarizeTill({
+      sessionId: session.id,
+      openingFloat: session.openingFloat,
+      sales: session.sales,
+      expenses: session.expenses.map((e) => ({
+        id: e.id,
+        amount: e.amount,
+        description: e.description,
+        categoryName: e.category.name,
+      })),
+    });
+    const expectedCash = snap.expectedCash;
+    const actualCash = input.actualCash == null || Number.isNaN(input.actualCash) ? expectedCash : input.actualCash;
+    const difference = actualCash - expectedCash;
 
     const closed = await tx.cashSession.update({
       where: { id: session.id },
@@ -69,7 +98,7 @@ export async function closeCashSession(input: {
         closedById: input.userId,
         closedAt: new Date(),
         expectedCash,
-        actualCash: input.actualCash,
+        actualCash,
         difference,
         notes: input.notes,
       },
@@ -81,7 +110,13 @@ export async function closeCashSession(input: {
         action: "CASH_CLOSE",
         entity: "CashSession",
         entityId: session.id,
-        after: { expectedCash, actualCash: input.actualCash, difference },
+        after: {
+          expectedCash,
+          actualCash,
+          difference,
+          salesTotal: snap.salesTotal,
+          expensesTotal: snap.expensesTotal,
+        },
       },
     });
 
@@ -89,10 +124,75 @@ export async function closeCashSession(input: {
   });
 }
 
+const sessionInclude = { register: { include: { location: true } } } as const;
+
 export async function getOpenSessionForUser(userId: string) {
-  return prisma.cashSession.findFirst({
+  const mine = await prisma.cashSession.findFirst({
     where: { status: "OPEN", openedById: userId },
-    include: { register: { include: { location: true } } },
+    include: sessionInclude,
     orderBy: { openedAt: "desc" },
   });
+  if (mine) return mine;
+  return prisma.cashSession.findFirst({
+    where: { status: "OPEN", register: { isActive: true } },
+    include: sessionInclude,
+    orderBy: { openedAt: "desc" },
+  });
+}
+
+export async function ensureOpenCashSession(userId: string, openingFloat = 0) {
+  const open = await getOpenSessionForUser(userId);
+  if (open) return open;
+  const register = await prisma.cashRegister.findFirst({
+    where: { isActive: true },
+    include: { location: true },
+  });
+  if (!register) throw new Error("Aucune caisse configurée");
+  const created = await openCashSession({
+    registerId: register.id,
+    userId,
+    openingFloat,
+  });
+  return prisma.cashSession.findUniqueOrThrow({
+    where: { id: created.id },
+    include: sessionInclude,
+  });
+}
+
+export async function recordTillExpense(input: {
+  userId: string;
+  amount: number;
+  description: string;
+  categoryId?: string | null;
+}) {
+  if (input.amount <= 0) throw new Error("Indiquez le montant de la dépense.");
+  const open = await getOpenSessionForUser(input.userId);
+  if (!open) throw new Error("Ouvrez d’abord la caisse.");
+  let categoryId = input.categoryId || "";
+  if (!categoryId) {
+    const fallback = await prisma.expenseCategory.findFirst({
+      where: { isActive: true, OR: [{ slug: "autre" }, { name: "Autre" }] },
+    });
+    const any = fallback ?? (await prisma.expenseCategory.findFirst({ where: { isActive: true } }));
+    if (!any) throw new Error("Aucune catégorie de dépense. Créez-en une dans Admin → Dépenses.");
+    categoryId = any.id;
+  }
+  const expense = await prisma.expense.create({
+    data: {
+      categoryId,
+      amount: input.amount,
+      date: new Date(),
+      description: input.description || "Dépense caisse",
+      userId: input.userId,
+      cashSessionId: open.id,
+    },
+  });
+  await writeAudit({
+    userId: input.userId,
+    action: "TILL_EXPENSE",
+    entity: "Expense",
+    entityId: expense.id,
+    after: { amount: input.amount, cashSessionId: open.id },
+  });
+  return expense;
 }

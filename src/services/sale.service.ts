@@ -26,7 +26,7 @@ export async function createPosSale(input: {
   const paymentTotal = input.payments.reduce((s, p) => s + p.amount, 0);
 
   const result = await prisma.$transaction(async (tx) => {
-    const settings = await getShopSettings();
+    const settings = await getShopSettings(tx);
     const seq = await nextSequence(tx, "sale");
     const number = formatRef(settings.prefixes.sale, seq.year, seq.value);
 
