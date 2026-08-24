@@ -414,6 +414,29 @@ async function main() {
       ],
     });
 
+    const catalogPhotos: [string, string][] = [
+      ["meche-bresilienne-body-wave", "/products/hair-body-wave.jpg"],
+      ["meche-bresilienne-straight", "/products/hair-straight.jpg"],
+      ["perruque-naturelle-lace-front", "/products/wig-lace.jpg"],
+      ["lait-corporel-hydratant", "/products/body-lotion.jpg"],
+      ["parfum-femme-nera-or", "/products/perfume.jpg"],
+      ["sac-a-main-cuir-camel", "/products/handbag.jpg"],
+      ["sandale-femme", "/products/sandals.jpg"],
+      ["boucles-doreilles-dorees", "/products/jewelry.jpg"],
+      ["ceinture-femme-cuir", "/products/jewelry.jpg"],
+      ["gloss-hydratant", "/products/gloss.jpg"],
+    ];
+    for (const [slug, url] of catalogPhotos) {
+      const row = await tx.product.findUnique({ where: { slug } });
+      if (!row) continue;
+      const already = await tx.productImage.findFirst({ where: { productId: row.id, url } });
+      if (!already) {
+        await tx.productImage.create({
+          data: { productId: row.id, url, alt: row.name, sortOrder: 0, kind: "IMAGE" },
+        });
+      }
+    }
+
     const customerHash = await bcrypt.hash("Client2026!", 12);
     await tx.customer.upsert({
       where: { email: "marie.client@example.com" },

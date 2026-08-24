@@ -18,7 +18,7 @@ export async function createOnlineOrder(input: {
   couponCode?: string | null;
   notes?: string;
   lines: { variantId: string; quantity: number }[];
-  payment?: { method: PaymentMethod; amount: number; reference?: string };
+  payment?: { method: PaymentMethod; amount: number; reference?: string; provider?: string };
 }) {
   if (!input.lines.length) throw new Error("Panier vide");
   const locationId = await getDefaultLocationId();
@@ -104,11 +104,11 @@ export async function createOnlineOrder(input: {
         payments: input.payment
           ? {
               create: {
-                amount: input.payment.amount,
+                amount: input.payment.amount > 0 ? input.payment.amount : total,
                 method: input.payment.method,
                 reference: input.payment.reference,
+                provider: input.payment.provider ?? "MANUAL",
                 status: "PENDING",
-                provider: "MANUAL",
               },
             }
           : undefined,
