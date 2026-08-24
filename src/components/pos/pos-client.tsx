@@ -12,7 +12,7 @@ type Variant = {
   sku: string;
   salePrice: number;
   promoPrice: number | null;
-  product: { name: string };
+  product: { name: string; images?: { url: string }[] };
   inventories: { onHand: number; reserved: number }[];
 };
 
@@ -64,6 +64,15 @@ export function PosClient({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {results.map((v) => (
             <button key={v.id} onClick={() => add(v)} className="rounded-2xl bg-cream p-4 text-left">
+              {v.product.images?.[0] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={v.product.images[0].url}
+                  alt=""
+                  loading="lazy"
+                  className="mb-2 h-24 w-full rounded-xl object-cover"
+                />
+              ) : null}
               <p className="font-medium">{v.product.name}</p>
               <p className="text-sm text-black/50">{v.name} · {v.sku}</p>
               <p className="mt-2">{formatCfa(unitPrice(v))}</p>

@@ -1,35 +1,41 @@
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/supabase/env";
+import { compressToWebp } from "@/lib/image";
+import { VIDEO_MAX_BYTES } from "@/lib/product-media";
 
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const MAX_BYTES = 5 * 1024 * 1024;
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
-function extensionFor(file: File) {
-  const fromType = file.type.split("/")[1]?.toLowerCase();
-  if (fromType === "jpeg") return "jpg";
-  if (fromType && ["jpg", "png", "webp", "gif"].includes(fromType)) return fromType;
-  const fromName = file.name.split(".").pop()?.toLowerCase();
-  if (fromName === "jpeg") return "jpg";
-  if (fromName && ["jpg", "png", "webp", "gif"].includes(fromName)) return fromName;
-  return "jpg";
+function publicUrl(path: string) {
+  const supabase = createSupabaseAdmin();
+  return supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
-export async function uploadProductImage(file: File, productId: string) {
-  if (!file.size) throw new Error("Fichier image vide");
-  if (file.size > MAX_BYTES) throw new Error("Image trop lourde (max 5 Mo)");
-  if (file.type && !ALLOWED_TYPES.has(file.type)) {
-    throw new Error("Format image non supporté (jpeg, png, webp, gif)");
-  }
-
+export async function uploadProductImage(file: File, productId: string, index = 0) {
+  const webp = await compressToWebp(file);
   const supabase = createSupabaseAdmin();
-  const path = `${productId}/${Date.now()}.${extensionFor(file)}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, buffer, {
-    contentType: file.type || `image/${extensionFor(file)}`,
+  const path = `${productId}/img-${Date.now()}-${index}.webp`;
+  const { error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, webp, {
+    contentType: "image/webp",
     upsert: false,
   });
-  if (error) throw new Error(`Upload Storage: ${error.message}`);
+  if (error) throw new Error(`Upload photo : ${error.message}`);
+  return publicUrl(path);
+}
 
-  const { data } = supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+export async function uploadProductVideo(file: File, productId: string) {
+  if (!file.size) throw new Error("Fichier vidéo vide");
+  if (file.size > VIDEO_MAX_BYTES) throw new Error("Vidéo trop lourde (max 28 Mo / 40 s)");
+  if (file.type && !VIDEO_TYPES.has(file.type)) {
+    throw new Error("Format vidéo non supporté (mp4 ou webm)");
+  }
+  const supabase = createSupabaseAdmin();
+  const ext = file.type === "video/webm" ? "webm" : "mp4";
+  const path = `${productId}/video-${Date.now()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, buffer, {
+    contentType: file.type || "video/mp4",
+    upsert: false,
+  });
+  if (error) throw new Error(`Upload vidéo : ${error.message}`);
+  return publicUrl(path);
 }

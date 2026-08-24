@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { addToCart } from "@/app/actions/shop";
+import { ProductGallery } from "@/components/shop/product-gallery";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -26,21 +26,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-2">
-      <div className="relative flex min-h-80 items-end overflow-hidden rounded-[2rem] bg-linear-to-br from-[#e8dcc8] to-[#c4a574] p-8">
-        {product.images[0] ? (
-          <Image
-            src={product.images[0].url}
-            alt={product.images[0].alt ?? product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-            priority
-          />
-        ) : null}
-        <h1 className="relative font-serif text-5xl text-brown drop-shadow-sm">{product.name}</h1>
-      </div>
+      <ProductGallery
+        name={product.name}
+        media={product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))}
+      />
       <div>
         <p className="text-sm uppercase tracking-widest text-black/50">{product.category?.name}</p>
+        <h1 className="mt-2 font-serif text-5xl text-brown">{product.name}</h1>
         <p className="mt-4 text-black/70">{product.description ?? product.shortDescription}</p>
         <p className="mt-6 font-serif text-4xl">{formatCfa(unitPrice(variant))}</p>
         <div className="mt-6 space-y-2 text-sm">

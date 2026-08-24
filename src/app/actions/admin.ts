@@ -10,7 +10,9 @@ import { adjustStock, receivePurchase } from "@/services/inventory.service";
 import { updateOrderStatus } from "@/services/order.service";
 import { slugify } from "@/lib/pricing";
 import { DEFAULT_SETTINGS, saveShopSettings, type ShopSettings } from "@/lib/settings";
-import { uploadProductImage } from "@/lib/storage";
+import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
+import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
+import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
 
 export async function saveCategory(formData: FormData) {
   const session = await requireStaff("categories.create");
@@ -42,20 +44,70 @@ function parseMoney(value: FormDataEntryValue | null) {
   return Number.isFinite(n) ? n : 0;
 }
 
-async function uniqueSku(requested: string, name: string) {
-  const base =
-    requested ||
-    slugify(name).replace(/-/g, "").slice(0, 10).toUpperCase() ||
-    "NER";
+async function uniqueSku(name: string) {
+  const now = Date.now();
   for (let i = 0; i < 8; i++) {
-    const sku = i === 0 && requested ? requested : `${base}-${Date.now().toString(36).toUpperCase().slice(-4)}${i || ""}`;
+    const sku = buildAutoSku(name, now, i);
     const [onProduct, onVariant] = await Promise.all([
       prisma.product.findFirst({ where: { sku } }),
       prisma.productVariant.findUnique({ where: { sku } }),
     ]);
     if (!onProduct && !onVariant) return sku;
   }
-  return `${base}-${Date.now()}`;
+  return `${skuBaseFromName(name)}-${Date.now()}`;
+}
+
+function refreshCatalog(slug?: string) {
+  revalidatePath("/admin/produits");
+  revalidatePath("/boutique");
+  revalidatePath("/");
+  revalidatePath("/pos");
+  if (slug) revalidatePath(`/produit/${slug}`);
+}
+
+async function attachMedia(productId: string, name: string, formData: FormData, existingPhotoCount = 0) {
+  const remaining = Math.max(0, MAX_PRODUCT_PHOTOS - existingPhotoCount);
+  const photos = formData
+    .getAll("photos")
+    .filter((item): item is File => item instanceof File && item.size > 0)
+    .slice(0, remaining);
+  let order = existingPhotoCount;
+  let warning: string | undefined;
+  for (const [index, photo] of photos.entries()) {
+    try {
+      const url = await uploadProductImage(photo, productId, index);
+      await prisma.productImage.create({
+        data: { productId, url, alt: name, sortOrder: order, kind: "IMAGE" },
+      });
+      order += 1;
+    } catch (err) {
+      warning = err instanceof Error ? err.message : "Une photo n’a pas pu être envoyée.";
+    }
+  }
+  const video = formData.get("video");
+  if (video instanceof File && video.size > 0) {
+    const duration = Number(formData.get("videoDuration") ?? 0);
+    if (duration > MAX_VIDEO_SECONDS) {
+      warning = "La vidéo dépasse 40 secondes et n’a pas été enregistrée.";
+    } else {
+      try {
+        const url = await uploadProductVideo(video, productId);
+        await prisma.productImage.create({
+          data: {
+            productId,
+            url,
+            alt: name,
+            sortOrder: order,
+            kind: "VIDEO",
+            durationSeconds: duration > 0 ? Math.round(duration) : null,
+          },
+        });
+      } catch (err) {
+        warning = err instanceof Error ? `Produit enregistré, vidéo refusée : ${err.message}` : "Produit enregistré sans vidéo.";
+      }
+    }
+  }
+  return warning;
 }
 
 export async function saveProduct(
@@ -67,12 +119,17 @@ export async function saveProduct(
     const name = String(formData.get("name") ?? "").trim();
     if (!name) return { ok: false, error: "Indiquez le nom du produit." };
 
+    const categoryId = String(formData.get("categoryId") ?? "").trim();
+    if (!categoryId) {
+      return { ok: false, error: "Choisissez une catégorie. Sans catégorie, le produit n’apparaît pas dans la boutique." };
+    }
+
     const salePrice = parseMoney(formData.get("salePrice"));
     if (salePrice <= 0) return { ok: false, error: "Indiquez un prix de vente (FCFA)." };
 
     const costPrice = parseMoney(formData.get("costPrice"));
     const stock = Math.max(0, parseMoney(formData.get("stock")));
-    const sku = await uniqueSku(String(formData.get("sku") ?? "").trim(), name);
+    const sku = await uniqueSku(name);
 
     const locationId = (await prisma.location.findFirst({ where: { isDefault: true } }))?.id;
     if (!locationId) return { ok: false, error: "Aucun magasin par défaut. Relancez le seed ou créez un magasin." };
@@ -83,10 +140,9 @@ export async function saveProduct(
         slug: `${slugify(name) || "produit"}-${Date.now().toString().slice(-6)}`,
         shortDescription: String(formData.get("shortDescription") ?? "") || null,
         description: String(formData.get("description") ?? "") || null,
+        sku,
         status: "ACTIVE",
-        categoryId: String(formData.get("categoryId") ?? "") || null,
-        brandId: String(formData.get("brandId") ?? "") || null,
-        supplierId: String(formData.get("supplierId") ?? "") || null,
+        categoryId,
         isFeatured: formData.get("isFeatured") === "on",
         isNew: true,
         isPromo: formData.get("isPromo") === "on",
@@ -95,29 +151,16 @@ export async function saveProduct(
           create: {
             name: "Standard",
             sku,
-            barcode: String(formData.get("barcode") ?? "") || null,
             costPrice,
             salePrice,
-            promoPrice: formData.get("promoPrice") ? parseMoney(formData.get("promoPrice")) : null,
             isDefault: true,
           },
         },
       },
-      include: { variants: true },
+      include: { variants: true, category: true },
     });
 
-    let warning: string | undefined;
-    const image = formData.get("image");
-    if (image instanceof File && image.size > 0) {
-      try {
-        const url = await uploadProductImage(image, product.id);
-        await prisma.productImage.create({
-          data: { productId: product.id, url, alt: name, sortOrder: 0 },
-        });
-      } catch (err) {
-        warning = err instanceof Error ? `Produit créé, mais la photo n’a pas été envoyée : ${err.message}` : "Produit créé sans photo.";
-      }
-    }
+    const warning = await attachMedia(product.id, name, formData);
 
     if (stock) {
       await receivePurchase({
@@ -134,20 +177,137 @@ export async function saveProduct(
       action: "PRODUCT_CREATE",
       entity: "Product",
       entityId: product.id,
-      after: { name, sku },
+      after: { name, sku, categoryId },
     });
-    revalidatePath("/admin/produits");
-    revalidatePath("/boutique");
-    revalidatePath("/");
-    return { ok: true, name, warning };
+    refreshCatalog(product.slug);
+    return {
+      ok: true,
+      name,
+      warning: warning
+        ? `${name} est en boutique et à la caisse (SKU ${sku}). ${warning}`
+        : `${name} est en boutique et à la caisse. SKU : ${sku}`,
+    };
   } catch (err) {
     unstable_rethrow(err);
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return { ok: false, error: "Ce SKU existe déjà. Laissez le champ SKU vide, un code unique sera créé." };
+      return { ok: false, error: "Un produit avec ce nom existe déjà. Changez le nom." };
     }
     const message = err instanceof Error ? err.message : "Création impossible.";
     return { ok: false, error: message };
   }
+}
+
+export async function updateProductPrice(formData: FormData) {
+  await requireStaff("products.update");
+  const variantId = String(formData.get("variantId") ?? "");
+  const salePrice = parseMoney(formData.get("salePrice"));
+  if (!variantId || salePrice <= 0) throw new Error("Prix invalide");
+  const variant = await prisma.productVariant.update({
+    where: { id: variantId },
+    data: { salePrice },
+    include: { product: true },
+  });
+  await writeAudit({
+    action: "PRODUCT_PRICE_UPDATE",
+    entity: "ProductVariant",
+    entityId: variantId,
+    after: { salePrice },
+  });
+  refreshCatalog(variant.product.slug);
+}
+
+export async function deleteProduct(formData: FormData) {
+  await requireStaff("products.delete");
+  const productId = String(formData.get("productId") ?? "");
+  const product = await prisma.product.update({
+    where: { id: productId },
+    data: { deletedAt: new Date(), status: "ARCHIVED", onlineVisible: false },
+  });
+  await prisma.productVariant.updateMany({
+    where: { productId },
+    data: { deletedAt: new Date(), isActive: false },
+  });
+  await writeAudit({ action: "PRODUCT_DELETE", entity: "Product", entityId: productId, after: { name: product.name } });
+  refreshCatalog(product.slug);
+}
+
+export async function updateProduct(
+  _prev: ProductFormState | null,
+  formData: FormData,
+): Promise<ProductFormState> {
+  try {
+    const session = await requireStaff("products.update");
+    const productId = String(formData.get("productId") ?? "");
+    const name = String(formData.get("name") ?? "").trim();
+    const categoryId = String(formData.get("categoryId") ?? "").trim();
+    const salePrice = parseMoney(formData.get("salePrice"));
+    if (!productId || !name) return { ok: false, error: "Nom requis" };
+    if (!categoryId) return { ok: false, error: "Catégorie obligatoire" };
+    if (salePrice <= 0) return { ok: false, error: "Prix invalide" };
+
+    const current = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { variants: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } }, images: true },
+    });
+    if (!current || current.deletedAt) return { ok: false, error: "Produit introuvable" };
+
+    const photoCount = current.images.filter((m) => m.kind === "IMAGE").length;
+    const hasVideo = current.images.some((m) => m.kind === "VIDEO");
+    const incomingPhotos = formData.getAll("photos").filter((item): item is File => item instanceof File && item.size > 0);
+    if (photoCount + incomingPhotos.length > MAX_PRODUCT_PHOTOS) {
+      return { ok: false, error: `Maximum ${MAX_PRODUCT_PHOTOS} photos par produit.` };
+    }
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        name,
+        categoryId,
+        shortDescription: String(formData.get("shortDescription") ?? "") || null,
+        isFeatured: formData.get("isFeatured") === "on",
+        onlineVisible: true,
+        status: "ACTIVE",
+      },
+    });
+    const variant = current.variants[0];
+    if (variant) {
+      await prisma.productVariant.update({
+        where: { id: variant.id },
+        data: { salePrice, costPrice: parseMoney(formData.get("costPrice")) || variant.costPrice },
+      });
+    }
+
+    if (hasVideo && formData.get("video") instanceof File && (formData.get("video") as File).size > 0) {
+      return { ok: false, error: "Ce produit a déjà une vidéo. Supprimez-la avant d’en ajouter une autre." };
+    }
+
+    const warning = await attachMedia(productId, name, formData, photoCount);
+    await writeAudit({
+      userId: session.userId,
+      action: "PRODUCT_UPDATE",
+      entity: "Product",
+      entityId: productId,
+      after: { name, salePrice },
+    });
+    refreshCatalog(current.slug);
+    return {
+      ok: true,
+      name,
+      warning: warning
+        ? `Produit mis à jour. ${warning}`
+        : "Produit mis à jour. Visible en boutique et à la caisse.",
+    };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false, error: err instanceof Error ? err.message : "Mise à jour impossible." };
+  }
+}
+
+export async function deleteProductMedia(formData: FormData) {
+  await requireStaff("products.update");
+  const mediaId = String(formData.get("mediaId") ?? "");
+  const media = await prisma.productImage.delete({ where: { id: mediaId }, include: { product: true } });
+  refreshCatalog(media.product.slug);
 }
 
 export async function saveStockAdjust(formData: FormData) {

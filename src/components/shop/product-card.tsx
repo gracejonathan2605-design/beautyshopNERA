@@ -27,6 +27,7 @@ export function ProductCard({
             fill
             className="object-cover transition group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, 25vw"
+            loading="lazy"
           />
         ) : null}
         <span className="relative font-serif text-2xl text-brown drop-shadow-sm">{product.name}</span>
