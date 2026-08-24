@@ -21,14 +21,20 @@ export default async function CartPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="font-serif text-5xl">Panier</h1>
+      <p className="text-xs uppercase tracking-[0.28em] text-gold">Votre sélection</p>
+      <h1 className="mt-2 font-serif text-5xl text-wine">Panier</h1>
       {!rows.length ? (
-        <p className="mt-6">Votre panier est vide.</p>
+        <div className="mt-8 rounded-[1.7rem] border border-[#eee0e6] bg-white/80 p-8 text-center">
+          <p className="text-black/60">Votre panier est encore vide.</p>
+          <Link href="/boutique" className="mt-6 inline-block rounded-full bg-brown px-6 py-3 text-cream">
+            Continuer mes achats
+          </Link>
+        </div>
       ) : (
         <div className="mt-8 space-y-4">
           {rows.map(({ item, variant }) =>
             variant ? (
-              <div key={item.variantId} className="flex items-center justify-between rounded-2xl bg-cream p-4">
+              <div key={item.variantId} className="flex items-center justify-between rounded-2xl border border-[#eee0e6] bg-white p-4">
                 <div>
                   <p className="font-medium">{variant.product.name}</p>
                   <p className="text-sm text-black/50">{variant.name}</p>

@@ -31,8 +31,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         media={product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))}
       />
       <div>
-        <p className="text-sm uppercase tracking-widest text-black/50">{product.category?.name}</p>
-        <h1 className="mt-2 font-serif text-5xl text-brown">{product.name}</h1>
+        <p className="text-xs uppercase tracking-[0.28em] text-gold">{product.category?.name}</p>
+        <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
         <p className="mt-4 text-black/70">{product.description ?? product.shortDescription}</p>
         <p className="mt-6 font-serif text-4xl">{formatCfa(unitPrice(variant))}</p>
         <div className="mt-6 space-y-2 text-sm">

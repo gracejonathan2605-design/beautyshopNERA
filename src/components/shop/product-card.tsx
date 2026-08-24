@@ -18,24 +18,38 @@ export function ProductCard({
   const promo = product.variants[0]?.promoPrice;
   const image = product.images?.[0];
   return (
-    <Link href={`/produit/${product.slug}`} className="group overflow-hidden rounded-3xl bg-cream shadow-sm">
-      <div className="relative flex h-48 items-end overflow-hidden bg-linear-to-br from-[#e8dcc8] to-[#c4a574] p-4">
+    <Link
+      href={`/produit/${product.slug}`}
+      className="group overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)] transition hover:-translate-y-0.5 hover:border-gold/50"
+    >
+      <div className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
         {image ? (
           <Image
             src={image.url}
             alt={image.alt ?? product.name}
             fill
-            className="object-cover transition group-hover:scale-105"
+            className="object-cover transition duration-500 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, 25vw"
             loading="lazy"
           />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center px-4 text-center font-serif text-3xl text-wine/70">
+            {product.name}
+          </span>
+        )}
+        {promo ? (
+          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-brown">
+            Promo
+          </span>
         ) : null}
-        <span className="relative font-serif text-2xl text-brown drop-shadow-sm">{product.name}</span>
       </div>
       <div className="p-4">
-        <p className="line-clamp-2 text-sm text-black/60">{product.shortDescription}</p>
-        <p className="mt-3 font-medium">
-          {promo ? <span className="mr-2 text-black/40 line-through">{formatCfa(product.variants[0].salePrice)}</span> : null}
+        <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
+        <p className="mt-1 line-clamp-2 text-sm text-black/50">{product.shortDescription}</p>
+        <p className="mt-3 text-sm font-medium text-wine">
+          {promo ? (
+            <span className="mr-2 text-black/30 line-through">{formatCfa(product.variants[0].salePrice)}</span>
+          ) : null}
           {formatCfa(price)}
         </p>
       </div>

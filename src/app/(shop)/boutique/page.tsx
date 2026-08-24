@@ -21,20 +21,35 @@ export default async function BoutiquePage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="font-serif text-5xl">Boutique</h1>
+      <p className="text-xs uppercase tracking-[0.28em] text-gold">Maison NERA</p>
+      <h1 className="mt-2 font-serif text-5xl text-wine">Boutique</h1>
+      <p className="mt-3 max-w-xl text-black/55">
+        Soins, mèches, parfums et mode — une sélection claire, à feuilleter sans se presser.
+      </p>
       <form className="mt-6">
         <input
           name="q"
           defaultValue={q}
           placeholder="Rechercher un produit"
-          className="w-full rounded-full border border-black/10 bg-cream px-5 py-3"
+          className="w-full rounded-full border border-[#eee0e6] bg-white px-5 py-3"
         />
       </form>
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-        {products.map((p) => (
-          <ProductCard key={p.id} product={p} />
-        ))}
-      </div>
+      {q ? (
+        <p className="mt-4 text-sm text-black/50">
+          {products.length} résultat{products.length > 1 ? "s" : ""} pour « {q} »
+        </p>
+      ) : null}
+      {products.length ? (
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-10 rounded-[1.7rem] border border-dashed border-[#eee0e6] bg-white/70 p-10 text-center text-black/50">
+          Aucun produit pour le moment{q ? " avec cette recherche" : ""}.
+        </p>
+      )}
     </div>
   );
 }

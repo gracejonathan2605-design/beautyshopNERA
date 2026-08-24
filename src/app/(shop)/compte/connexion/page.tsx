@@ -9,9 +9,10 @@ export default async function CustomerLoginPage({
   const { error } = await searchParams;
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <h1 className="font-serif text-5xl">Connexion</h1>
+      <p className="text-xs uppercase tracking-[0.28em] text-gold">Espace cliente</p>
+      <h1 className="mt-2 font-serif text-5xl text-wine">Connexion</h1>
       {error ? <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p> : null}
-      <form action={loginCustomer} className="mt-8 space-y-3">
+      <form action={loginCustomer} className="mt-8 space-y-3 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
         <input name="email" type="email" required placeholder="Email" className="w-full rounded-xl border px-4 py-3" />
         <input name="password" type="password" required placeholder="Mot de passe" className="w-full rounded-xl border px-4 py-3" />
         <button className="w-full rounded-full bg-brown py-3 text-cream">Se connecter</button>
