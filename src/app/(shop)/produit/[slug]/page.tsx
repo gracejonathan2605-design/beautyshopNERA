@@ -4,6 +4,8 @@ import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { addToCart } from "@/app/actions/shop";
 import { ProductGallery } from "@/components/shop/product-gallery";
+import { AddToCartButton } from "@/components/shop/add-to-cart-button";
+import { catalogPhotoFor } from "@/lib/product-photos";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -19,6 +21,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const variant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
   if (!variant) notFound();
 
+  const gallery = product.images.length
+    ? product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))
+    : [{ id: "catalog", url: catalogPhotoFor(product.slug, product.name), alt: product.name, kind: "IMAGE" as const }];
+
   async function add() {
     "use server";
     await addToCart(variant.id, 1);
@@ -26,10 +32,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-2">
-      <ProductGallery
-        name={product.name}
-        media={product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))}
-      />
+      <ProductGallery name={product.name} media={gallery} />
       <div>
         <p className="text-xs uppercase tracking-[0.28em] text-gold">{product.category?.name}</p>
         <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
@@ -42,9 +45,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </p>
           ))}
         </div>
-        <form action={add}>
-          <button className="mt-8 rounded-full bg-brown px-8 py-3 text-cream">Ajouter au panier</button>
-        </form>
+        <AddToCartButton action={add} />
       </div>
     </div>
   );
