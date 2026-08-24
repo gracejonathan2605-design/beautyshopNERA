@@ -3,14 +3,16 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput, readVideoDuration } from "@/components/admin/video-input";
+import { CategorySelect } from "@/components/admin/category-select";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
+import type { CategoryOptionGroup } from "@/lib/catalog";
 
 const INITIAL: ProductFormState = { ok: false };
 
 export function ProductForm({
-  categories,
+  categoryGroups,
 }: {
-  categories: { id: string; name: string }[];
+  categoryGroups: CategoryOptionGroup[];
 }) {
   const [state, action, pending] = useActionState(saveProduct, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
@@ -60,14 +62,7 @@ export function ProductForm({
         </p>
       ) : null}
       <input name="name" required placeholder="Nom du produit" className="rounded-xl border px-3 py-2 md:col-span-2" />
-      <select name="categoryId" required className="rounded-xl border px-3 py-2">
-        <option value="">Catégorie (obligatoire)</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+      <CategorySelect groups={categoryGroups} className="rounded-xl border px-3 py-2 md:col-span-2" />
       <input name="salePrice" inputMode="numeric" required placeholder="Prix vente (FCFA)" className="rounded-xl border px-3 py-2" />
       <input name="costPrice" inputMode="numeric" placeholder="Prix achat (FCFA)" className="rounded-xl border px-3 py-2" />
       <input name="stock" inputMode="numeric" placeholder="Stock initial" className="rounded-xl border px-3 py-2" />

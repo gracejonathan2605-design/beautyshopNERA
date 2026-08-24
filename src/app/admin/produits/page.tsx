@@ -4,6 +4,7 @@ import { ProductForm } from "@/components/admin/product-form";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
+import { groupCategoriesForSelect } from "@/lib/catalog";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -15,16 +16,19 @@ export default async function ProductsAdminPage() {
       include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.category.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.category.findMany({
+      where: { isActive: true, deletedAt: null },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
   ]);
   return (
     <div>
       <h1 className="font-serif text-4xl">Produits</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
-        Catégorie obligatoire. SKU automatique. Le produit apparaît tout de suite en boutique et à la caisse.
-        Jusqu’à 5 photos (compressées) et 1 vidéo de 40 s.
+        Choisissez le rayon ou la sous-catégorie, puis le nom et le prix. Le SKU est automatique.
+        Le produit apparaît tout de suite en boutique et à la caisse. Jusqu’à 5 photos et 1 vidéo de 40 s.
       </p>
-      <ProductForm categories={categories.map((c) => ({ id: c.id, name: c.name }))} />
+      <ProductForm categoryGroups={groupCategoriesForSelect(categories)} />
       <div className="mt-6 overflow-x-auto rounded-2xl bg-cream">
         <table className="w-full text-sm">
           <thead>

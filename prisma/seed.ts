@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { PERMISSION_CATALOG, ROLE_PRESETS } from "../src/lib/permissions";
 import { DEFAULT_SETTINGS } from "../src/lib/settings";
 import { slugify } from "../src/lib/pricing";
+import { syncNeraCatalog } from "../src/lib/catalog";
 
 const prisma = new PrismaClient();
 
@@ -175,29 +176,16 @@ async function main() {
       else await tx.deliveryZone.create({ data: zone });
     }
 
-    async function category(name: string, parentId?: string) {
-      const slug = slugify(name);
-      return tx.category.upsert({
-        where: { slug },
-        update: { name, parentId, isActive: true },
-        create: { name, slug, parentId, isActive: true },
-      });
-    }
-
-    const beaute = await category("Beauté");
-    const cheveux = await category("Cheveux");
-    const mode = await category("Mode");
-    await category("Visage", beaute.id);
-    const corps = await category("Corps", beaute.id);
-    const maquillage = await category("Maquillage", beaute.id);
-    const parfums = await category("Parfums", beaute.id);
-    const meches = await category("Mèches", cheveux.id);
-    const perruques = await category("Perruques", cheveux.id);
-    await category("Extensions", cheveux.id);
-    const sacs = await category("Sacs", mode.id);
-    const chaussures = await category("Chaussures", mode.id);
-    const bijoux = await category("Bijoux", mode.id);
-    const accessoires = await category("Accessoires", mode.id);
+    const catalog = await syncNeraCatalog(tx);
+    const meches = { id: catalog["meches-perruques-extensions-meches-bresiliennes"] };
+    const perruques = { id: catalog["meches-perruques-extensions-perruques"] };
+    const corps = { id: catalog["cosmetiques-soins-lait-corporel"] };
+    const parfums = { id: catalog["parfumerie-parfums-femme"] };
+    const sacs = { id: catalog["mode-sacs"] };
+    const chaussures = { id: catalog["mode-sandales"] };
+    const bijoux = { id: catalog["accessoires-bijoux-bijoux"] };
+    const accessoires = { id: catalog["accessoires-bijoux-ceintures-femme"] };
+    const maquillage = { id: catalog["maquillage-gloss"] };
 
     const brand = await tx.brand.upsert({
       where: { slug: "nera" },

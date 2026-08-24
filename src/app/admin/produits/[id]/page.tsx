@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
 import { deleteProductMedia } from "@/app/actions/admin";
 import { ProductEditForm } from "@/components/admin/product-edit-form";
+import { groupCategoriesForSelect } from "@/lib/catalog";
 import Image from "next/image";
 
 export default async function ProductEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +18,10 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
         category: true,
       },
     }),
-    prisma.category.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.category.findMany({
+      where: { isActive: true, deletedAt: null },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
   ]);
   if (!product || product.deletedAt) notFound();
   const variant = product.variants[0];
@@ -38,7 +42,7 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
         isFeatured={product.isFeatured}
         photoCount={photos.length}
         hasVideo={Boolean(video)}
-        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        categoryGroups={groupCategoriesForSelect(categories)}
       />
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         {product.images.map((m) => (

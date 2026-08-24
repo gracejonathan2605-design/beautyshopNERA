@@ -29,6 +29,23 @@ export async function saveCategory(formData: FormData) {
   });
   await writeAudit({ userId: session.userId, action: "CATEGORY_CREATE", entity: "Category", after: { name } });
   revalidatePath("/admin/categories");
+  revalidatePath("/");
+}
+
+export async function installNeraCatalog() {
+  const session = await requireStaff("categories.create");
+  const { syncNeraCatalog } = await import("@/lib/catalog");
+  const ids = await syncNeraCatalog(prisma);
+  await writeAudit({
+    userId: session.userId,
+    action: "CATALOG_SYNC",
+    entity: "Category",
+    after: { count: Object.keys(ids).length },
+  });
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/produits");
+  revalidatePath("/");
+  revalidatePath("/boutique");
 }
 
 export type ProductFormState = {

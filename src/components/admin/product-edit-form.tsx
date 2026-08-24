@@ -3,7 +3,9 @@
 import { useActionState, useState } from "react";
 import { updateProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput, readVideoDuration } from "@/components/admin/video-input";
+import { CategorySelect } from "@/components/admin/category-select";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
+import type { CategoryOptionGroup } from "@/lib/catalog";
 
 const INITIAL: ProductFormState = { ok: false };
 
@@ -17,7 +19,7 @@ export function ProductEditForm({
   isFeatured,
   photoCount,
   hasVideo,
-  categories,
+  categoryGroups,
 }: {
   productId: string;
   name: string;
@@ -28,7 +30,7 @@ export function ProductEditForm({
   isFeatured: boolean;
   photoCount: number;
   hasVideo: boolean;
-  categories: { id: string; name: string }[];
+  categoryGroups: CategoryOptionGroup[];
 }) {
   const [state, action, pending] = useActionState(updateProduct, INITIAL);
   const [clientError, setClientError] = useState("");
@@ -74,14 +76,7 @@ export function ProductEditForm({
       ) : null}
       <input type="hidden" name="productId" value={productId} />
       <input name="name" required defaultValue={name} className="rounded-xl border px-3 py-2" />
-      <select name="categoryId" required defaultValue={categoryId} className="rounded-xl border px-3 py-2">
-        <option value="">Catégorie (obligatoire)</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+      <CategorySelect groups={categoryGroups} defaultValue={categoryId} />
       <input name="salePrice" required defaultValue={salePrice} className="rounded-xl border px-3 py-2" />
       <input name="costPrice" defaultValue={costPrice} className="rounded-xl border px-3 py-2" />
       <input

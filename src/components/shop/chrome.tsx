@@ -16,7 +16,7 @@ export async function ShopHeader() {
       prisma.category.findMany({
         where: { isActive: true, parentId: null, deletedAt: null },
         orderBy: { sortOrder: "asc" },
-        take: 8,
+        take: 12,
         select: { id: true, name: true, slug: true },
       }),
     ]);
