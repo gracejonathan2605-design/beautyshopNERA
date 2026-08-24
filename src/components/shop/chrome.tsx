@@ -72,7 +72,12 @@ export async function ShopFooter() {
           <p>{settings.city}, {settings.country}</p>
           <p>{settings.phone}</p>
         </div>
-        <p className="text-sm opacity-70">{settings.terms}</p>
+        <div className="text-sm opacity-80">
+          <p>{settings.terms}</p>
+          <Link href="/login" className="mt-4 inline-block underline">
+            Espace équipe
+          </Link>
+        </div>
       </div>
     </footer>
   );

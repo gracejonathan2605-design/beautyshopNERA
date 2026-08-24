@@ -155,11 +155,23 @@ export const ROLE_PRESETS: Record<string, PermissionCode[]> = {
   ],
 };
 
+export type StaffAuthz = {
+  isSuperAdmin?: boolean;
+  permissions: string[];
+};
+
 export function hasPermission(
-  session: { isSuperAdmin: boolean; permissions: string[] } | null | undefined,
+  session: StaffAuthz | null | undefined,
   code: PermissionCode,
 ) {
   if (!session) return false;
   if (session.isSuperAdmin) return true;
   return session.permissions.includes(code);
+}
+
+export function defaultStaffPath(session: StaffAuthz) {
+  if (hasPermission(session, "dashboard.view")) return "/admin";
+  if (hasPermission(session, "pos.access")) return "/pos";
+  if (hasPermission(session, "stock.view")) return "/admin/stocks";
+  return "/admin";
 }

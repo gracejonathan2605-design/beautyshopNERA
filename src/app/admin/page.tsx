@@ -1,9 +1,14 @@
+import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/guard";
+import { defaultStaffPath, hasPermission } from "@/lib/permissions";
 import { getDashboardMetrics, rangeFromPreset } from "@/services/reports.service";
 import { formatCfa } from "@/lib/money";
 
 export default async function AdminHomePage() {
-  await requireStaff("dashboard.view");
+  const session = await requireStaff();
+  if (!hasPermission(session, "dashboard.view")) {
+    redirect(defaultStaffPath(session));
+  }
   const m = await getDashboardMetrics(rangeFromPreset("today"));
   const cards = [
     ["CA du jour", formatCfa(m.revenue)],
