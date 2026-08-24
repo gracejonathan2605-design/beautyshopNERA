@@ -20,10 +20,6 @@ export default async function CustomerLoginPage({
         <Link href="/compte/inscription" className="underline">
           Créer un compte cliente
         </Link>
-        {" · "}
-        <Link href="/login" className="underline">
-          Espace équipe
-        </Link>
       </p>
     </div>
   );

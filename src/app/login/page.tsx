@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { loginStaff } from "@/app/actions/auth";
+import { getStaffSession } from "@/lib/auth";
+import { defaultStaffPath } from "@/lib/permissions";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+  title: "Connexion équipe — NERA",
+};
 
 export default async function LoginPage({
   searchParams,
@@ -7,13 +16,19 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; next?: string; hint?: string }>;
 }) {
   const { error, next, hint } = await searchParams;
+  const existing = await getStaffSession().catch(() => null);
+  if (existing) {
+    const requested = next?.startsWith("/") ? next : defaultStaffPath(existing);
+    redirect(requested);
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <form action={loginStaff} className="w-full max-w-md rounded-3xl bg-cream p-8 shadow-sm">
         <p className="font-serif text-4xl text-brown">NERA</p>
         <h1 className="mt-2 text-lg">Connexion équipe</h1>
         <p className="mt-2 text-sm text-black/50">
-          Espace administration et caisse. Les clientes utilisent Compte dans la boutique.
+          Réservé à la vendeuse et à l’administratrice. Les clientes se connectent via Compte.
         </p>
         {hint === "staff" ? (
           <p className="mt-3 text-sm text-brown">
@@ -26,9 +41,7 @@ export default async function LoginPage({
         <input name="password" type="password" required placeholder="Mot de passe" className="mt-3 w-full rounded-xl border px-4 py-3" />
         <button className="mt-6 w-full rounded-full bg-brown py-3 text-cream">Entrer</button>
         <p className="mt-6 text-center text-sm text-black/50">
-          <Link href="/compte/connexion" className="underline">Compte cliente</Link>
-          {" · "}
-          <Link href="/" className="underline">Boutique</Link>
+          <Link href="/" className="underline">Retour à la boutique</Link>
         </p>
       </form>
     </div>
