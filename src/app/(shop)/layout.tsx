@@ -1,6 +1,10 @@
+import type { ReactNode } from "react";
 import { ShopFooter, ShopHeader } from "@/components/shop/chrome";
 
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export default function ShopLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <ShopHeader />

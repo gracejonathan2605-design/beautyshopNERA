@@ -4,8 +4,27 @@ import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
 import { productCardInclude } from "@/lib/product-query";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export default async function HomePage() {
-  const settings = await getShopSettings();
+  let settings;
+  try {
+    settings = await getShopSettings();
+  } catch {
+    return (
+      <section className="bg-linear-to-r from-[#5c4033] to-[#c4a574] px-4 py-24 text-cream">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-sm uppercase tracking-[0.3em]">Yaoundé · Cameroun</p>
+          <h1 className="mt-4 font-serif text-6xl">NERA Beauté & Shop</h1>
+          <p className="mt-4 max-w-xl text-lg opacity-90">
+            La boutique est en ligne, mais la base n’est pas encore reliée à Vercel. Ajoutez
+            DATABASE_URL et DIRECT_URL (pooler session Supabase) dans Project → Settings → Environment Variables, puis redéployez.
+          </p>
+        </div>
+      </section>
+    );
+  }
   const [featured, news, promos, categories] = await Promise.all([
     prisma.product.findMany({
       where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },

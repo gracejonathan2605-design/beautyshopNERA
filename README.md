@@ -37,6 +37,26 @@ npm run supabase:setup
 
 Crée/met à jour `product-images` et supprime le bucket de sonde. L’admin produits envoie les images via le service_role (serveur uniquement).
 
+## Vercel (page vide / Ready mais rien)
+
+Le SQL Supabase est bon. Si Vercel affiche **Ready** mais le site est blanc ou 404 :
+
+1. **Protection des déploiements** : Settings → Deployment Protection → désactiver *Vercel Authentication* (Preview **et** Production). Sinon le visiteur est renvoyé vers un login Vercel.
+2. **Domaine de production** : Settings → Domains → assigner `beautyshop-nera.vercel.app` au dernier déploiement Production. Aujourd’hui cette URL répond `NOT_FOUND`.
+3. **Variables d’environnement** (Production + Preview) puis Redeploy :
+
+```
+DATABASE_URL   postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-1-eu-west-3.pooler.supabase.com:5432/postgres?sslmode=require
+DIRECT_URL     (identique à DATABASE_URL)
+AUTH_SECRET    une longue chaîne aléatoire
+APP_URL        https://<votre-domaine>.vercel.app
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Contrôle : `https://<domaine>/api/health` doit renvoyer `"ok": true`.
+
 ## Démarrage local
 
 ```bash
