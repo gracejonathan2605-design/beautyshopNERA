@@ -16,9 +16,11 @@ export default async function CustomerLoginPage({
         <input name="password" type="password" required placeholder="Mot de passe" className="w-full rounded-xl border px-4 py-3" />
         <button className="w-full rounded-full bg-brown py-3 text-cream">Se connecter</button>
       </form>
-      <Link href="/compte/inscription" className="mt-4 inline-block text-sm">
-        Créer un compte
-      </Link>
+      <p className="mt-6 text-sm text-black/60">
+        <Link href="/compte/inscription" className="underline">
+          Créer un compte cliente
+        </Link>
+      </p>
     </div>
   );
 }

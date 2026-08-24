@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getShopSettings } from "@/lib/settings";
 import { getCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
+import { StaffToolbar } from "@/components/staff/toolbar";
 
 export async function ShopHeader() {
   let settings = (await getShopSettings().catch(() => null)) ?? {
@@ -27,6 +28,7 @@ export async function ShopHeader() {
 
   return (
     <header className="border-b border-black/10 bg-cream/80 backdrop-blur">
+      <StaffToolbar />
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <Link href="/" className="font-serif text-3xl tracking-wide text-brown">
           {settings.name}

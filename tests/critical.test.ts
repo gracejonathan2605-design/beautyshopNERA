@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { prisma } from "../src/lib/prisma";
 import { applyStockChange, availableQty } from "../src/services/inventory.service";
 import { createPosSale } from "../src/services/sale.service";
-import { hasPermission } from "../src/lib/permissions";
+import { hasPermission, defaultStaffPath } from "../src/lib/permissions";
 
 describe("stock", () => {
   it("diminue le stock après une vente POS", async () => {
@@ -58,6 +58,7 @@ describe("permissions", () => {
     expect(hasPermission(session, "pos.access")).toBe(true);
     expect(hasPermission(session, "settings.update")).toBe(false);
     expect(hasPermission(session, "users.create")).toBe(false);
+    expect(defaultStaffPath(session)).toBe("/pos");
   });
 
   it("le super admin a tout", async () => {
@@ -66,5 +67,6 @@ describe("permissions", () => {
       include: { role: true },
     });
     expect(hasPermission({ isSuperAdmin: admin.role.isSuperAdmin, permissions: [] }, "users.delete")).toBe(true);
+    expect(defaultStaffPath({ isSuperAdmin: true, permissions: [] })).toBe("/admin");
   });
 });

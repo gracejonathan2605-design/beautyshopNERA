@@ -12,19 +12,36 @@ import {
 } from "@/lib/auth";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
+import { defaultStaffPath } from "@/lib/permissions";
 
 export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin");
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { role: { include: { permissions: { include: { permission: true } } } } },
+  });
   if (!user || !user.isActive || user.deletedAt) {
     redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
   }
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
-  await createStaffSession(user.id);
-  redirect(next.startsWith("/") ? next : "/admin");
+  try {
+    await createStaffSession(user.id);
+  } catch {
+    redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
+  }
+  const sessionLike = {
+    isSuperAdmin: user.role.isSuperAdmin,
+    permissions: user.role.permissions.map((p) => p.permission.code),
+  };
+  const requested = next.startsWith("/") ? next : "/admin";
+  const dest =
+    requested === "/admin" || requested === "/admin/"
+      ? defaultStaffPath(sessionLike)
+      : requested;
+  redirect(dest);
 }
 
 export async function logoutStaff() {
@@ -37,6 +54,11 @@ export async function loginCustomer(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const customer = await prisma.customer.findUnique({ where: { email } });
   if (!customer?.passwordHash || !customer.isActive) {
+    const staff = await prisma.user.findFirst({
+      where: { email, isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+    if (staff) redirect("/login?hint=staff");
     redirect("/compte/connexion?error=1");
   }
   const ok = await verifyPassword(password, customer.passwordHash);
