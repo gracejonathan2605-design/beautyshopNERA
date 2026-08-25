@@ -6,22 +6,36 @@ Système unique (boutique en ligne + POS + administration) pour **NERA Beauté &
 
 Next.js 16 · TypeScript · Tailwind CSS · PostgreSQL (Supabase) · Prisma · Auth JWT httpOnly · Storage Supabase · Zod
 
+## Secrets
+
+Ne commitez **jamais** :
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- mot de passe Postgres
+- emails / mots de passe du personnel
+
+Collez-les uniquement dans `.env` (ignoré par git) et dans les variables d’environnement Vercel.
+
+Les comptes locaux se créent avec `npx prisma db seed` à partir des variables `SEED_*` de `.env` (voir `.env.example`). Aucun mot de passe réel ne figure dans ce README.
+
 ## Supabase
 
-Le projet est branché sur `https://lqlfciaelhmaozxwunun.supabase.co` :
+- **Postgres** : Prisma via le pooler **session** (port 5432 — les ventes/stock ont besoin de transactions interactives)
+- **Storage** : bucket public `product-images` (photos catalogue, compressées en WebP à l’envoi)
+- **Auth GoTrue** : non utilisé pour le staff (JWT httpOnly). Les clés anon / service_role servent à Storage.
 
-- **Postgres** : Prisma via le pooler session `aws-1-eu-west-3` (port 5432 — les ventes/stock ont besoin de transactions interactives)
-- **Storage** : bucket public `product-images` (photos catalogue)
-- **Auth GoTrue** : non utilisé pour le staff (JWT httpOnly existant). Les clés anon / service_role servent à Storage.
+URI type (valeurs dans `.env`, jamais ici) :
 
-Les secrets (`SUPABASE_SERVICE_ROLE_KEY`, mot de passe Postgres) ne vont **jamais** dans git. Collez-les dans `.env` et dans Vercel.
+```
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[DB_PASSWORD]@aws-1-[REGION].pooler.supabase.com:5432/postgres?sslmode=require"
+DIRECT_URL="$DATABASE_URL"
+```
 
-Schéma, seed et RLS sont **déjà appliqués** sur ce projet. Pour une machine neuve :
+Schéma, seed et RLS se préparent ainsi sur une machine neuve :
 
 ```bash
-# Session pooler (IPv4) — même URI pour DATABASE_URL et DIRECT_URL
-DATABASE_URL="postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-1-eu-west-3.pooler.supabase.com:5432/postgres?sslmode=require"
-DIRECT_URL="$DATABASE_URL"
+cp .env.example .env
+# remplir DATABASE_URL, DIRECT_URL, AUTH_SECRET, clés Supabase, SEED_*
 
 npx prisma migrate deploy
 npx prisma db seed
@@ -35,25 +49,15 @@ npm run supabase:setup
 npm run supabase:setup
 ```
 
-Crée/met à jour `product-images` et supprime le bucket de sonde. L’admin produits envoie les images via le service_role (serveur uniquement).
+Crée/met à jour `product-images`. L’admin produits envoie les images via le service_role (serveur uniquement). Les photos sont **compressées automatiquement** (WebP, max 1400 px) sur l’appareil puis de nouveau sur le serveur, pour rester légères en boutique.
 
-## Vercel (page vide / Ready mais rien)
+## Vercel
 
-Le SQL Supabase est bon. Si Vercel affiche **Ready** mais le site est blanc ou 404 :
+Le SQL Supabase est géré par `prisma migrate deploy` au build. Si Vercel affiche **Ready** mais le site est blanc ou 404 :
 
-1. **Protection des déploiements** : Settings → Deployment Protection → désactiver *Vercel Authentication* (Preview **et** Production). Sinon le visiteur est renvoyé vers un login Vercel.
-2. **Domaine de production** : Settings → Domains → assigner `beautyshop-nera.vercel.app` au dernier déploiement Production. Aujourd’hui cette URL répond `NOT_FOUND`.
-3. **Variables d’environnement** (Production + Preview) puis Redeploy :
-
-```
-DATABASE_URL   postgresql://postgres.lqlfciaelhmaozxwunun:[DB_PASSWORD]@aws-1-eu-west-3.pooler.supabase.com:5432/postgres?sslmode=require
-DIRECT_URL     (identique à DATABASE_URL)
-AUTH_SECRET    une longue chaîne aléatoire
-APP_URL        https://<votre-domaine>.vercel.app
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-```
+1. **Protection des déploiements** : Settings → Deployment Protection → désactiver *Vercel Authentication* (Preview **et** Production) si la boutique doit être publique.
+2. **Domaine de production** : Settings → Domains → assigner le domaine au dernier déploiement Production.
+3. **Variables d’environnement** (Production + Preview) puis Redeploy : `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 Contrôle : `https://<domaine>/api/health` doit renvoyer `"ok": true`.
 
@@ -61,22 +65,13 @@ Contrôle : `https://<domaine>/api/health` doit renvoyer `"ok": true`.
 
 ```bash
 cp .env.example .env
-# Ajuster DATABASE_URL si besoin
+# Ajuster DATABASE_URL et les SEED_*
 npx prisma migrate dev
 npx prisma db seed
 npm run dev
 ```
 
 PostgreSQL 16 doit écouter sur `127.0.0.1:5432` (utilisateur `nera` / base `nera_beaute`).
-
-## Comptes de démonstration (dev uniquement)
-
-| Rôle | Email | Mot de passe |
-|---|---|---|
-| Super admin | `raisaodin1@gmail.com` | `NeraAdmin2026!` |
-| Caisse | `caisse@nerabeaute.cm` | `Caisse2026!` |
-| Stock | `stock@nerabeaute.cm` | `Stock2026!` |
-| Cliente | `marie.client@example.com` | `Client2026!` |
 
 ## Surfaces
 

@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { updateProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput } from "@/components/admin/video-input";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
+import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
 import type { CategoryOptionGroup } from "@/lib/catalog";
 
 const INITIAL: ProductFormState = { ok: false };
+const updateProductSafe = wrapProductAction(updateProduct);
 
 export function ProductEditForm({
   productId,
@@ -51,7 +53,8 @@ export function ProductEditForm({
   brands?: { id: string; name: string }[];
   suppliers?: { id: string; name: string }[];
 }) {
-  const [state, action, pending] = useActionState(updateProduct, INITIAL);
+  const [state, action, pending] = useActionState(updateProductSafe, INITIAL);
+  const [, startTransition] = useTransition();
   const [clientError, setClientError] = useState("");
   const [saving, setSaving] = useState(false);
   const remainingPhotos = MAX_PRODUCT_PHOTOS - photoCount;
@@ -67,7 +70,8 @@ export function ProductEditForm({
       action={action}
       noValidate
       className="relative mt-6 grid gap-3 rounded-2xl bg-cream p-5 md:grid-cols-2"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
+        event.preventDefault();
         setClientError("");
         const form = event.currentTarget;
         const nextName = String(new FormData(form).get("name") ?? "").trim();
@@ -75,32 +79,37 @@ export function ProductEditForm({
         const nextPrice = String(new FormData(form).get("salePrice") ?? "").trim();
         const photos = (form.elements.namedItem("photos") as HTMLInputElement | null)?.files;
         if (!nextName) {
-          event.preventDefault();
           setClientError("Indiquez le nom du produit.");
           return;
         }
         if (!nextCategory) {
-          event.preventDefault();
           setClientError("Choisissez une catégorie.");
           return;
         }
         if (!nextPrice) {
-          event.preventDefault();
           setClientError("Indiquez un prix de vente en FCFA.");
           return;
         }
         if (photos && photos.length > remainingPhotos) {
-          event.preventDefault();
           setClientError(`Maximum ${MAX_PRODUCT_PHOTOS} photos. Il reste ${remainingPhotos} emplacement(s).`);
           return;
         }
         setSaving(true);
+        try {
+          const fd = await prepareProductFormData(form);
+          startTransition(() => {
+            action(fd);
+          });
+        } catch (err) {
+          setSaving(false);
+          setClientError(err instanceof Error ? err.message : "Le fichier n’a pas pu être envoyé.");
+        }
       }}
     >
       <FormBusyOverlay
         active={busy}
         title="Enregistrement en cours"
-        detail="Mise à jour du produit, compression des nouvelles photos si besoin. Visible ensuite en boutique et à la caisse."
+        detail="Compression des nouvelles photos sur votre appareil, puis enregistrement. Visible ensuite en boutique et à la caisse."
       />
       {message ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 md:col-span-2">{message}</p>
@@ -162,13 +171,20 @@ export function ProductEditForm({
       {remainingPhotos > 0 ? (
         <label className="text-sm md:col-span-2">
           Ajouter des photos ({photoCount}/{MAX_PRODUCT_PHOTOS})
-          <input name="photos" type="file" accept="image/*" multiple className="mt-1 w-full rounded-xl border px-3 py-2" />
+          <input
+            name="photos"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+          />
         </label>
       ) : null}
-      {!hasVideo ? <VideoInput label="Ajouter une vidéo (40 s max)" /> : null}
+      {!hasVideo ? <VideoInput label={`Ajouter une vidéo (40 s / 3,5 Mo max)`} /> : null}
       <PendingSubmitButton
         idle="Enregistrer"
         pendingLabel="Enregistrement…"
+        pending={busy}
         className="rounded-full bg-brown py-3 text-cream disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
       />
     </form>

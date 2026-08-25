@@ -24,7 +24,7 @@ export async function uploadProductImage(file: File, productId: string, index = 
 
 export async function uploadProductVideo(file: File, productId: string) {
   if (!file.size) throw new Error("Fichier vidéo vide");
-  if (file.size > VIDEO_MAX_BYTES) throw new Error("Vidéo trop lourde (max 28 Mo / 40 s)");
+  if (file.size > VIDEO_MAX_BYTES) throw new Error("Vidéo trop lourde (max 3,5 Mo / 40 s)");
   if (file.type && !VIDEO_TYPES.has(file.type)) {
     throw new Error("Format vidéo non supporté (mp4 ou webm)");
   }

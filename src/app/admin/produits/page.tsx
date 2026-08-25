@@ -31,7 +31,7 @@ export default async function ProductsAdminPage() {
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Remplissez le nom, le rayon et le prix, puis cliquez sur <strong>Publier le produit</strong>.
         Un écran « Publication en cours » s’affiche pendant la compression des photos. Le SKU est automatique.
-        Le produit apparaît ensuite en boutique et à la caisse. Jusqu’à 5 photos et 1 vidéo de 40 s.
+        Le produit apparaît ensuite en boutique et à la caisse. Jusqu’à 5 photos, compressées automatiquement (légères en boutique), et 1 vidéo de 40 s / 3,5 Mo.
       </p>
       <ProductForm
         categoryGroups={groupCategoriesForSelect(categories)}
