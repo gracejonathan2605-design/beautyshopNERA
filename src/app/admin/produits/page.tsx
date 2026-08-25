@@ -10,7 +10,7 @@ import Link from "next/link";
 
 export default async function ProductsAdminPage() {
   await requireStaff("products.view");
-  const [products, categories] = await Promise.all([
+  const [products, categories, brands, suppliers] = await Promise.all([
     prisma.product.findMany({
       where: { deletedAt: null },
       include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
@@ -21,6 +21,8 @@ export default async function ProductsAdminPage() {
       where: { isActive: true, deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
+    prisma.brand.findMany({ where: { deletedAt: null, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.supplier.findMany({ where: { deletedAt: null, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   return (
     <div>
@@ -30,7 +32,11 @@ export default async function ProductsAdminPage() {
         Un écran « Publication en cours » s’affiche pendant la compression des photos. Le SKU est automatique.
         Le produit apparaît ensuite en boutique et à la caisse. Jusqu’à 5 photos et 1 vidéo de 40 s.
       </p>
-      <ProductForm categoryGroups={groupCategoriesForSelect(categories)} />
+      <ProductForm
+        categoryGroups={groupCategoriesForSelect(categories)}
+        brands={brands}
+        suppliers={suppliers}
+      />
       <div className="mt-6 overflow-x-auto rounded-2xl bg-cream">
         <table className="w-full text-sm">
           <thead>
@@ -52,9 +58,12 @@ export default async function ProductsAdminPage() {
                         <Image src={p.images[0].url} alt="" fill className="object-cover" sizes="40px" loading="lazy" />
                       </span>
                     ) : null}
-                    <Link href={`/produit/${p.slug}`} className="underline">
+                    <Link href={`/admin/produits/${p.id}`} className="underline">
                       {p.name}
                     </Link>
+                    <span className="ml-2 text-xs text-black/40">
+                      {p.onlineVisible ? "en ligne" : "dépublié"}
+                    </span>
                   </div>
                 </td>
                 <td>{p.variants[0]?.sku}</td>
@@ -66,6 +75,7 @@ export default async function ProductsAdminPage() {
                     name={p.name}
                     variantId={p.variants[0]?.id ?? null}
                     salePrice={p.variants[0]?.salePrice ?? 0}
+                    published={p.onlineVisible}
                   />
                 </td>
               </tr>

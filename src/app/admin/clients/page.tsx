@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/guard";
 import { formatCfa } from "@/lib/money";
 import { saveCustomer } from "@/app/actions/admin";
 import { hasPermission } from "@/lib/permissions";
+import Link from "next/link";
 
 export default async function CustomersAdminPage({
   searchParams,
@@ -67,7 +68,9 @@ export default async function CustomersAdminPage({
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-cream p-4">
               <div>
                 <p className="font-medium">
-                  {c.firstName} {c.lastName}
+                  <Link href={`/admin/clients/${c.id}`} className="underline">
+                    {c.firstName} {c.lastName}
+                  </Link>
                 </p>
                 <p className="text-sm text-black/50">
                   {c.code}

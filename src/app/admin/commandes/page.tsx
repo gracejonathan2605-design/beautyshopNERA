@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
 import { changeOrderStatus, collectOrderPayment } from "@/app/actions/admin";
@@ -63,7 +64,11 @@ export default async function OrdersAdminPage() {
               <article key={o.id} className="rounded-2xl bg-cream p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium">{o.number}</p>
+                    <p className="font-medium">
+                      <Link href={`/admin/commandes/${o.id}`} className="underline">
+                        {o.number}
+                      </Link>
+                    </p>
                     <p className="text-sm text-black/50">
                       {formatWhen(o.createdAt)} · {customer}
                       {phone ? ` · ${phone}` : ""} · {formatCfa(o.total)}

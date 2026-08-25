@@ -257,14 +257,46 @@ export async function saveProduct(
       return { ok: false, error: "Choisissez une catégorie. Sans catégorie, le produit n’apparaît pas dans la boutique." };
     }
 
-    const salePrice = parseMoney(formData.get("salePrice"));
+    const salePrice = parseMoney(formData.get("variantSalePrice") ?? formData.get("salePrice"));
     if (salePrice <= 0) return { ok: false, error: "Indiquez un prix de vente (FCFA)." };
 
-    const costPrice = parseMoney(formData.get("costPrice"));
-    const promoPrice = parsePromoPrice(formData.get("promoPrice"), salePrice);
-    const isPromo = formData.get("isPromo") === "on" || promoPrice != null;
+    const names = formData.getAll("variantName").map((v) => String(v).trim());
+    const salePrices = formData.getAll("variantSalePrice");
+    const promoPrices = formData.getAll("variantPromoPrice");
+    const costPrices = formData.getAll("variantCostPrice");
+    const barcodes = formData.getAll("variantBarcode");
+    const stocks = formData.getAll("variantStock");
+    const variantInputs =
+      names.length > 0
+        ? names.map((variantName, index) => {
+            const price = parseMoney(salePrices[index] ?? null);
+            return {
+              name: variantName || (index === 0 ? "Standard" : `Variante ${index + 1}`),
+              salePrice: price,
+              promoPrice: parsePromoPrice(promoPrices[index] ?? null, price),
+              costPrice: parseMoney(costPrices[index] ?? null),
+              barcode: String(barcodes[index] ?? "").trim() || null,
+              stock: Math.max(0, parseMoney(stocks[index] ?? null)),
+            };
+          }).filter((row) => row.salePrice > 0)
+        : [
+            {
+              name: "Standard",
+              salePrice,
+              promoPrice: parsePromoPrice(formData.get("promoPrice"), salePrice),
+              costPrice: parseMoney(formData.get("costPrice")),
+              barcode: String(formData.get("barcode") ?? "").trim() || null,
+              stock: Math.max(0, parseMoney(formData.get("stock"))),
+            },
+          ];
+    if (!variantInputs.length) return { ok: false, error: "Indiquez au moins une variante avec un prix." };
+
+    const promoPrice = variantInputs[0].promoPrice;
+    const isPromo = formData.get("isPromo") === "on" || variantInputs.some((v) => v.promoPrice != null);
     const isNew = formData.get("isNew") === "on";
-    const stock = Math.max(0, parseMoney(formData.get("stock")));
+    const onlineVisible = formData.get("onlineVisible") === "on";
+    const brandId = String(formData.get("brandId") ?? "").trim() || null;
+    const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
     const sku = await uniqueSku(name);
 
     const locationId = (await prisma.location.findFirst({ where: { isDefault: true } }))?.id;
@@ -279,31 +311,46 @@ export async function saveProduct(
         sku,
         status: "ACTIVE",
         categoryId,
+        brandId,
+        supplierId,
         isFeatured: formData.get("isFeatured") === "on",
         isNew,
         isPromo,
-        onlineVisible: true,
+        onlineVisible,
         variants: {
-          create: {
-            name: "Standard",
-            sku,
-            costPrice,
-            salePrice,
-            promoPrice,
-            isDefault: true,
-          },
+          create: await (async () => {
+            const rows = [];
+            for (let index = 0; index < variantInputs.length; index++) {
+              const row = variantInputs[index];
+              rows.push({
+                name: row.name,
+                sku: index === 0 ? sku : await uniqueSku(`${name} ${row.name}`),
+                costPrice: row.costPrice,
+                salePrice: row.salePrice,
+                promoPrice: row.promoPrice,
+                barcode: row.barcode,
+                isDefault: index === 0,
+              });
+            }
+            return rows;
+          })(),
         },
       },
       include: { variants: true, category: true },
     });
 
     const warning = await attachMedia(product.id, name, formData);
-
-    if (stock) {
+    const createdVariants = [...product.variants].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+    for (const [index, row] of variantInputs.entries()) {
+      if (!row.stock) continue;
+      const variant = createdVariants[index];
+      if (!variant) continue;
       await receivePurchase({
-        variantId: product.variants[0].id,
+        variantId: variant.id,
         locationId,
-        quantity: stock,
+        quantity: row.stock,
         userId: session.userId,
         comment: "Stock initial",
       });
@@ -321,8 +368,8 @@ export async function saveProduct(
       ok: true,
       name,
       warning: warning
-        ? `${name} est en boutique et à la caisse (SKU ${sku}). ${warning}`
-        : `${name} est en boutique et à la caisse. SKU : ${sku}`,
+        ? `${name} est ${onlineVisible ? "en boutique et à la caisse" : "enregistré (non publié en boutique)"} (SKU ${sku}). ${warning}`
+        : `${name} est ${onlineVisible ? "en boutique et à la caisse" : "enregistré (non publié en boutique)"}. SKU : ${sku}`,
     };
   } catch (err) {
     unstable_rethrow(err);
@@ -380,6 +427,10 @@ export async function updateProduct(
     const salePrice = parseMoney(formData.get("salePrice"));
     const promoPrice = parsePromoPrice(formData.get("promoPrice"), salePrice);
     const isPromo = formData.get("isPromo") === "on" || promoPrice != null;
+    const barcode = String(formData.get("barcode") ?? "").trim() || null;
+    const onlineVisible = formData.get("onlineVisible") === "on";
+    const brandId = String(formData.get("brandId") ?? "").trim() || null;
+    const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
     if (!productId || !name) return { ok: false, error: "Nom requis" };
     if (!categoryId) return { ok: false, error: "Catégorie obligatoire" };
     if (salePrice <= 0) return { ok: false, error: "Prix invalide" };
@@ -410,6 +461,10 @@ export async function updateProduct(
         isFeatured: formData.get("isFeatured") === "on",
         isPromo,
         isNew: formData.get("isNew") === "on",
+        onlineVisible,
+        status: current.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
+        brandId,
+        supplierId,
       },
     });
     const variant = current.variants[0];
@@ -420,6 +475,7 @@ export async function updateProduct(
           salePrice,
           promoPrice,
           costPrice: parseMoney(formData.get("costPrice")) || variant.costPrice,
+          barcode,
         },
       });
     }
@@ -480,7 +536,9 @@ export async function changeOrderStatus(formData: FormData) {
   }
   await updateOrderStatus({ orderId, status, userId: session.userId });
   revalidatePath("/admin/commandes");
+  revalidatePath(`/admin/commandes/${orderId}`);
   revalidatePath("/admin/stocks");
+  revalidatePath("/admin/alertes");
 }
 
 export async function collectOrderPayment(formData: FormData) {
@@ -505,6 +563,8 @@ export async function collectOrderPayment(formData: FormData) {
     await updateOrderStatus({ orderId, status: "CONFIRMED", userId: session.userId });
   }
   revalidatePath("/admin/commandes");
+  revalidatePath(`/admin/commandes/${orderId}`);
+  revalidatePath("/admin/alertes");
 }
 
 function bounceClients(kind: "ok" | "erreur", message: string): never {
