@@ -14,6 +14,7 @@ import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
 import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
 import { categoryDeleteBlocker } from "@/lib/categories";
+import { createCustomerRecord } from "@/services/customer.service";
 
 function refreshCategories() {
   revalidatePath("/admin/categories");
@@ -469,6 +470,38 @@ export async function collectOrderPayment(formData: FormData) {
     await updateOrderStatus({ orderId, status: "CONFIRMED", userId: session.userId });
   }
   revalidatePath("/admin/commandes");
+}
+
+function bounceClients(kind: "ok" | "erreur", message: string): never {
+  const q = new URLSearchParams();
+  q.set(kind, message);
+  redirect(`/admin/clients?${q.toString()}`);
+}
+
+export async function saveCustomer(formData: FormData) {
+  try {
+    const session = await requireStaff("customers.create");
+    const customer = await createCustomerRecord({
+      firstName: String(formData.get("firstName") ?? ""),
+      lastName: String(formData.get("lastName") ?? ""),
+      phone: String(formData.get("phone") ?? "") || null,
+      email: String(formData.get("email") ?? "") || null,
+      city: String(formData.get("city") ?? "") || null,
+      address: String(formData.get("address") ?? "") || null,
+    });
+    await writeAudit({
+      userId: session.userId,
+      action: "CUSTOMER_CREATE",
+      entity: "Customer",
+      entityId: customer.id,
+      after: { code: customer.code, name: `${customer.firstName} ${customer.lastName}` },
+    });
+    revalidatePath("/admin/clients");
+    bounceClients("ok", `${customer.firstName} ${customer.lastName} enregistrée (${customer.code}).`);
+  } catch (err) {
+    unstable_rethrow(err);
+    bounceClients("erreur", err instanceof Error ? err.message : "Création impossible.");
+  }
 }
 
 export async function saveExpense(formData: FormData) {

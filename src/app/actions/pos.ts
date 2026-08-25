@@ -6,6 +6,7 @@ import { PaymentMethod } from "@prisma/client";
 import { requireStaff } from "@/lib/guard";
 import { createPosSale } from "@/services/sale.service";
 import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser, recordTillExpense } from "@/services/cash.service";
+import { findOrCreateWalkInCustomer } from "@/services/customer.service";
 import { prisma } from "@/lib/prisma";
 
 export async function searchPosProducts(query: string) {
@@ -111,6 +112,8 @@ export type PosSaleResult =
 
 export async function submitPosSale(input: {
   customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
   discount?: number;
   notes?: string;
   lines: { variantId: string; quantity: number; unitPrice?: number }[];
@@ -121,11 +124,19 @@ export async function submitPosSale(input: {
     if (!input.lines.length) return { ok: false, error: "Ajoutez au moins un produit au ticket." };
     const open = await ensureOpenCashSession(session.userId);
     const locationId = open.register.locationId;
+    let customerId = input.customerId;
+    if (!customerId && (input.customerPhone?.trim() || input.customerName?.trim())) {
+      const customer = await findOrCreateWalkInCustomer({
+        name: input.customerName,
+        phone: input.customerPhone,
+      });
+      customerId = customer?.id;
+    }
     const sale = await createPosSale({
       cashierId: session.userId,
       locationId,
       cashSessionId: open.id,
-      customerId: input.customerId,
+      customerId,
       discount: input.discount,
       notes: input.notes,
       lines: input.lines,
@@ -133,6 +144,7 @@ export async function submitPosSale(input: {
     });
     revalidatePath("/pos");
     revalidatePath("/admin/ventes");
+    revalidatePath("/admin/clients");
     return { ok: true, sale };
   } catch (err) {
     unstable_rethrow(err);

@@ -38,6 +38,7 @@ export function PosClient({
   const [cart, setCart] = useState<Line[]>([]);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [ticket, setTicket] = useState<ReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -67,6 +68,8 @@ export function PosClient({
         const result = await submitPosSale({
           lines: cart.map((l) => ({ variantId: l.variant.id, quantity: l.quantity })),
           payments: [{ method, amount: total }],
+          customerName: customerName.trim() || undefined,
+          customerPhone: customerPhone.trim() || undefined,
         });
         if (!result.ok) {
           setError(result.error);
@@ -77,6 +80,7 @@ export function PosClient({
         setTicket(receipt);
         setCart([]);
         setCustomerPhone("");
+        setCustomerName("");
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "L’encaissement n’a pas abouti.");
@@ -168,10 +172,16 @@ export function PosClient({
         {!cart.length ? <p className="mt-4 text-sm text-black/45">Touchez un produit pour l’ajouter au ticket.</p> : null}
         <p className="mt-4 font-serif text-3xl text-wine">{formatCfa(total)}</p>
         <input
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="Nom de la cliente (crée le client si nouveau)"
+          className="mt-4 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
+        />
+        <input
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
-          placeholder="WhatsApp cliente (optionnel)"
-          className="mt-4 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
+          placeholder="WhatsApp cliente"
+          className="mt-2 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
         />
         <div className="mt-4 flex flex-wrap gap-2">
           {METHODS.map((m) => (
