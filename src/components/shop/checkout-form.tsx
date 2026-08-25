@@ -82,18 +82,20 @@ export function CheckoutForm({
 
       <fieldset className="space-y-2 rounded-2xl bg-blush/60 p-4">
         <legend className="text-sm font-medium text-wine">Paiement Mobile Money</legend>
+        <p className="text-sm text-black/60">
+          Après confirmation, envoyez <strong>{formatCfa(total)}</strong> puis gardez le reçu.
+        </p>
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="ORANGE" defaultChecked className="mt-1" />
           <span>
-            <strong>Orange Money — sans frais.</strong> Code marchand {PAYMENT_INSTRUCTIONS.ORANGE.code},{" "}
+            <strong>Orange Money — sans frais.</strong> {PAYMENT_INSTRUCTIONS.ORANGE.code} ·{" "}
             {PAYMENT_INSTRUCTIONS.ORANGE.name}.
           </span>
         </label>
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="MTN" className="mt-1" />
           <span>
-            <strong>MTN Money.</strong> Transfert normal au {PAYMENT_INSTRUCTIONS.MTN.code},{" "}
-            {PAYMENT_INSTRUCTIONS.MTN.name}.
+            <strong>MTN Money.</strong> {PAYMENT_INSTRUCTIONS.MTN.code} · {PAYMENT_INSTRUCTIONS.MTN.name}.
           </span>
         </label>
       </fieldset>

@@ -4,8 +4,8 @@ import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
-
-const OPEN_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PREPARING", "READY"];
+import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
+import { unitPrice as priced } from "@/lib/pricing";
 
 export async function createOnlineOrder(input: {
   customerId?: string | null;
@@ -45,12 +45,15 @@ export async function createOnlineOrder(input: {
     let subtotal = 0;
     const items: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
     for (const line of input.lines) {
+      if (!Number.isFinite(line.quantity) || line.quantity <= 0) {
+        throw new Error("Quantité invalide");
+      }
       const variant = byId.get(line.variantId);
-      if (!variant || !variant.isActive || variant.deletedAt || !variant.product.onlineVisible) {
+      if (!variant || !variant.isActive || variant.deletedAt || variant.product.deletedAt || !variant.product.onlineVisible) {
         throw new Error("Produit indisponible en ligne");
       }
       if (variant.product.status !== "ACTIVE") throw new Error("Produit indisponible");
-      const unitPrice = variant.promoPrice ?? variant.salePrice;
+      const unitPrice = priced(variant);
       subtotal += unitPrice * line.quantity;
       items.push({
         variantId: variant.id,
@@ -79,7 +82,14 @@ export async function createOnlineOrder(input: {
       }
       discount =
         coupon.type === "PERCENT" ? Math.round((subtotal * coupon.value) / 100) : coupon.value;
-      await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
+      const claimed = await tx.coupon.updateMany({
+        where: {
+          id: coupon.id,
+          ...(coupon.maxUses !== null ? { usedCount: { lt: coupon.maxUses } } : {}),
+        },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (claimed.count !== 1) throw new Error("Coupon invalide");
     }
 
     const total = Math.max(0, subtotal - discount + shippingFee);
@@ -155,37 +165,37 @@ export async function updateOrderStatus(input: {
     const from = order.status;
     const to = input.status;
     if (from === to) return order;
-
-    if (to === "CANCELLED" || to === "REFUNDED") {
-      if (OPEN_STATUSES.includes(from)) {
-        for (const item of order.items) {
-          await applyStockChange(tx, {
-            variantId: item.variantId,
-            locationId,
-            type: "CANCELLATION",
-            quantity: 0,
-            reserveDelta: -item.quantity,
-            userId: input.userId,
-            reference: order.number,
-            comment: "Libération stock commande",
-          });
-        }
-      } else if (from === "SHIPPED" || from === "DELIVERED") {
-        for (const item of order.items) {
-          await applyStockChange(tx, {
-            variantId: item.variantId,
-            locationId,
-            type: "RETURN",
-            quantity: item.quantity,
-            userId: input.userId,
-            reference: order.number,
-            comment: "Retour commande",
-          });
-        }
-      }
+    if (!canTransitionOrder(from, to)) {
+      throw new Error("Ce changement de statut n’est pas autorisé (risque de stock).");
     }
 
-    if ((to === "SHIPPED" || to === "DELIVERED") && OPEN_STATUSES.includes(from)) {
+    const effect = stockEffectForTransition(from, to);
+    if (effect === "release") {
+      for (const item of order.items) {
+        await applyStockChange(tx, {
+          variantId: item.variantId,
+          locationId,
+          type: "CANCELLATION",
+          quantity: 0,
+          reserveDelta: -item.quantity,
+          userId: input.userId,
+          reference: order.number,
+          comment: "Libération stock commande",
+        });
+      }
+    } else if (effect === "restock") {
+      for (const item of order.items) {
+        await applyStockChange(tx, {
+          variantId: item.variantId,
+          locationId,
+          type: "RETURN",
+          quantity: item.quantity,
+          userId: input.userId,
+          reference: order.number,
+          comment: "Retour commande",
+        });
+      }
+    } else if (effect === "ship") {
       for (const item of order.items) {
         await applyStockChange(tx, {
           variantId: item.variantId,
@@ -210,6 +220,17 @@ export async function updateOrderStatus(input: {
       where: { id: order.id },
       data: { status: to },
     });
+
+    if (to === "CANCELLED" || to === "REFUNDED") {
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: "PENDING" },
+        data: { status: "FAILED" },
+      });
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: "COMPLETED" },
+        data: { status: "REFUNDED" },
+      });
+    }
 
     await tx.auditLog.create({
       data: {

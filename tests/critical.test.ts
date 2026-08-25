@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { prisma } from "../src/lib/prisma";
 import { applyStockChange, availableQty } from "../src/services/inventory.service";
 import { createPosSale } from "../src/services/sale.service";
+import { unitPrice } from "../src/lib/pricing";
 import { hasPermission, defaultStaffPath } from "../src/lib/permissions";
 
 describe("stock", () => {
@@ -17,7 +18,7 @@ describe("stock", () => {
       cashierId: user.id,
       locationId,
       lines: [{ variantId: variant.id, quantity: 1 }],
-      payments: [{ method: "CASH", amount: variant.promoPrice ?? variant.salePrice }],
+      payments: [{ method: "CASH", amount: unitPrice(variant) }],
     });
     const after = await prisma.inventory.findUniqueOrThrow({
       where: { variantId_locationId: { variantId: variant.id, locationId } },

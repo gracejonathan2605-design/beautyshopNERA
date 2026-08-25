@@ -15,6 +15,7 @@ export default async function ProductsAdminPage() {
       where: { deletedAt: null },
       include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
+      take: 80,
     }),
     prisma.category.findMany({
       where: { isActive: true, deletedAt: null },

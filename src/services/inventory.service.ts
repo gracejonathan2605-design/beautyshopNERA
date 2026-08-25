@@ -6,14 +6,19 @@ export function availableQty(onHand: number, reserved: number) {
   return onHand - reserved;
 }
 
-async function raiseStockAlerts(tx: Prisma.TransactionClient, variantId: string, locationId: string) {
+async function raiseStockAlerts(
+  tx: Prisma.TransactionClient,
+  variantId: string,
+  locationId: string,
+  prevAvailable: number,
+) {
   const inventory = await tx.inventory.findUnique({
     where: { variantId_locationId: { variantId, locationId } },
     include: { variant: { include: { product: true } } },
   });
   if (!inventory) return;
   const available = availableQty(inventory.onHand, inventory.reserved);
-  if (available <= 0) {
+  if (available <= 0 && prevAvailable > 0) {
     await tx.notification.create({
       data: {
         type: "STOCK_OUT",
@@ -21,7 +26,7 @@ async function raiseStockAlerts(tx: Prisma.TransactionClient, variantId: string,
         message: `${inventory.variant.product.name} — ${inventory.variant.name} n'a plus de stock disponible.`,
       },
     });
-  } else if (available <= inventory.minQuantity) {
+  } else if (available <= inventory.minQuantity && prevAvailable > inventory.minQuantity) {
     await tx.notification.create({
       data: {
         type: "STOCK_LOW",
@@ -66,6 +71,7 @@ export async function applyStockChange(
     where: { variantId_locationId: { variantId: input.variantId, locationId: input.locationId } },
   });
 
+  const prevAvailable = availableQty(inventory.onHand, inventory.reserved);
   const nextOnHand = inventory.onHand + input.quantity;
   const nextReserved = inventory.reserved + (input.reserveDelta ?? 0);
   if (nextOnHand < 0) throw new Error("Stock physique insuffisant");
@@ -101,7 +107,7 @@ export async function applyStockChange(
     });
   }
 
-  await raiseStockAlerts(tx, input.variantId, input.locationId);
+  await raiseStockAlerts(tx, input.variantId, input.locationId, prevAvailable);
 }
 
 export async function receivePurchase(input: {

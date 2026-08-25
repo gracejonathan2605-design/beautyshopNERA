@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
-import { productCardInclude } from "@/lib/product-query";
+import { getHomeCatalog } from "@/lib/catalog-cache";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +16,9 @@ const TRUST = [
 
 export default async function HomePage() {
   let settings;
+  let catalog: Awaited<ReturnType<typeof getHomeCatalog>> | null = null;
   try {
-    settings = await getShopSettings();
+    [settings, catalog] = await Promise.all([getShopSettings(), getHomeCatalog()]);
   } catch {
     return (
       <section className="hero-light px-4 py-24">
@@ -37,27 +37,16 @@ export default async function HomePage() {
       </section>
     );
   }
-  const [featured, news, promos, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
-      include: productCardInclude,
-      take: 8,
-    }),
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, isNew: true, deletedAt: null },
-      include: productCardInclude,
-      take: 8,
-    }),
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
-      include: productCardInclude,
-      take: 8,
-    }),
-    prisma.category.findMany({
-      where: { isActive: true, parentId: null, deletedAt: null },
-      orderBy: { sortOrder: "asc" },
-    }),
-  ]);
+  if (!settings || !catalog) {
+    return (
+      <section className="hero-light px-4 py-24">
+        <div className="mx-auto max-w-6xl px-4 py-10">
+          <h1 className="font-serif text-5xl text-wine">NERA Beauté & Shop</h1>
+        </div>
+      </section>
+    );
+  }
+  const { featured, news, promos, categories } = catalog;
 
   return (
     <div>

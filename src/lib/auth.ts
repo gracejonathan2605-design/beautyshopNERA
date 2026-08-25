@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
@@ -117,23 +118,36 @@ export async function createCustomerSession(customerId: string) {
   return session;
 }
 
-export async function getStaffSession(): Promise<StaffSession | null> {
+async function readStaffSession(): Promise<StaffSession | null> {
   const jar = await cookies();
   const token = jar.get(STAFF_COOKIE)?.value;
   if (!token) return null;
   const session = await verifyToken<StaffSession>(token);
   if (!session || session.kind !== "staff") return null;
+  const live = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isActive: true, deletedAt: true },
+  });
+  if (!live?.isActive || live.deletedAt) return null;
   return session;
 }
 
-export async function getCustomerSession(): Promise<CustomerSession | null> {
+async function readCustomerSession(): Promise<CustomerSession | null> {
   const jar = await cookies();
   const token = jar.get(CUSTOMER_COOKIE)?.value;
   if (!token) return null;
   const session = await verifyToken<CustomerSession>(token);
   if (!session || session.kind !== "customer") return null;
+  const live = await prisma.customer.findUnique({
+    where: { id: session.customerId },
+    select: { isActive: true, deletedAt: true },
+  });
+  if (!live?.isActive || live.deletedAt) return null;
   return session;
 }
+
+export const getStaffSession = cache(readStaffSession);
+export const getCustomerSession = cache(readCustomerSession);
 
 export async function clearStaffSession() {
   const jar = await cookies();

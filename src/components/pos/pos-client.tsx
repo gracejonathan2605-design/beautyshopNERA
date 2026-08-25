@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
@@ -13,6 +13,7 @@ type Variant = {
   id: string;
   name: string;
   sku: string;
+  barcode: string | null;
   salePrice: number;
   promoPrice: number | null;
   product: { name: string; images?: { url: string }[] };
@@ -38,11 +39,26 @@ export function PosClient({
   const [cart, setCart] = useState<Line[]>([]);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [tendered, setTendered] = useState("");
   const [ticket, setTicket] = useState<ReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [searching, startSearch] = useTransition();
   const total = useMemo(() => cart.reduce((s, l) => s + unitPrice(l.variant) * l.quantity, 0), [cart]);
+  const received = method === "CASH" && tendered.trim() ? Number(tendered.replace(/\s/g, "").replace(",", ".")) : total;
+  const change = method === "CASH" && Number.isFinite(received) ? Math.max(0, received - total) : 0;
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      startSearch(async () => setResults(await searchPosProducts(query)));
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  function available(v: Variant) {
+    return v.inventories.reduce((s, i) => s + (i.onHand - i.reserved), 0);
+  }
 
   function add(variant: Variant) {
     setCart((c) => {
@@ -59,14 +75,35 @@ export function PosClient({
     });
   }
 
+  function addFromScan(list: Variant[], q: string) {
+    const needle = q.trim();
+    if (!needle) return;
+    const exact = list.find((v) => v.sku === needle || v.barcode === needle);
+    const pick = exact ?? (list.length === 1 ? list[0] : null);
+    if (pick && available(pick) > 0) {
+      add(pick);
+      setQuery("");
+    }
+  }
+
   function checkout() {
     if (!cart.length || pending) return;
+    if (!openSession) {
+      setError("Ouvrez d’abord la caisse avec le fond du matin.");
+      return;
+    }
+    if (method === "CASH" && Number.isFinite(received) && received < total) {
+      setError("Le montant reçu est inférieur au total.");
+      return;
+    }
     setError(null);
     start(async () => {
       try {
         const result = await submitPosSale({
           lines: cart.map((l) => ({ variantId: l.variant.id, quantity: l.quantity })),
           payments: [{ method, amount: total }],
+          customerName: customerName.trim() || undefined,
+          customerPhone: customerPhone.trim() || undefined,
         });
         if (!result.ok) {
           setError(result.error);
@@ -77,6 +114,8 @@ export function PosClient({
         setTicket(receipt);
         setCart([]);
         setCustomerPhone("");
+        setCustomerName("");
+        setTendered("");
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "L’encaissement n’a pas abouti.");
@@ -109,39 +148,47 @@ export function PosClient({
       <section>
         <input
           value={query}
-          onChange={(e) => {
-            const v = e.target.value;
-            setQuery(v);
-            startSearch(async () => setResults(await searchPosProducts(v)));
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addFromScan(results, query);
+            }
           }}
-          placeholder="Nom, SKU ou code-barres"
+          placeholder="Nom, SKU ou code-barres — Entrée pour ajouter"
           aria-busy={searching}
           className="w-full rounded-2xl border border-[#eee0e6] bg-white px-4 py-3"
         />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {results.map((v) => (
-            <button
-              type="button"
-              key={v.id}
-              onClick={() => add(v)}
-              className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold"
-            >
-              {v.product.images?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={v.product.images[0].url}
-                  alt=""
-                  loading="lazy"
-                  className="mb-2 h-24 w-full rounded-xl object-cover"
-                />
-              ) : null}
-              <p className="font-medium text-wine">{v.product.name}</p>
-              <p className="text-sm text-black/50">
-                {v.name} · {v.sku}
-              </p>
-              <p className="mt-2">{formatCfa(unitPrice(v))}</p>
-            </button>
-          ))}
+          {results.map((v) => {
+            const qty = available(v);
+            const out = qty <= 0;
+            return (
+              <button
+                type="button"
+                key={v.id}
+                disabled={out}
+                onClick={() => add(v)}
+                className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold disabled:opacity-45"
+              >
+                {v.product.images?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={v.product.images[0].url}
+                    alt=""
+                    loading="lazy"
+                    className="mb-2 h-24 w-full rounded-xl object-cover"
+                  />
+                ) : null}
+                <p className="font-medium text-wine">{v.product.name}</p>
+                <p className="text-sm text-black/50">
+                  {v.name} · {v.sku}
+                </p>
+                <p className="mt-2">{formatCfa(unitPrice(v))}</p>
+                <p className="mt-1 text-xs text-black/40">{out ? "Rupture" : `Stock ${qty}`}</p>
+              </button>
+            );
+          })}
         </div>
       </section>
       <aside className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-5">
@@ -165,13 +212,19 @@ export function PosClient({
             </li>
           ))}
         </ul>
-        {!cart.length ? <p className="mt-4 text-sm text-black/45">Touchez un produit pour l’ajouter au ticket.</p> : null}
+        {!cart.length ? <p className="mt-4 text-sm text-black/45">Touchez un produit ou scannez un code-barres.</p> : null}
         <p className="mt-4 font-serif text-3xl text-wine">{formatCfa(total)}</p>
+        <input
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="Nom de la cliente (crée le client si nouveau)"
+          className="mt-4 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
+        />
         <input
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
-          placeholder="WhatsApp cliente (optionnel)"
-          className="mt-4 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
+          placeholder="WhatsApp cliente"
+          className="mt-2 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
         />
         <div className="mt-4 flex flex-wrap gap-2">
           {METHODS.map((m) => (
@@ -185,6 +238,19 @@ export function PosClient({
             </button>
           ))}
         </div>
+        {method === "CASH" && cart.length ? (
+          <label className="mt-3 block text-sm text-black/60">
+            Montant reçu
+            <input
+              value={tendered}
+              onChange={(e) => setTendered(e.target.value)}
+              inputMode="numeric"
+              placeholder={String(total)}
+              className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2"
+            />
+            {change > 0 ? <span className="mt-1 block text-wine">Monnaie : {formatCfa(change)}</span> : null}
+          </label>
+        ) : null}
         {error ? (
           <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
             {error}
@@ -192,7 +258,7 @@ export function PosClient({
         ) : null}
         <button
           type="button"
-          disabled={!cart.length || pending}
+          disabled={!cart.length || pending || !openSession}
           onClick={checkout}
           className="mt-4 w-full rounded-full bg-brown py-3 text-cream disabled:opacity-50"
         >

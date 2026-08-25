@@ -205,6 +205,7 @@ model Category {
 
   @@index([parentId])
   @@index([isActive, sortOrder])
+  @@index([parentId, isActive, deletedAt])
 }
 
 model Brand {
@@ -280,7 +281,7 @@ model Product {
   promotions       Promotion[]
 
   @@index([categoryId])
-  @@index([status, onlineVisible])
+  @@index([status, onlineVisible, deletedAt])
   @@index([name])
 }
 
@@ -309,6 +310,7 @@ model ProductVariant {
 
   @@index([barcode])
   @@index([productId])
+  @@index([isActive, deletedAt])
 }
 
 model VariantAttributeValue {
@@ -331,6 +333,8 @@ model ProductImage {
   sortOrder       Int             @default(0)
   kind            MediaKind       @default(IMAGE)
   durationSeconds Int?
+
+  @@index([productId, sortOrder])
 }
 
 model Inventory {
@@ -486,6 +490,8 @@ model Payment {
   createdAt DateTime      @default(now())
 
   @@index([createdAt])
+  @@index([orderId])
+  @@index([saleId])
 }
 
 model ExpenseCategory {
@@ -510,6 +516,7 @@ model Expense {
   createdAt     DateTime        @default(now())
 
   @@index([cashSessionId])
+  @@index([date])
 }
 
 model Promotion {

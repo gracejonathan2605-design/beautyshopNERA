@@ -5,6 +5,7 @@ import { loginStaff } from "@/app/actions/auth";
 import { getStaffSession } from "@/lib/auth";
 import { defaultStaffPath } from "@/lib/permissions";
 import { BrandLogo } from "@/components/brand/logo";
+import { safeNextPath } from "@/lib/safe-path";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -19,8 +20,7 @@ export default async function LoginPage({
   const { error, next, hint } = await searchParams;
   const existing = await getStaffSession().catch(() => null);
   if (existing) {
-    const requested = next?.startsWith("/") ? next : defaultStaffPath(existing);
-    redirect(requested);
+    redirect(safeNextPath(next ?? "", defaultStaffPath(existing)));
   }
 
   return (
@@ -41,7 +41,7 @@ export default async function LoginPage({
           </p>
         ) : null}
         {error ? <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p> : null}
-        <input type="hidden" name="next" value={next ?? "/admin"} />
+        <input type="hidden" name="next" value={safeNextPath(next ?? "", "/admin")} />
         <input name="email" type="email" required placeholder="Email" className="mt-6 w-full rounded-xl border border-[#eee0e6] px-4 py-3" />
         <input name="password" type="password" required placeholder="Mot de passe" className="mt-3 w-full rounded-xl border border-[#eee0e6] px-4 py-3" />
         <button className="mt-6 w-full rounded-full bg-brown py-3 text-cream">Entrer</button>

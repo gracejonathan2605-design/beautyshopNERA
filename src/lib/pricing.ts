@@ -1,5 +1,7 @@
 export function unitPrice(variant: { salePrice: number; promoPrice: number | null }) {
-  return variant.promoPrice ?? variant.salePrice;
+  const promo = variant.promoPrice;
+  if (promo != null && promo > 0 && promo < variant.salePrice) return promo;
+  return variant.salePrice;
 }
 
 export function slugify(value: string) {

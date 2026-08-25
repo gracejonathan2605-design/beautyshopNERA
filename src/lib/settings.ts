@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "./prisma";
 import type { Prisma } from "@prisma/client";
 
@@ -45,10 +46,17 @@ export const DEFAULT_SETTINGS: ShopSettings = {
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-export async function getShopSettings(db: Db = prisma): Promise<ShopSettings> {
+async function loadShopSettings(db: Db): Promise<ShopSettings> {
   const row = await db.setting.findUnique({ where: { key: "shop" } });
   if (!row) return DEFAULT_SETTINGS;
   return { ...DEFAULT_SETTINGS, ...(row.value as Partial<ShopSettings>) };
+}
+
+const cachedShopSettings = cache(() => loadShopSettings(prisma));
+
+export async function getShopSettings(db: Db = prisma): Promise<ShopSettings> {
+  if (db !== prisma) return loadShopSettings(db);
+  return cachedShopSettings();
 }
 
 export async function saveShopSettings(value: ShopSettings) {
