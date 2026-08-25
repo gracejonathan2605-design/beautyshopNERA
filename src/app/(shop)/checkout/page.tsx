@@ -6,13 +6,14 @@ import { redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { sellableOnlineWhere } from "@/lib/product-query";
+import { getCustomerSession } from "@/lib/auth";
 
 export default async function CheckoutPage() {
   const cart = await getCart();
   if (!cart.length) redirect("/panier");
 
   try {
-    const [variants, zones] = await Promise.all([
+    const [variants, zones, session] = await Promise.all([
       prisma.productVariant.findMany({
         where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
         select: { id: true, salePrice: true, promoPrice: true },
@@ -22,7 +23,14 @@ export default async function CheckoutPage() {
         orderBy: { sortOrder: "asc" },
         select: { id: true, name: true, fee: true },
       }),
+      getCustomerSession().catch(() => null),
     ]);
+    const profile = session
+      ? await prisma.customer.findUnique({
+          where: { id: session.customerId },
+          select: { firstName: true, lastName: true, phone: true, address: true, city: true },
+        })
+      : null;
 
     const subtotal = cart.reduce((s, item) => {
       const v = variants.find((x) => x.id === item.variantId);
@@ -49,7 +57,20 @@ export default async function CheckoutPage() {
         <div className="mt-4">
           <PayDeliveryBadges />
         </div>
-        <CheckoutForm subtotal={subtotal} zones={zones} />
+        <CheckoutForm
+          subtotal={subtotal}
+          zones={zones}
+          customer={
+            profile
+              ? {
+                  shippingName: `${profile.firstName} ${profile.lastName}`.trim(),
+                  shippingPhone: profile.phone ?? "",
+                  shippingAddress: profile.address ?? "",
+                  shippingCity: profile.city ?? "",
+                }
+              : null
+          }
+        />
       </div>
     );
   } catch {

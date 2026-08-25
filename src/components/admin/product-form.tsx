@@ -107,11 +107,18 @@ export function ProductForm({
       <input name="name" required placeholder="Nom du produit" className="rounded-xl border px-3 py-2 md:col-span-2" />
       <CategorySelect groups={categoryGroups} className="rounded-xl border px-3 py-2 md:col-span-2" />
       <input name="salePrice" inputMode="numeric" required placeholder="Prix vente (FCFA)" className="rounded-xl border px-3 py-2" />
+      <input name="promoPrice" inputMode="numeric" placeholder="Prix promo (FCFA)" className="rounded-xl border px-3 py-2" />
       <input name="costPrice" inputMode="numeric" placeholder="Prix achat (FCFA)" className="rounded-xl border px-3 py-2" />
       <input name="stock" inputMode="numeric" placeholder="Stock initial" className="rounded-xl border px-3 py-2" />
       <input name="shortDescription" placeholder="Petite description" className="rounded-xl border px-3 py-2 md:col-span-2" />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isFeatured" /> Vedette
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="isPromo" /> Promo
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="isNew" defaultChecked /> Nouveauté
       </label>
       <p className="text-xs text-black/50 md:col-span-4">
         SKU généré automatiquement. Après publication, le produit est visible tout de suite en boutique et à la caisse.

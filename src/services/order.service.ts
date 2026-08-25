@@ -6,6 +6,7 @@ import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
 import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
+import { couponDiscountAmount, explainCouponFailure } from "@/lib/coupon";
 
 export async function createOnlineOrder(input: {
   customerId?: string | null;
@@ -69,19 +70,9 @@ export async function createOnlineOrder(input: {
     let discount = 0;
     if (input.couponCode) {
       const coupon = await tx.coupon.findUnique({ where: { code: input.couponCode.toUpperCase() } });
-      const now = new Date();
-      if (
-        !coupon ||
-        !coupon.isActive ||
-        (coupon.startAt && coupon.startAt > now) ||
-        (coupon.endAt && coupon.endAt < now) ||
-        (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) ||
-        subtotal < coupon.minAmount
-      ) {
-        throw new Error("Coupon invalide");
-      }
-      discount =
-        coupon.type === "PERCENT" ? Math.round((subtotal * coupon.value) / 100) : coupon.value;
+      const couponError = explainCouponFailure(coupon, subtotal);
+      if (couponError || !coupon) throw new Error(couponError ?? "Coupon invalide");
+      discount = couponDiscountAmount(coupon.type, coupon.value, subtotal);
       const claimed = await tx.coupon.updateMany({
         where: {
           id: coupon.id,
@@ -89,7 +80,7 @@ export async function createOnlineOrder(input: {
         },
         data: { usedCount: { increment: 1 } },
       });
-      if (claimed.count !== 1) throw new Error("Coupon invalide");
+      if (claimed.count !== 1) throw new Error("Ce code promo n’est plus disponible.");
     }
 
     const total = Math.max(0, subtotal - discount + shippingFee);

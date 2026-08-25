@@ -5,12 +5,14 @@ import { addToCart } from "@/app/actions/shop";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
+import { variantAvailable } from "@/lib/stock-display";
 
 type BuyVariant = {
   id: string;
   name: string;
   salePrice: number;
   promoPrice: number | null;
+  inventories?: { onHand: number; reserved: number }[];
 };
 
 export function ProductBuy({
@@ -23,6 +25,10 @@ export function ProductBuy({
   const [id, setId] = useState(variants[0]?.id ?? "");
   const selected = variants.find((v) => v.id === id) ?? variants[0];
   if (!selected) return null;
+  const available = variantAvailable(selected.inventories);
+  const inStock = available > 0;
+  const promo = selected.promoPrice;
+  const onPromo = Boolean(promo && promo > 0 && promo < selected.salePrice);
   return (
     <div>
       {variants.length > 1 ? (
@@ -36,13 +42,26 @@ export function ProductBuy({
             {variants.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name} · {formatCfa(unitPrice(v))}
+                {variantAvailable(v.inventories) <= 0 ? " — bientôt de retour" : ""}
               </option>
             ))}
           </select>
         </label>
       ) : null}
-      <p className="mt-6 font-serif text-4xl">{formatCfa(unitPrice(selected))}</p>
-      <AddToCartButton action={() => addToCart(selected.id, 1)} />
+      <p className="mt-6 font-serif text-4xl">
+        {onPromo ? (
+          <span className="mr-3 font-sans text-xl text-black/30 line-through">{formatCfa(selected.salePrice)}</span>
+        ) : null}
+        {formatCfa(unitPrice(selected))}
+      </p>
+      {inStock ? (
+        <AddToCartButton action={() => addToCart(selected.id, 1)} />
+      ) : (
+        <p className="mt-8 rounded-2xl bg-blush px-4 py-3 text-sm text-wine">
+          Bientôt de retour. Cet article n’est plus en stock — il reste visible, vous pourrez le commander dès
+          réapprovisionnement.
+        </p>
+      )}
       {whatsappUrl ? (
         <a
           href={whatsappUrl}
@@ -50,7 +69,7 @@ export function ProductBuy({
           rel="noreferrer"
           className="mt-3 block rounded-full border border-[#25D366] py-3 text-center text-sm text-[#128C46]"
         >
-          Commander sur WhatsApp
+          {inStock ? "Commander sur WhatsApp" : "Demander le retour en stock sur WhatsApp"}
         </a>
       ) : null}
     </div>

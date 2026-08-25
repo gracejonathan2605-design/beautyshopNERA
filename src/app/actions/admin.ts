@@ -159,6 +159,14 @@ function parseMoney(value: FormDataEntryValue | null) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function parsePromoPrice(value: FormDataEntryValue | null, salePrice: number) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const n = parseMoney(value);
+  if (n <= 0 || n >= salePrice) return null;
+  return n;
+}
+
 async function uniqueSku(name: string) {
   const now = Date.now();
   for (let i = 0; i < 8; i++) {
@@ -253,6 +261,9 @@ export async function saveProduct(
     if (salePrice <= 0) return { ok: false, error: "Indiquez un prix de vente (FCFA)." };
 
     const costPrice = parseMoney(formData.get("costPrice"));
+    const promoPrice = parsePromoPrice(formData.get("promoPrice"), salePrice);
+    const isPromo = formData.get("isPromo") === "on" || promoPrice != null;
+    const isNew = formData.get("isNew") === "on";
     const stock = Math.max(0, parseMoney(formData.get("stock")));
     const sku = await uniqueSku(name);
 
@@ -269,8 +280,8 @@ export async function saveProduct(
         status: "ACTIVE",
         categoryId,
         isFeatured: formData.get("isFeatured") === "on",
-        isNew: true,
-        isPromo: formData.get("isPromo") === "on",
+        isNew,
+        isPromo,
         onlineVisible: true,
         variants: {
           create: {
@@ -278,6 +289,7 @@ export async function saveProduct(
             sku,
             costPrice,
             salePrice,
+            promoPrice,
             isDefault: true,
           },
         },
@@ -366,6 +378,8 @@ export async function updateProduct(
     const name = String(formData.get("name") ?? "").trim();
     const categoryId = String(formData.get("categoryId") ?? "").trim();
     const salePrice = parseMoney(formData.get("salePrice"));
+    const promoPrice = parsePromoPrice(formData.get("promoPrice"), salePrice);
+    const isPromo = formData.get("isPromo") === "on" || promoPrice != null;
     if (!productId || !name) return { ok: false, error: "Nom requis" };
     if (!categoryId) return { ok: false, error: "Catégorie obligatoire" };
     if (salePrice <= 0) return { ok: false, error: "Prix invalide" };
@@ -394,13 +408,19 @@ export async function updateProduct(
         categoryId,
         shortDescription: String(formData.get("shortDescription") ?? "") || null,
         isFeatured: formData.get("isFeatured") === "on",
+        isPromo,
+        isNew: formData.get("isNew") === "on",
       },
     });
     const variant = current.variants[0];
     if (variant) {
       await prisma.productVariant.update({
         where: { id: variant.id },
-        data: { salePrice, costPrice: parseMoney(formData.get("costPrice")) || variant.costPrice },
+        data: {
+          salePrice,
+          promoPrice,
+          costPrice: parseMoney(formData.get("costPrice")) || variant.costPrice,
+        },
       });
     }
 

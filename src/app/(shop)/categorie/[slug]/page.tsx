@@ -3,19 +3,25 @@ import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/shop/product-card";
 import { getCachedCategoryPage } from "@/lib/catalog-cache";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
+import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-toolbar";
+import { browseShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Props = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ q?: string; vue?: string; tri?: string; page?: string }>;
 };
 
-export default async function CategoryPage({ params }: Props) {
-  const { slug } = await params;
+export default async function CategoryPage({ params, searchParams }: Props) {
+  const [{ slug }, raw] = await Promise.all([params, searchParams]);
   const data = await getCachedCategoryPage(slug);
   if (!data) notFound();
-  const { category, products } = data;
+  const { category } = data;
+  const query = parseBrowseQuery({ ...raw, rayon: slug });
+  const categoryIds = await descendantCategoryIds(category.id);
+  const result = await browseShopProducts(query, categoryIds);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -50,17 +56,31 @@ export default async function CategoryPage({ params }: Props) {
         </div>
       ) : null}
 
-      {products.length === 0 ? (
+      <CatalogToolbar
+        query={{ ...query, rayon: "" }}
+        rayons={[]}
+        basePath={`/categorie/${slug}`}
+        hideRayon
+      />
+
+      {result.items.length === 0 ? (
         <p className="mt-10 rounded-2xl border border-dashed border-black/15 p-8 text-center text-sm text-black/50">
           Aucun produit dans cette catégorie pour le moment.
         </p>
       ) : (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-          {products.map((product) => (
+          {result.items.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
       )}
+      <CatalogPagination
+        query={{ ...query, rayon: "" }}
+        page={result.page}
+        pages={result.pages}
+        total={result.total}
+        basePath={`/categorie/${slug}`}
+      />
     </div>
   );
 }

@@ -16,8 +16,11 @@ export function ProductEditForm({
   categoryId,
   salePrice,
   costPrice,
+  promoPrice,
   shortDescription,
   isFeatured,
+  isPromo,
+  isNew,
   photoCount,
   hasVideo,
   categoryGroups,
@@ -27,8 +30,11 @@ export function ProductEditForm({
   categoryId: string;
   salePrice: number;
   costPrice: number;
+  promoPrice: number | null;
   shortDescription: string;
   isFeatured: boolean;
+  isPromo: boolean;
+  isNew: boolean;
   photoCount: number;
   hasVideo: boolean;
   categoryGroups: CategoryOptionGroup[];
@@ -96,14 +102,26 @@ export function ProductEditForm({
       <input name="name" required defaultValue={name} className="rounded-xl border px-3 py-2" />
       <CategorySelect groups={categoryGroups} defaultValue={categoryId} />
       <input name="salePrice" required defaultValue={salePrice} className="rounded-xl border px-3 py-2" />
+      <input
+        name="promoPrice"
+        defaultValue={promoPrice ?? ""}
+        placeholder="Prix promo (FCFA)"
+        className="rounded-xl border px-3 py-2"
+      />
       <input name="costPrice" defaultValue={costPrice} className="rounded-xl border px-3 py-2" />
       <input
         name="shortDescription"
         defaultValue={shortDescription}
         className="rounded-xl border px-3 py-2 md:col-span-2"
       />
-      <label className="flex items-center gap-2 text-sm md:col-span-2">
+      <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isFeatured" defaultChecked={isFeatured} /> Vedette
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="isPromo" defaultChecked={isPromo} /> Promo
+      </label>
+      <label className="flex items-center gap-2 text-sm md:col-span-2">
+        <input type="checkbox" name="isNew" defaultChecked={isNew} /> Nouveauté
       </label>
       {remainingPhotos > 0 ? (
         <label className="text-sm md:col-span-2">

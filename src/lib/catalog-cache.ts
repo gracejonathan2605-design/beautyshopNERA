@@ -51,18 +51,6 @@ export const getHomeCatalog = unstable_cache(
   { revalidate: 45, tags: ["catalog"] },
 );
 
-export const getCachedBoutique = unstable_cache(
-  async () =>
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, deletedAt: null },
-      select: productCardSelect,
-      orderBy: { name: "asc" },
-      take: 60,
-    }),
-  ["boutique-list"],
-  { revalidate: 45, tags: ["catalog"] },
-);
-
 export function getCachedProductPage(slug: string) {
   return unstable_cache(
     async () =>
@@ -80,7 +68,13 @@ export function getCachedProductPage(slug: string) {
           category: { select: { name: true } },
           variants: {
             where: { isActive: true, deletedAt: null },
-            select: { id: true, name: true, salePrice: true, promoPrice: true },
+            select: {
+              id: true,
+              name: true,
+              salePrice: true,
+              promoPrice: true,
+              inventories: { select: { onHand: true, reserved: true } },
+            },
           },
           images: {
             orderBy: { sortOrder: "asc" },
