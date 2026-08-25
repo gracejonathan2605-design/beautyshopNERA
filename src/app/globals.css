@@ -122,10 +122,15 @@ button.bg-brown:hover {
   display: none;
 }
 
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
 @media print {
   @page {
     size: 80mm auto;
-    margin: 2mm;
+    margin: 0;
   }
 
   html,
@@ -150,15 +155,16 @@ button.bg-brown:hover {
     display: none !important;
   }
 
-  html.printing-ticket body > .receipt-print-clone {
+  html.printing-ticket body > .receipt-print-clone,
+  html.printing-ticket .receipt-paper {
     display: block !important;
     position: static !important;
     inset: auto !important;
-    width: 74mm !important;
-    max-width: 74mm !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
     max-height: none !important;
     margin: 0 !important;
-    padding: 1mm 2mm !important;
+    padding: 2mm 3mm !important;
     overflow: visible !important;
     box-shadow: none !important;
     border: 0 !important;
