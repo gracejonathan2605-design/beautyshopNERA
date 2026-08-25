@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-  : "lqlfciaelhmaozxwunun.supabase.co";
+  : null;
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
@@ -10,9 +10,18 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: supabaseHost,
+        hostname: "**.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      ...(supabaseHost && !supabaseHost.endsWith(".supabase.co")
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: supabaseHost,
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
     ],
   },
   experimental: {

@@ -98,7 +98,7 @@ export function ProductForm({
       <div className="md:col-span-4">
         <h2 className="font-serif text-2xl text-wine">Publier un nouveau produit</h2>
         <p className="mt-1 text-sm text-black/55">
-          Nom, rayon, prix — puis Publier. Les photos sont compressées sur votre téléphone avant l’envoi.
+          Nom, rayon, prix — puis Publier. Les photos lourdes du téléphone sont réduites automatiquement (WebP, 1400 px) pour s’ouvrir vite en boutique.
         </p>
       </div>
       {noCategories ? (
@@ -158,7 +158,7 @@ export function ProductForm({
         SKU généré automatiquement. Après publication, le produit est visible tout de suite en boutique et à la caisse.
       </p>
       <label className="text-sm md:col-span-2">
-        Photos (1 à {MAX_PRODUCT_PHOTOS}) — jpeg/png/webp, compressées ici avant l’envoi (pas HEIC)
+        Photos (1 à {MAX_PRODUCT_PHOTOS}) — compressées automatiquement en WebP léger (pas HEIC)
         <input
           name="photos"
           type="file"

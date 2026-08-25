@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { uploadActionError, wrapProductAction } from "../src/lib/product-form-submit";
 import { ACTION_PAYLOAD_MAX_BYTES, VIDEO_CLIENT_MAX_BYTES, VIDEO_MAX_BYTES } from "../src/lib/product-media";
+import { IMAGE_MAX_EDGE } from "../src/lib/image-limits";
 
 describe("envoi photos / vidéos produit", () => {
   it("reste sous la limite Vercel (~4,5 Mo)", () => {
@@ -24,5 +26,27 @@ describe("envoi photos / vidéos produit", () => {
     const result = await wrapped(null, new FormData());
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/trop lourdes/);
+  });
+
+  it("redimensionne les photos pour rester légères en boutique", () => {
+    expect(IMAGE_MAX_EDGE).toBeLessThanOrEqual(1400);
+  });
+
+  it("ne publie pas d’identifiants de démo dans le README ni le seed", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const seed = readFileSync("prisma/seed.ts", "utf8");
+    for (const leaked of [
+      "NeraAdmin2026",
+      "Caisse2026",
+      "Stock2026",
+      "Client2026",
+      "AdminOps2026",
+      "Manager2026",
+      "lqlfciaelhmaozxwunun",
+      "raisaodin1@gmail.com",
+    ]) {
+      expect(readme).not.toContain(leaked);
+      expect(seed).not.toContain(leaked);
+    }
   });
 });

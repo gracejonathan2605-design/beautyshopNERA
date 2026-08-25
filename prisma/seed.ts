@@ -9,10 +9,19 @@ import { syncNeraCatalog } from "../src/lib/catalog";
 const prisma = new PrismaClient();
 
 async function main() {
+  const localPassword = "ChangeMeNow!";
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@nerabeaute.cm";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "NeraAdmin2026!";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? localPassword;
   const cashierEmail = process.env.SEED_CASHIER_EMAIL ?? "caisse@nerabeaute.cm";
-  const cashierPassword = process.env.SEED_CASHIER_PASSWORD ?? "Caisse2026!";
+  const cashierPassword = process.env.SEED_CASHIER_PASSWORD ?? localPassword;
+  const stockEmail = process.env.SEED_STOCK_EMAIL ?? "stock@nerabeaute.cm";
+  const stockPassword = process.env.SEED_STOCK_PASSWORD ?? localPassword;
+  const opsEmail = process.env.SEED_OPS_EMAIL ?? "admin.ops@nerabeaute.cm";
+  const opsPassword = process.env.SEED_OPS_PASSWORD ?? localPassword;
+  const managerEmail = process.env.SEED_MANAGER_EMAIL ?? "manager@nerabeaute.cm";
+  const managerPassword = process.env.SEED_MANAGER_PASSWORD ?? localPassword;
+  const customerEmail = process.env.SEED_CUSTOMER_EMAIL ?? "marie.client@example.com";
+  const customerPassword = process.env.SEED_CUSTOMER_PASSWORD ?? localPassword;
 
   await prisma.$transaction(
     async (tx) => {
@@ -65,11 +74,13 @@ async function main() {
 
     const adminHash = await bcrypt.hash(adminPassword, 12);
     const cashierHash = await bcrypt.hash(cashierPassword, 12);
-    const stockHash = await bcrypt.hash("Stock2026!", 12);
+    const stockHash = await bcrypt.hash(stockPassword, 12);
+    const opsHash = await bcrypt.hash(opsPassword, 12);
+    const managerHash = await bcrypt.hash(managerPassword, 12);
 
     await tx.user.upsert({
       where: { email: adminEmail },
-      update: { passwordHash: adminHash, roleId: superRole.id, isActive: true, firstName: "Raisa", lastName: "Kouekam" },
+      update: { roleId: superRole.id, isActive: true, firstName: "Raisa", lastName: "Kouekam" },
       create: {
         email: adminEmail,
         passwordHash: adminHash,
@@ -81,7 +92,7 @@ async function main() {
     });
     await tx.user.upsert({
       where: { email: cashierEmail },
-      update: { passwordHash: cashierHash, roleId: cashierRole.id, isActive: true },
+      update: { roleId: cashierRole.id, isActive: true },
       create: {
         email: cashierEmail,
         passwordHash: cashierHash,
@@ -92,10 +103,10 @@ async function main() {
       },
     });
     await tx.user.upsert({
-      where: { email: "stock@nerabeaute.cm" },
-      update: { passwordHash: stockHash, roleId: stockRole.id },
+      where: { email: stockEmail },
+      update: { roleId: stockRole.id },
       create: {
-        email: "stock@nerabeaute.cm",
+        email: stockEmail,
         passwordHash: stockHash,
         firstName: "Jean",
         lastName: "Mbarga",
@@ -104,22 +115,22 @@ async function main() {
       },
     });
     await tx.user.upsert({
-      where: { email: "admin.ops@nerabeaute.cm" },
+      where: { email: opsEmail },
       update: { roleId: adminRole.id },
       create: {
-        email: "admin.ops@nerabeaute.cm",
-        passwordHash: await bcrypt.hash("AdminOps2026!", 12),
+        email: opsEmail,
+        passwordHash: opsHash,
         firstName: "Nadia",
         lastName: "Fouda",
         roleId: adminRole.id,
       },
     });
     await tx.user.upsert({
-      where: { email: "manager@nerabeaute.cm" },
+      where: { email: managerEmail },
       update: { roleId: managerRole.id },
       create: {
-        email: "manager@nerabeaute.cm",
-        passwordHash: await bcrypt.hash("Manager2026!", 12),
+        email: managerEmail,
+        passwordHash: managerHash,
         firstName: "Chantal",
         lastName: "Ewane",
         roleId: managerRole.id,
@@ -437,15 +448,15 @@ async function main() {
       }
     }
 
-    const customerHash = await bcrypt.hash("Client2026!", 12);
+    const customerHash = await bcrypt.hash(customerPassword, 12);
     await tx.customer.upsert({
-      where: { email: "marie.client@example.com" },
+      where: { email: customerEmail },
       update: {},
       create: {
         code: "CLI-000001",
         firstName: "Marie",
         lastName: "Abega",
-        email: "marie.client@example.com",
+        email: customerEmail,
         phone: "+237 6 55 00 00 21",
         city: "Yaoundé",
         passwordHash: customerHash,
