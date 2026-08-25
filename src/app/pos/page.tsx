@@ -8,6 +8,8 @@ import { getShopSettings, toReceiptShop } from "@/lib/settings";
 import { BrandLockup } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
+import type { HeldTicketPayload } from "@/lib/pos";
 
 export default async function PosPage({
   searchParams,
@@ -21,11 +23,17 @@ export default async function PosPage({
     : q.ok
       ? ({ kind: "ok" as const, text: q.ok })
       : null;
-  const [products, open, settings, expenseCategories] = await Promise.all([
+  const [products, open, settings, expenseCategories, heldRows] = await Promise.all([
     searchPosProducts(""),
     getOpenSessionForUser(session.userId),
     getShopSettings(),
     prisma.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    prisma.heldTicket.findMany({
+      where: { cashierId: session.userId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, note: true, createdAt: true, payload: true },
+    }),
   ]);
   const snapshot = open ? await getTillSnapshot(open.id) : null;
   return (
@@ -61,6 +69,13 @@ export default async function PosPage({
             initial={products}
             openSession={open ? { id: open.id, openingFloat: open.openingFloat } : null}
             shop={toReceiptShop(settings)}
+            canRefund={hasPermission(session, "sales.refund")}
+            initialHeld={heldRows.map((row) => ({
+              id: row.id,
+              note: row.note,
+              createdAt: row.createdAt,
+              payload: row.payload as HeldTicketPayload,
+            }))}
           />
         </div>
       </div>

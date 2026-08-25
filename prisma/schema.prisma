@@ -135,6 +135,7 @@ model User {
   openedSessions CashSession[]    @relation("SessionOpenedBy")
   closedSessions CashSession[]    @relation("SessionClosedBy")
   notifications Notification[]
+  heldTickets   HeldTicket[]
 
   @@index([email])
   @@index([roleId])
@@ -182,8 +183,23 @@ model CashSession {
   closedAt     DateTime?
   sales        Sale[]
   expenses     Expense[]
+  heldTickets  HeldTicket[]
 
   @@index([registerId, status])
+}
+
+model HeldTicket {
+  id            String       @id @default(cuid())
+  cashierId     String
+  cashier       User         @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+  cashSessionId String?
+  cashSession   CashSession? @relation(fields: [cashSessionId], references: [id], onDelete: SetNull)
+  note          String?
+  payload       Json
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([cashierId, createdAt])
 }
 
 model Category {
