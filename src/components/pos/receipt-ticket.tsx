@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   buildReceiptText,
   formatReceiptDate,
@@ -10,6 +10,7 @@ import {
   type ReceiptData,
 } from "@/lib/receipt";
 import { ReceiptLogo } from "@/components/brand/logo";
+import { printReceiptElement } from "@/lib/print-ticket";
 
 export function ReceiptTicket({
   data,
@@ -20,9 +21,11 @@ export function ReceiptTicket({
 }) {
   const [phone, setPhone] = useState(data.customerPhone ?? "");
   const text = useMemo(() => buildReceiptText(data), [data]);
+  const paperRef = useRef<HTMLElement>(null);
 
   function printTicket() {
-    window.print();
+    if (paperRef.current) printReceiptElement(paperRef.current);
+    else window.print();
   }
 
   function sendWhatsApp() {
@@ -44,7 +47,10 @@ export function ReceiptTicket({
         <p className="no-print text-center text-xs uppercase tracking-[0.28em] text-brown">
           Ticket de caisse
         </p>
-        <article className="receipt-paper mx-auto mt-3 w-[72mm] bg-white px-2 py-3 font-mono text-[11px] leading-4 text-black">
+        <article
+          ref={paperRef}
+          className="receipt-paper mx-auto mt-3 w-[72mm] bg-white px-2 py-3 font-mono text-[11px] leading-4 text-black"
+        >
           <header className="text-center">
             <ReceiptLogo />
             <p className="font-serif text-lg leading-5 tracking-[0.18em]">{data.shop.name}</p>
@@ -142,7 +148,7 @@ export function ReceiptTicket({
             ) : null}
           </div>
           <p className="text-center text-xs text-black/45">
-            Impression 80 mm — papier thermique. Sur WhatsApp, le ticket part en texte lisible.
+            Impression 80 mm — papier thermique. Dans la fenêtre d’impression, choisissez le format 80 mm si proposé. Sur WhatsApp, le ticket part en texte lisible.
           </p>
         </div>
       </div>

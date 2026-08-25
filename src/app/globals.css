@@ -125,7 +125,7 @@ button.bg-brown:hover {
 @media print {
   @page {
     size: 80mm auto;
-    margin: 3mm;
+    margin: 2mm;
   }
 
   html,
@@ -133,30 +133,48 @@ button.bg-brown:hover {
     background: #fff !important;
     background-image: none !important;
     color: #000 !important;
+    width: 80mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
-  body * {
-    visibility: hidden;
+  .no-print,
+  .wa-fab {
+    display: none !important;
   }
 
-  .receipt-paper,
-  .receipt-paper * {
-    visibility: visible;
+  html.printing-ticket body > * {
+    display: none !important;
+  }
+
+  html.printing-ticket body > .receipt-print-clone {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 74mm !important;
+    max-width: 74mm !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 1mm 2mm !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .receipt-paper {
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: 72mm;
     box-shadow: none !important;
     border: 0 !important;
     background: #fff !important;
     color: #000 !important;
-    font-size: 12px;
-    line-height: 1.35;
-  }
-
-  .no-print {
-    display: none !important;
   }
 }
