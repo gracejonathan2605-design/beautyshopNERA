@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { PaymentMethod } from "@prisma/client";
 import { requireStaff } from "@/lib/guard";
-import { createPosSale } from "@/services/sale.service";
+import { cancelSale, createPosSale } from "@/services/sale.service";
 import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser, recordTillExpense } from "@/services/cash.service";
 import { findOrCreateWalkInCustomer } from "@/services/customer.service";
+import { parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 
 export async function searchPosProducts(query: string) {
@@ -17,16 +18,25 @@ export async function searchPosProducts(query: string) {
     deletedAt: null,
     product: { status: "ACTIVE" as const, deletedAt: null },
   };
-  const posInclude = {
+  const posSelect = {
+    id: true,
+    name: true,
+    sku: true,
+    barcode: true,
+    salePrice: true,
+    promoPrice: true,
     product: {
-      include: { images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1 } },
+      select: {
+        name: true,
+        images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { url: true } },
+      },
     },
-    inventories: true,
-  };
+    inventories: { select: { onHand: true, reserved: true } },
+  } as const;
   if (!q) {
     return prisma.productVariant.findMany({
       where,
-      include: posInclude,
+      select: posSelect,
       take: 24,
       orderBy: { product: { name: "asc" } },
     });
@@ -41,7 +51,7 @@ export async function searchPosProducts(query: string) {
         { product: { name: { contains: q, mode: "insensitive" } } },
       ],
     },
-    include: posInclude,
+    select: posSelect,
     take: 30,
   });
 }
@@ -54,7 +64,8 @@ function bouncePos(kind: "ok" | "erreur", message?: string): never {
 
 export async function openRegister(formData: FormData) {
   const session = await requireStaff("pos.access");
-  await ensureOpenCashSession(session.userId, Number(formData.get("openingFloat") ?? 0));
+  const openingFloat = parseCfaInput(String(formData.get("openingFloat") ?? "0"));
+  await ensureOpenCashSession(session.userId, openingFloat);
   revalidatePath("/pos");
   bouncePos("ok", "Caisse ouverte.");
 }
@@ -64,8 +75,11 @@ export async function closeRegister(formData: FormData) {
     const session = await requireStaff("pos.access");
     const open = await getOpenSessionForUser(session.userId);
     if (!open) bouncePos("erreur", "Aucune session ouverte.");
+    if (open.openedById !== session.userId && !session.isSuperAdmin) {
+      bouncePos("erreur", "Seul celui qui a ouvert la caisse (ou l’admin) peut la fermer.");
+    }
     const raw = String(formData.get("actualCash") ?? "").trim();
-    const actualCash = raw === "" ? null : Number(raw);
+    const actualCash = raw === "" ? null : parseCfaInput(raw);
     await closeCashSession({
       sessionId: open.id,
       userId: session.userId,
@@ -85,8 +99,9 @@ export async function closeRegister(formData: FormData) {
 export async function addTillExpense(formData: FormData) {
   try {
     const session = await requireStaff("pos.access");
-    const amount = Number(String(formData.get("amount") ?? "").replace(/\s/g, "").replace(",", "."));
+    const amount = parseCfaInput(String(formData.get("amount") ?? ""));
     const description = String(formData.get("description") ?? "").trim();
+    if (!amount) bouncePos("erreur", "Indiquez un montant de dépense valide.");
     if (!description) bouncePos("erreur", "Indiquez le motif de la dépense (taxi, eau, etc.).");
     await recordTillExpense({
       userId: session.userId,
@@ -116,7 +131,7 @@ export async function submitPosSale(input: {
   customerPhone?: string;
   discount?: number;
   notes?: string;
-  lines: { variantId: string; quantity: number; unitPrice?: number }[];
+  lines: { variantId: string; quantity: number }[];
   payments: { method: PaymentMethod; amount: number }[];
 }): Promise<PosSaleResult> {
   try {
@@ -150,6 +165,28 @@ export async function submitPosSale(input: {
   } catch (err) {
     unstable_rethrow(err);
     return { ok: false, error: err instanceof Error ? err.message : "Encaissement impossible." };
+  }
+}
+
+function bounceVentes(kind: "ok" | "erreur", message: string): never {
+  const q = new URLSearchParams();
+  q.set(kind, message);
+  redirect(`/admin/ventes?${q.toString()}`);
+}
+
+export async function cancelPosSale(formData: FormData) {
+  try {
+    const session = await requireStaff("sales.cancel");
+    const saleId = String(formData.get("saleId") ?? "");
+    if (!saleId) bounceVentes("erreur", "Vente manquante.");
+    await cancelSale({ saleId, userId: session.userId, restock: true });
+    revalidatePath("/admin/ventes");
+    revalidatePath("/pos");
+    revalidatePath("/admin/stocks");
+    bounceVentes("ok", "Vente annulée et stock remis.");
+  } catch (err) {
+    unstable_rethrow(err);
+    bounceVentes("erreur", err instanceof Error ? err.message : "Annulation impossible.");
   }
 }
 

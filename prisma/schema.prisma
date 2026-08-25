@@ -205,6 +205,7 @@ model Category {
 
   @@index([parentId])
   @@index([isActive, sortOrder])
+  @@index([parentId, isActive, deletedAt])
 }
 
 model Brand {
@@ -280,7 +281,7 @@ model Product {
   promotions       Promotion[]
 
   @@index([categoryId])
-  @@index([status, onlineVisible])
+  @@index([status, onlineVisible, deletedAt])
   @@index([name])
 }
 
@@ -309,6 +310,7 @@ model ProductVariant {
 
   @@index([barcode])
   @@index([productId])
+  @@index([isActive, deletedAt])
 }
 
 model VariantAttributeValue {

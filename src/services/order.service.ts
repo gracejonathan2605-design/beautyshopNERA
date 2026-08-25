@@ -5,6 +5,7 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
 import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
+import { unitPrice as priced } from "@/lib/pricing";
 
 export async function createOnlineOrder(input: {
   customerId?: string | null;
@@ -48,11 +49,11 @@ export async function createOnlineOrder(input: {
         throw new Error("Quantité invalide");
       }
       const variant = byId.get(line.variantId);
-      if (!variant || !variant.isActive || variant.deletedAt || !variant.product.onlineVisible) {
+      if (!variant || !variant.isActive || variant.deletedAt || variant.product.deletedAt || !variant.product.onlineVisible) {
         throw new Error("Produit indisponible en ligne");
       }
       if (variant.product.status !== "ACTIVE") throw new Error("Produit indisponible");
-      const unitPrice = variant.promoPrice ?? variant.salePrice;
+      const unitPrice = priced(variant);
       subtotal += unitPrice * line.quantity;
       items.push({
         variantId: variant.id,
@@ -219,6 +220,17 @@ export async function updateOrderStatus(input: {
       where: { id: order.id },
       data: { status: to },
     });
+
+    if (to === "CANCELLED" || to === "REFUNDED") {
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: "PENDING" },
+        data: { status: "FAILED" },
+      });
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: "COMPLETED" },
+        data: { status: "REFUNDED" },
+      });
+    }
 
     await tx.auditLog.create({
       data: {

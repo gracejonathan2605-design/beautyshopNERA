@@ -9,12 +9,14 @@ import { writeAudit } from "@/lib/audit";
 import { adjustStock, receivePurchase } from "@/services/inventory.service";
 import { updateOrderStatus } from "@/services/order.service";
 import { slugify } from "@/lib/pricing";
-import { DEFAULT_SETTINGS, saveShopSettings, type ShopSettings } from "@/lib/settings";
+import { getShopSettings, saveShopSettings, type ShopSettings } from "@/lib/settings";
 import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
 import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
 import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
+import { hasPermission } from "@/lib/permissions";
+import { parseCfaInput } from "@/lib/money";
 
 function refreshCategories() {
   updateTag("catalog");
@@ -187,21 +189,30 @@ async function attachMedia(productId: string, name: string, formData: FormData, 
     .slice(0, remaining);
   let order = existingPhotoCount;
   let warning: string | undefined;
-  for (const [index, photo] of photos.entries()) {
-    try {
-      const url = await uploadProductImage(photo, productId, index);
-      await prisma.productImage.create({
-        data: { productId, url, alt: name, sortOrder: order, kind: "IMAGE" },
-      });
-      order += 1;
-    } catch (err) {
-      warning = err instanceof Error ? err.message : "Une photo n’a pas pu être envoyée.";
-    }
+  const uploaded = await Promise.all(
+    photos.map(async (photo, index) => {
+      try {
+        const url = await uploadProductImage(photo, productId, index);
+        return { url, sortOrder: existingPhotoCount + index };
+      } catch (err) {
+        warning = err instanceof Error ? err.message : "Une photo n’a pas pu être envoyée.";
+        return null;
+      }
+    }),
+  );
+  for (const item of uploaded) {
+    if (!item) continue;
+    await prisma.productImage.create({
+      data: { productId, url: item.url, alt: name, sortOrder: item.sortOrder, kind: "IMAGE" },
+    });
+    order = item.sortOrder + 1;
   }
   const video = formData.get("video");
   if (video instanceof File && video.size > 0) {
     const duration = Number(formData.get("videoDuration") ?? 0);
-    if (duration > MAX_VIDEO_SECONDS) {
+    if (!Number.isFinite(duration) || duration <= 0) {
+      warning = "Durée de la vidéo inconnue. Attendez le chargement puis réessayez.";
+    } else if (duration > MAX_VIDEO_SECONDS) {
       warning = "La vidéo dépasse 40 secondes et n’a pas été enregistrée.";
     } else {
       try {
@@ -371,6 +382,10 @@ export async function updateProduct(
     if (photoCount + incomingPhotos.length > MAX_PRODUCT_PHOTOS) {
       return { ok: false, error: `Maximum ${MAX_PRODUCT_PHOTOS} photos par produit.` };
     }
+    const incomingVideo = formData.get("video");
+    if (hasVideo && incomingVideo instanceof File && incomingVideo.size > 0) {
+      return { ok: false, error: "Ce produit a déjà une vidéo. Supprimez-la avant d’en ajouter une autre." };
+    }
 
     await prisma.product.update({
       where: { id: productId },
@@ -379,8 +394,6 @@ export async function updateProduct(
         categoryId,
         shortDescription: String(formData.get("shortDescription") ?? "") || null,
         isFeatured: formData.get("isFeatured") === "on",
-        onlineVisible: true,
-        status: "ACTIVE",
       },
     });
     const variant = current.variants[0];
@@ -389,10 +402,6 @@ export async function updateProduct(
         where: { id: variant.id },
         data: { salePrice, costPrice: parseMoney(formData.get("costPrice")) || variant.costPrice },
       });
-    }
-
-    if (hasVideo && formData.get("video") instanceof File && (formData.get("video") as File).size > 0) {
-      return { ok: false, error: "Ce produit a déjà une vidéo. Supprimez-la avant d’en ajouter une autre." };
     }
 
     const warning = await attachMedia(productId, name, formData, photoCount);
@@ -446,6 +455,9 @@ export async function changeOrderStatus(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const status = String(formData.get("status") ?? "") as OrderStatus;
   if (!orderId || !status) throw new Error("Commande ou statut manquant");
+  if ((status === "CANCELLED" || status === "REFUNDED") && !hasPermission(session, "orders.cancel")) {
+    throw new Error("Vous n’avez pas le droit d’annuler une commande.");
+  }
   await updateOrderStatus({ orderId, status, userId: session.userId });
   revalidatePath("/admin/commandes");
   revalidatePath("/admin/stocks");
@@ -509,11 +521,16 @@ export async function saveCustomer(formData: FormData) {
 
 export async function saveExpense(formData: FormData) {
   const session = await requireStaff("expenses.manage");
+  const amount = parseCfaInput(String(formData.get("amount") ?? ""));
+  if (amount <= 0) throw new Error("Indiquez un montant de dépense valide.");
+  const dateRaw = String(formData.get("date") ?? "");
+  const date = dateRaw ? new Date(dateRaw) : new Date();
+  if (Number.isNaN(date.getTime())) throw new Error("Date invalide.");
   await prisma.expense.create({
     data: {
       categoryId: String(formData.get("categoryId")),
-      amount: Number(formData.get("amount")),
-      date: new Date(String(formData.get("date") ?? new Date().toISOString())),
+      amount,
+      date,
       description: String(formData.get("description") ?? "") || null,
       userId: session.userId,
     },
@@ -523,16 +540,17 @@ export async function saveExpense(formData: FormData) {
 
 export async function saveSettings(formData: FormData) {
   await requireStaff("settings.update");
+  const current = await getShopSettings();
   const next: ShopSettings = {
-    ...DEFAULT_SETTINGS,
-    name: String(formData.get("name") ?? DEFAULT_SETTINGS.name),
-    slogan: String(formData.get("slogan") ?? DEFAULT_SETTINGS.slogan),
-    phone: String(formData.get("phone") ?? DEFAULT_SETTINGS.phone),
-    email: String(formData.get("email") ?? DEFAULT_SETTINGS.email),
-    address: String(formData.get("address") ?? DEFAULT_SETTINGS.address),
-    city: String(formData.get("city") ?? DEFAULT_SETTINGS.city),
-    country: String(formData.get("country") ?? DEFAULT_SETTINGS.country),
-    ticketFooter: String(formData.get("ticketFooter") ?? DEFAULT_SETTINGS.ticketFooter),
+    ...current,
+    name: String(formData.get("name") ?? current.name),
+    slogan: String(formData.get("slogan") ?? current.slogan),
+    phone: String(formData.get("phone") ?? current.phone),
+    email: String(formData.get("email") ?? current.email),
+    address: String(formData.get("address") ?? current.address),
+    city: String(formData.get("city") ?? current.city),
+    country: String(formData.get("country") ?? current.country),
+    ticketFooter: String(formData.get("ticketFooter") ?? current.ticketFooter),
   };
   await saveShopSettings(next);
   updateTag("catalog");

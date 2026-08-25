@@ -6,17 +6,32 @@ import { saleToReceipt } from "@/lib/receipt";
 import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork, PAYMENT_INSTRUCTIONS } from "@/lib/checkout";
 import { BrandLogo } from "@/components/brand/logo";
+import { getCustomerSession, getStaffSession } from "@/lib/auth";
+import { isValidOrderAccessToken } from "@/lib/order-access";
 
-export default async function OrderPage({ params }: { params: Promise<{ number: string }> }) {
-  const { number } = await params;
-  const [order, settings] = await Promise.all([
+export default async function OrderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ number: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
+  const [{ number }, { t }] = await Promise.all([params, searchParams]);
+  const [order, settings, staff, customer] = await Promise.all([
     prisma.order.findUnique({
       where: { number },
       include: { items: true, payments: true, deliveryZone: true },
     }),
     getShopSettings(),
+    getStaffSession().catch(() => null),
+    getCustomerSession().catch(() => null),
   ]);
   if (!order) notFound();
+  const allowed =
+    isValidOrderAccessToken(number, t) ||
+    Boolean(staff) ||
+    Boolean(customer && order.customerId === customer.customerId);
+  if (!allowed) notFound();
   const paid = order.payments.some((p) => p.status === "COMPLETED");
 
   const networkRaw = order.payments[0]?.provider ?? order.payments[0]?.reference ?? "ORANGE";

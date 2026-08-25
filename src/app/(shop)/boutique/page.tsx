@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/product-card";
-import { productCardInclude } from "@/lib/product-query";
+import { getCachedBoutique } from "@/lib/catalog-cache";
+import { productCardSelect } from "@/lib/product-query";
 
 export default async function BoutiquePage({
   searchParams,
@@ -8,25 +9,23 @@ export default async function BoutiquePage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const products = await prisma.product.findMany({
-    where: {
-      status: "ACTIVE",
-      onlineVisible: true,
-      deletedAt: null,
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" as const } },
-              { shortDescription: { contains: q, mode: "insensitive" as const } },
-              { category: { name: { contains: q, mode: "insensitive" as const } } },
-            ],
-          }
-        : {}),
-    },
-    include: productCardInclude,
-    orderBy: { name: "asc" },
-    take: 60,
-  });
+  const products = q
+    ? await prisma.product.findMany({
+        where: {
+          status: "ACTIVE",
+          onlineVisible: true,
+          deletedAt: null,
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { shortDescription: { contains: q, mode: "insensitive" } },
+            { category: { name: { contains: q, mode: "insensitive" } } },
+          ],
+        },
+        select: productCardSelect,
+        orderBy: { name: "asc" },
+        take: 60,
+      })
+    : await getCachedBoutique();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">

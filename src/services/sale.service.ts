@@ -4,13 +4,44 @@ import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { writeAudit } from "@/lib/audit";
+import { unitPrice as priced } from "@/lib/pricing";
 
 export type SaleLineInput = {
   variantId: string;
   quantity: number;
-  unitPrice?: number;
-  discount?: number;
 };
+
+function recordPayments(
+  payments: { method: PaymentMethod; amount: number; reference?: string }[],
+  total: number,
+) {
+  if (!payments.length) throw new Error("Indiquez un paiement");
+  for (const payment of payments) {
+    if (!Number.isFinite(payment.amount) || payment.amount <= 0) {
+      throw new Error("Montant de paiement invalide");
+    }
+  }
+  const other = payments.filter((p) => p.method !== "CASH");
+  const cash = payments.filter((p) => p.method === "CASH");
+  const otherTotal = other.reduce((sum, p) => sum + p.amount, 0);
+  if (otherTotal > total) throw new Error("Paiement supérieur au total");
+  const cashNeeded = total - otherTotal;
+  const cashTendered = cash.reduce((sum, p) => sum + p.amount, 0);
+  if (cashTendered < cashNeeded) throw new Error("Paiement insuffisant");
+  const recorded: { method: PaymentMethod; amount: number; reference?: string }[] = other.map((p) => ({
+    method: p.method,
+    amount: Math.round(p.amount),
+    reference: p.reference,
+  }));
+  if (cashNeeded > 0) {
+    recorded.push({
+      method: "CASH",
+      amount: cashNeeded,
+      reference: cash[0]?.reference,
+    });
+  }
+  return recorded;
+}
 
 export async function createPosSale(input: {
   cashierId: string;
@@ -23,7 +54,6 @@ export async function createPosSale(input: {
   payments: { method: PaymentMethod; amount: number; reference?: string }[];
 }) {
   if (!input.lines.length) throw new Error("Le panier est vide");
-  const paymentTotal = input.payments.reduce((s, p) => s + p.amount, 0);
 
   const result = await prisma.$transaction(async (tx) => {
     const settings = await getShopSettings(tx);
@@ -43,11 +73,10 @@ export async function createPosSale(input: {
       const variant = byId.get(line.variantId);
       if (!variant) throw new Error("Variante introuvable ou inactive");
       if (line.quantity <= 0) throw new Error("Quantité invalide");
-      const unitPrice = line.unitPrice ?? variant.promoPrice ?? variant.salePrice;
-      const discount = line.discount ?? 0;
-      const total = unitPrice * line.quantity - discount;
+      const unitPrice = priced(variant);
+      const total = unitPrice * line.quantity;
       if (total < 0) throw new Error("Ligne au montant invalide");
-      subtotal += unitPrice * line.quantity;
+      subtotal += total;
       items.push({
         variantId: variant.id,
         productName: variant.product.name,
@@ -55,15 +84,15 @@ export async function createPosSale(input: {
         sku: variant.sku,
         quantity: line.quantity,
         unitPrice,
-        discount,
+        discount: 0,
         total,
       });
     }
 
-    const cartDiscount = input.discount ?? 0;
-    const total = subtotal - cartDiscount - items.reduce((s, i) => s + (i.discount as number), 0);
-    if (total < 0) throw new Error("Total invalide");
-    if (paymentTotal < total) throw new Error("Paiement insuffisant");
+    const cartDiscount = Math.max(0, Math.round(input.discount ?? 0));
+    if (cartDiscount > subtotal) throw new Error("Remise supérieure au total");
+    const total = subtotal - cartDiscount;
+    const payments = recordPayments(input.payments, total);
 
     const sale = await tx.sale.create({
       data: {
@@ -78,7 +107,7 @@ export async function createPosSale(input: {
         notes: input.notes,
         items: { create: items },
         payments: {
-          create: input.payments.map((p) => ({
+          create: payments.map((p) => ({
             amount: p.amount,
             method: p.method,
             reference: p.reference,

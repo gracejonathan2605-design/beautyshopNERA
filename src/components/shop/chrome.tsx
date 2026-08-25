@@ -1,4 +1,3 @@
-import { cache } from "react";
 import Link from "next/link";
 import { getShopSettings } from "@/lib/settings";
 import { getCart } from "@/lib/cart";
@@ -6,8 +5,6 @@ import { getNavCategories } from "@/lib/catalog-cache";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { BrandLockup, BrandLogo } from "@/components/brand/logo";
-
-const shopSettings = cache(getShopSettings);
 
 function WhatsAppIcon() {
   return (
@@ -21,7 +18,7 @@ function WhatsAppIcon() {
 }
 
 export async function ShopHeader() {
-  let settings = (await shopSettings().catch(() => null)) ?? {
+  let settings = (await getShopSettings().catch(() => null)) ?? {
     name: "NERA Beauté & Shop",
     phone: "",
   };
@@ -89,7 +86,7 @@ export async function ShopHeader() {
 }
 
 export async function ShopFooter() {
-  const settings = (await shopSettings().catch(() => null)) ?? {
+  const settings = (await getShopSettings().catch(() => null)) ?? {
     name: "NERA Beauté & Shop",
     slogan: "Beauté, cheveux & mode — Yaoundé",
     address: "Marché Central",

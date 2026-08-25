@@ -6,6 +6,7 @@ import { clearCart, getCart, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession } from "@/lib/auth";
 import { createOnlineOrder } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
+import { orderConfirmationPath } from "@/lib/order-access";
 
 export async function addToCart(variantId: string, quantity = 1) {
   const cart = await getCart();
@@ -50,28 +51,35 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     const networkRaw = String(formData.get("paymentNetwork") ?? "ORANGE");
     const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
 
-    const order = await createOnlineOrder({
-      customerId: session?.customerId,
-      fulfillment,
-      deliveryZoneId,
-      shippingName: name,
-      shippingPhone: phone,
-      shippingAddress: String(formData.get("shippingAddress") ?? ""),
-      shippingCity: String(formData.get("shippingCity") ?? ""),
-      couponCode: String(formData.get("couponCode") ?? "") || null,
-      notes: String(formData.get("notes") ?? "") || undefined,
-      lines: cart.filter((l) => l.quantity > 0),
-      payment: {
-        method: "MOBILE_MONEY",
-        amount: 0,
-        reference: network,
-        provider: network,
-      },
-    });
-    await clearCart();
-    revalidatePath("/panier");
-    revalidatePath("/");
-    redirect(`/commande/${order.number}`);
+    await saveCart([]);
+    try {
+      const order = await createOnlineOrder({
+        customerId: session?.customerId,
+        fulfillment,
+        deliveryZoneId,
+        shippingName: name,
+        shippingPhone: phone,
+        shippingAddress: String(formData.get("shippingAddress") ?? ""),
+        shippingCity: String(formData.get("shippingCity") ?? ""),
+        couponCode: String(formData.get("couponCode") ?? "") || null,
+        notes: String(formData.get("notes") ?? "") || undefined,
+        lines: cart.filter((l) => l.quantity > 0),
+        payment: {
+          method: "MOBILE_MONEY",
+          amount: 0,
+          reference: network,
+          provider: network,
+        },
+      });
+      await clearCart();
+      revalidatePath("/panier");
+      revalidatePath("/");
+      redirect(orderConfirmationPath(order.number));
+    } catch (err) {
+      unstable_rethrow(err);
+      await saveCart(cart);
+      throw err;
+    }
   } catch (err) {
     unstable_rethrow(err);
     return { ok: false, error: err instanceof Error ? err.message : "Commande impossible pour le moment." };

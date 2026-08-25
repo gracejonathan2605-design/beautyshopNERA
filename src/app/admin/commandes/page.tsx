@@ -22,7 +22,18 @@ export default async function OrdersAdminPage() {
   const canUpdate = hasPermission(session, "orders.update");
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
-    include: { customer: true, payments: true, items: true },
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      total: true,
+      createdAt: true,
+      shippingName: true,
+      shippingPhone: true,
+      customer: { select: { firstName: true, lastName: true, phone: true } },
+      payments: { select: { status: true, method: true, amount: true, reference: true } },
+      items: { select: { id: true, quantity: true, productName: true }, take: 5 },
+    },
     take: 100,
   });
   return (

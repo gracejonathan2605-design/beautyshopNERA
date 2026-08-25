@@ -3,6 +3,8 @@ import { requireStaff } from "@/lib/guard";
 import { formatCfa } from "@/lib/money";
 import { SALE_STATUS_LABELS } from "@/lib/status-labels";
 import { PAYMENT_LABELS } from "@/lib/receipt";
+import { hasPermission } from "@/lib/permissions";
+import { cancelPosSale } from "@/app/actions/pos";
 import Link from "next/link";
 
 function formatWhen(date: Date) {
@@ -15,11 +17,25 @@ function formatWhen(date: Date) {
   });
 }
 
-export default async function SalesAdminPage() {
-  await requireStaff("sales.view");
+export default async function SalesAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; erreur?: string }>;
+}) {
+  const session = await requireStaff("sales.view");
+  const canCancel = hasPermission(session, "sales.cancel");
+  const { ok, erreur } = await searchParams;
   const sales = await prisma.sale.findMany({
     orderBy: { createdAt: "desc" },
-    include: { cashier: true, payments: true },
+    select: {
+      id: true,
+      number: true,
+      total: true,
+      status: true,
+      createdAt: true,
+      cashier: { select: { firstName: true, lastName: true } },
+      payments: { select: { method: true } },
+    },
     take: 100,
   });
   return (
@@ -32,6 +48,8 @@ export default async function SalesAdminPage() {
         </Link>
         .
       </p>
+      {ok ? <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{ok}</p> : null}
+      {erreur ? <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{erreur}</p> : null}
       {sales.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-[#eee0e6] bg-white p-8">
           <p className="font-medium text-wine">Aucune vente pour le moment</p>
@@ -60,7 +78,15 @@ export default async function SalesAdminPage() {
                     {methods ? ` · ${methods}` : ""} · {SALE_STATUS_LABELS[s.status] ?? s.status}
                   </p>
                 </div>
-                <span className="font-serif text-xl text-wine">{formatCfa(s.total)}</span>
+                <span className="flex items-center gap-3">
+                  <span className="font-serif text-xl text-wine">{formatCfa(s.total)}</span>
+                  {canCancel && s.status === "COMPLETED" ? (
+                    <form action={cancelPosSale}>
+                      <input type="hidden" name="saleId" value={s.id} />
+                      <button className="text-sm text-red-700">Annuler</button>
+                    </form>
+                  ) : null}
+                </span>
               </li>
             );
           })}

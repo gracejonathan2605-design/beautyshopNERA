@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/product-card";
-import { productCardInclude } from "@/lib/product-query";
+import { getCachedCategoryPage } from "@/lib/catalog-cache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,30 +12,9 @@ type Props = {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
-  const category = await prisma.category.findUnique({
-    where: { slug },
-    include: {
-      parent: true,
-      children: {
-        where: { isActive: true, deletedAt: null },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
-  if (!category || category.deletedAt || !category.isActive) notFound();
-
-  const descendantIds = await collectCategoryIds(category.id);
-  const products = await prisma.product.findMany({
-    where: {
-      status: "ACTIVE",
-      onlineVisible: true,
-      deletedAt: null,
-      categoryId: { in: descendantIds },
-    },
-      include: productCardInclude,
-    orderBy: { name: "asc" },
-    take: 80,
-  });
+  const data = await getCachedCategoryPage(slug);
+  if (!data) notFound();
+  const { category, products } = data;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -83,23 +61,8 @@ export default async function CategoryPage({ params }: Props) {
   );
 }
 
-async function collectCategoryIds(rootId: string): Promise<string[]> {
-  const children = await prisma.category.findMany({
-    where: { parentId: rootId, isActive: true, deletedAt: null },
-    select: { id: true },
-  });
-  const childIds = children.map((c) => c.id);
-  const grand = childIds.length
-    ? await prisma.category.findMany({
-        where: { parentId: { in: childIds }, isActive: true, deletedAt: null },
-        select: { id: true },
-      })
-    : [];
-  return [rootId, ...childIds, ...grand.map((g) => g.id)];
-}
-
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const category = await prisma.category.findUnique({ where: { slug } });
-  return { title: category ? `${category.name} — NERA Beauté` : "Catégorie" };
+  const data = await getCachedCategoryPage(slug);
+  return { title: data ? `${data.category.name} — NERA Beauté` : "Catégorie" };
 }

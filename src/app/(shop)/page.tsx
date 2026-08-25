@@ -16,8 +16,9 @@ const TRUST = [
 
 export default async function HomePage() {
   let settings;
+  let catalog: Awaited<ReturnType<typeof getHomeCatalog>> | null = null;
   try {
-    settings = await getShopSettings();
+    [settings, catalog] = await Promise.all([getShopSettings(), getHomeCatalog()]);
   } catch {
     return (
       <section className="hero-light px-4 py-24">
@@ -36,7 +37,16 @@ export default async function HomePage() {
       </section>
     );
   }
-  const { featured, news, promos, categories } = await getHomeCatalog();
+  if (!settings || !catalog) {
+    return (
+      <section className="hero-light px-4 py-24">
+        <div className="mx-auto max-w-6xl px-4 py-10">
+          <h1 className="font-serif text-5xl text-wine">NERA Beauté & Shop</h1>
+        </div>
+      </section>
+    );
+  }
+  const { featured, news, promos, categories } = catalog;
 
   return (
     <div>

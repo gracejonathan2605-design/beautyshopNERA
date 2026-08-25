@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   clearCustomerSession,
@@ -79,22 +80,36 @@ export async function registerCustomer(formData: FormData) {
   }
   const exists = await prisma.customer.findUnique({ where: { email } });
   if (exists) redirect("/compte/inscription?error=exists");
+  if (phone) {
+    const phoneTaken = await prisma.customer.findFirst({
+      where: { phone, deletedAt: null },
+      select: { id: true },
+    });
+    if (phoneTaken) redirect("/compte/inscription?error=exists");
+  }
   const passwordHash = await hashPassword(password);
   const settings = await getShopSettings();
-  const customer = await prisma.$transaction(async (tx) => {
-    const seq = await nextSequence(tx, "customer");
-    return tx.customer.create({
-      data: {
-        code: formatRef(settings.prefixes.customer, seq.year, seq.value),
-        firstName,
-        lastName,
-        email,
-        phone: phone || null,
-        passwordHash,
-      },
+  try {
+    const customer = await prisma.$transaction(async (tx) => {
+      const seq = await nextSequence(tx, "customer");
+      return tx.customer.create({
+        data: {
+          code: formatRef(settings.prefixes.customer, seq.year, seq.value),
+          firstName,
+          lastName,
+          email,
+          phone: phone || null,
+          passwordHash,
+        },
+      });
     });
-  });
-  await createCustomerSession(customer.id);
+    await createCustomerSession(customer.id);
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      redirect("/compte/inscription?error=exists");
+    }
+    throw err;
+  }
   redirect("/compte");
 }
 

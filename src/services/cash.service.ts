@@ -1,12 +1,22 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { summarizeTill, type TillSnapshot } from "@/lib/till";
+
+const tillSaleSelect = {
+  status: true,
+  total: true,
+  payments: { select: { method: true, status: true, amount: true } },
+} as const;
 
 export async function openCashSession(input: {
   registerId: string;
   userId: string;
   openingFloat: number;
 }) {
+  if (!Number.isFinite(input.openingFloat) || input.openingFloat < 0) {
+    throw new Error("Fond d’ouverture invalide.");
+  }
   const mine = await prisma.cashSession.findFirst({
     where: { registerId: input.registerId, status: "OPEN", openedById: input.userId },
   });
@@ -17,31 +27,46 @@ export async function openCashSession(input: {
   });
   if (existing) return existing;
 
-  const session = await prisma.cashSession.create({
-    data: {
-      registerId: input.registerId,
-      openedById: input.userId,
-      openingFloat: input.openingFloat,
-    },
-  });
+  try {
+    const session = await prisma.cashSession.create({
+      data: {
+        registerId: input.registerId,
+        openedById: input.userId,
+        openingFloat: Math.round(input.openingFloat),
+      },
+    });
 
-  await writeAudit({
-    userId: input.userId,
-    action: "CASH_OPEN",
-    entity: "CashSession",
-    entityId: session.id,
-    after: { openingFloat: input.openingFloat },
-  });
+    await writeAudit({
+      userId: input.userId,
+      action: "CASH_OPEN",
+      entity: "CashSession",
+      entityId: session.id,
+      after: { openingFloat: input.openingFloat },
+    });
 
-  return session;
+    return session;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const raced = await prisma.cashSession.findFirst({
+        where: { registerId: input.registerId, status: "OPEN" },
+      });
+      if (raced) return raced;
+    }
+    throw err;
+  }
 }
 
 export async function getTillSnapshot(sessionId: string): Promise<TillSnapshot | null> {
   const session = await prisma.cashSession.findUnique({
     where: { id: sessionId },
-    include: {
-      sales: { include: { payments: true } },
-      expenses: { include: { category: true }, orderBy: { createdAt: "asc" } },
+    select: {
+      id: true,
+      openingFloat: true,
+      sales: { select: tillSaleSelect },
+      expenses: {
+        select: { id: true, amount: true, description: true, category: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
   if (!session) return null;
@@ -67,9 +92,13 @@ export async function closeCashSession(input: {
   return prisma.$transaction(async (tx) => {
     const session = await tx.cashSession.findUnique({
       where: { id: input.sessionId },
-      include: {
-        sales: { include: { payments: true } },
-        expenses: { include: { category: true } },
+      select: {
+        id: true,
+        status: true,
+        openedById: true,
+        openingFloat: true,
+        sales: { select: tillSaleSelect },
+        expenses: { select: { id: true, amount: true, description: true, category: { select: { name: true } } } },
       },
     });
     if (!session || session.status !== "OPEN") {
@@ -88,7 +117,9 @@ export async function closeCashSession(input: {
       })),
     });
     const expectedCash = snap.expectedCash;
-    const actualCash = input.actualCash == null || Number.isNaN(input.actualCash) ? expectedCash : input.actualCash;
+    const actualCash =
+      input.actualCash == null || !Number.isFinite(input.actualCash) ? expectedCash : input.actualCash;
+    if (actualCash < 0) throw new Error("Le cash réel ne peut pas être négatif.");
     const difference = actualCash - expectedCash;
 
     const closed = await tx.cashSession.update({

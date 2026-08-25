@@ -4,6 +4,7 @@ import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/shop/checkout-form";
+import { sellableOnlineWhere } from "@/lib/product-query";
 
 export default async function CheckoutPage() {
   const cart = await getCart();
@@ -12,8 +13,8 @@ export default async function CheckoutPage() {
   try {
     const [variants, zones] = await Promise.all([
       prisma.productVariant.findMany({
-        where: { id: { in: cart.map((i) => i.variantId) } },
-        include: { product: true },
+        where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
+        select: { id: true, salePrice: true, promoPrice: true },
       }),
       prisma.deliveryZone.findMany({
         where: { isActive: true },

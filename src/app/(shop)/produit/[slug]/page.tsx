@@ -1,19 +1,16 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { ProductBuy } from "@/components/shop/product-buy";
 import { catalogPhotoFor } from "@/lib/product-photos";
+import { getCachedProductPage } from "@/lib/catalog-cache";
+import { getShopSettings } from "@/lib/settings";
+import { whatsappChatUrl } from "@/lib/receipt";
+import { formatCfa } from "@/lib/money";
+import { unitPrice } from "@/lib/pricing";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: {
-      variants: { where: { isActive: true, deletedAt: null } },
-      category: true,
-      images: { orderBy: { sortOrder: "asc" } },
-    },
-  });
+  const [product, settings] = await Promise.all([getCachedProductPage(slug), getShopSettings()]);
   if (!product || product.deletedAt || !product.onlineVisible || product.status !== "ACTIVE") notFound();
   const variants = product.variants;
   if (!variants.length) notFound();
@@ -21,6 +18,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const gallery = product.images.length
     ? product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))
     : [{ id: "catalog", url: catalogPhotoFor(product.slug, product.name), alt: product.name, kind: "IMAGE" as const }];
+
+  const price = unitPrice(variants[0]);
+  const wa = settings.phone
+    ? whatsappChatUrl(
+        settings.phone,
+        `Bonjour NERA Beauté, je souhaite commander ${product.name} (${formatCfa(price)}).`,
+      )
+    : "";
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-2">
@@ -36,6 +41,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             salePrice: v.salePrice,
             promoPrice: v.promoPrice,
           }))}
+          whatsappUrl={wa}
         />
       </div>
     </div>

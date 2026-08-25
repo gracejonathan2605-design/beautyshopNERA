@@ -3,11 +3,15 @@ import { requireStaff } from "@/lib/guard";
 import { saveStockAdjust } from "@/app/actions/admin";
 import { formatCfa } from "@/lib/money";
 import { availableQty } from "@/services/inventory.service";
+import { unitPrice } from "@/lib/pricing";
 
 export default async function StockAdminPage() {
   await requireStaff("stock.view");
   const rows = await prisma.inventory.findMany({
-    include: { variant: { include: { product: true } }, location: true },
+    include: {
+      variant: { select: { name: true, salePrice: true, promoPrice: true, product: { select: { name: true } } } },
+      location: { select: { name: true } },
+    },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -43,7 +47,7 @@ export default async function StockAdminPage() {
               <td>{availableQty(r.onHand, r.reserved)}</td>
               <td>{r.reserved}</td>
               <td>{r.minQuantity}</td>
-              <td>{formatCfa(r.variant.promoPrice ?? r.variant.salePrice)}</td>
+              <td>{formatCfa(unitPrice(r.variant))}</td>
             </tr>
           ))}
         </tbody>

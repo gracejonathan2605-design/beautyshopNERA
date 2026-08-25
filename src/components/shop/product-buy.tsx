@@ -13,7 +13,13 @@ type BuyVariant = {
   promoPrice: number | null;
 };
 
-export function ProductBuy({ variants }: { variants: BuyVariant[] }) {
+export function ProductBuy({
+  variants,
+  whatsappUrl,
+}: {
+  variants: BuyVariant[];
+  whatsappUrl?: string;
+}) {
   const [id, setId] = useState(variants[0]?.id ?? "");
   const selected = variants.find((v) => v.id === id) ?? variants[0];
   if (!selected) return null;
@@ -37,6 +43,16 @@ export function ProductBuy({ variants }: { variants: BuyVariant[] }) {
       ) : null}
       <p className="mt-6 font-serif text-4xl">{formatCfa(unitPrice(selected))}</p>
       <AddToCartButton action={() => addToCart(selected.id, 1)} />
+      {whatsappUrl ? (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 block rounded-full border border-[#25D366] py-3 text-center text-sm text-[#128C46]"
+        >
+          Commander sur WhatsApp
+        </a>
+      ) : null}
     </div>
   );
 }

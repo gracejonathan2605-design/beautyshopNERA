@@ -3,14 +3,21 @@ import { getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { setCartQtyForm } from "@/app/actions/shop";
+import { sellableOnlineWhere } from "@/lib/product-query";
 import Link from "next/link";
 
 export default async function CartPage() {
   const cart = await getCart();
   const variants = cart.length
     ? await prisma.productVariant.findMany({
-        where: { id: { in: cart.map((i) => i.variantId) }, isActive: true, deletedAt: null },
-        include: { product: true },
+        where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
+        select: {
+          id: true,
+          name: true,
+          salePrice: true,
+          promoPrice: true,
+          product: { select: { name: true } },
+        },
       })
     : [];
   const rows = cart

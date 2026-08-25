@@ -18,7 +18,7 @@ export function rangeFromPreset(preset: string, from?: string, to?: string): Rep
   return { from: startOfDay(now), to: now };
 }
 
-const ONLINE_REVENUE_STATUSES = ["CONFIRMED", "PREPARING", "READY", "SHIPPED", "DELIVERED"] as const;
+const ONLINE_REVENUE_STATUSES = ["SHIPPED", "DELIVERED"] as const;
 
 export async function getDashboardMetrics(range: ReportRange) {
   const { from, to } = range;
@@ -113,6 +113,7 @@ export async function salesByUser(range: ReportRange) {
   });
   const users = await prisma.user.findMany({
     where: { id: { in: sales.map((s) => s.cashierId) } },
+    select: { id: true, firstName: true, lastName: true },
   });
   return sales.map((s) => {
     const u = users.find((x) => x.id === s.cashierId);

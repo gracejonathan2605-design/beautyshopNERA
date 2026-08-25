@@ -113,6 +113,7 @@ export const ROLE_PRESETS: Record<string, PermissionCode[]> = {
     "sales.cancel",
     "orders.view",
     "orders.update",
+    "orders.cancel",
     "customers.view",
     "customers.create",
     "customers.update",

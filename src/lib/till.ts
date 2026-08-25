@@ -32,9 +32,17 @@ export function summarizeTill(input: {
 }): TillSnapshot {
   const completed = input.sales.filter((s) => s.status === "COMPLETED");
   const salesTotal = completed.reduce((sum, s) => sum + s.total, 0);
-  const payments = completed.flatMap((s) => s.payments).filter((p) => p.status === "COMPLETED");
-  const cashSales = payments.filter((p) => p.method === "CASH").reduce((sum, p) => sum + p.amount, 0);
-  const otherSales = payments.filter((p) => p.method !== "CASH").reduce((sum, p) => sum + p.amount, 0);
+  let cashSales = 0;
+  let otherSales = 0;
+  for (const sale of completed) {
+    const paid = sale.payments.filter((p) => p.status === "COMPLETED");
+    const other = paid.filter((p) => p.method !== "CASH").reduce((sum, p) => sum + p.amount, 0);
+    const cash = paid.filter((p) => p.method === "CASH").reduce((sum, p) => sum + p.amount, 0);
+    const otherCounted = Math.min(Math.max(0, other), sale.total);
+    const cashDue = Math.max(0, sale.total - otherCounted);
+    otherSales += otherCounted;
+    cashSales += Math.min(Math.max(0, cash), cashDue);
+  }
   const expensesTotal = input.expenses.reduce((sum, e) => sum + e.amount, 0);
   return {
     sessionId: input.sessionId,

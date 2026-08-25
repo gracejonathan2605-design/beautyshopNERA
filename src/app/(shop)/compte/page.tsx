@@ -5,6 +5,7 @@ import { logoutCustomer } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ORDER_STATUS_LABELS } from "@/lib/status-labels";
+import { orderConfirmationPath } from "@/lib/order-access";
 
 export default async function AccountPage() {
   const session = await getCustomerSession();
@@ -31,7 +32,7 @@ export default async function AccountPage() {
       <ul className="mt-4 space-y-3">
         {customer.orders.map((o) => (
           <li key={o.id}>
-            <Link href={`/commande/${o.number}`} className="flex justify-between rounded-2xl bg-cream p-4">
+            <Link href={orderConfirmationPath(o.number)} className="flex justify-between rounded-2xl bg-cream p-4">
               <span>{o.number} · {ORDER_STATUS_LABELS[o.status] ?? o.status}</span>
               <span>{formatCfa(o.total)}</span>
             </Link>
