@@ -4,7 +4,7 @@ import { ACTION_PAYLOAD_MAX_BYTES, VIDEO_CLIENT_MAX_BYTES } from "@/lib/product-
 
 export function uploadActionError(err: unknown) {
   const message = err instanceof Error ? err.message : String(err ?? "");
-  if (!message || /failed to fetch|networkerror|load failed|fetch/i.test(message)) {
+  if (!message || /failed to fetch|networkerror|load failed/i.test(message)) {
     return "L’envoi du fichier a été coupé. Les photos du téléphone sont souvent trop lourdes. Essayez 1 photo, sans vidéo.";
   }
   return message;

@@ -14,6 +14,7 @@ describe("envoi photos / vidéos produit", () => {
     expect(uploadActionError(new Error("NetworkError when attempting to fetch resource."))).toMatch(/trop lourdes/);
     expect(uploadActionError(new Error("Load failed"))).toMatch(/trop lourdes/);
     expect(uploadActionError(new Error("Prix invalide"))).toBe("Prix invalide");
+    expect(uploadActionError(new Error("Impossible de fetch le rayon"))).toBe("Impossible de fetch le rayon");
   });
 
   it("empêche l’erreur Failed to fetch de casser toute la page admin", async () => {
