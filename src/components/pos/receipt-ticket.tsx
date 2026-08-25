@@ -10,7 +10,7 @@ import {
   type ReceiptData,
 } from "@/lib/receipt";
 import { ReceiptLogo } from "@/components/brand/logo";
-import { printReceiptElement } from "@/lib/print-ticket";
+import { printReceiptElement, printReceiptFallback } from "@/lib/print-ticket";
 
 export function ReceiptTicket({
   data,
@@ -25,7 +25,7 @@ export function ReceiptTicket({
 
   function printTicket() {
     if (paperRef.current) printReceiptElement(paperRef.current);
-    else window.print();
+    else printReceiptFallback();
   }
 
   function sendWhatsApp() {
@@ -148,7 +148,7 @@ export function ReceiptTicket({
             ) : null}
           </div>
           <p className="text-center text-xs text-black/45">
-            Impression 80 mm — papier thermique. Dans la fenêtre d’impression, choisissez le format 80 mm si proposé. Sur WhatsApp, le ticket part en texte lisible.
+            Impression 80 mm uniquement. Dans Destination, choisissez l’imprimante thermique — pas « Fichier PDF » ni A4.
           </p>
         </div>
       </div>
