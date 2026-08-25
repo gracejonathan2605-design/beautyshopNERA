@@ -44,7 +44,7 @@ export default async function SalesAdminPage({
       <h1 className="font-serif text-4xl">Ventes POS</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Tickets encaissés à la caisse. Pour enregistrer une vente, ouvrez{" "}
-        <Link href="/pos" className="underline">
+        <Link href="/pos" prefetch={false} className="underline">
           Caisse POS
         </Link>
         .
@@ -57,7 +57,7 @@ export default async function SalesAdminPage({
           <p className="mt-2 text-sm text-black/55">
             Dès qu’un ticket est encaissé à la caisse, il apparaît ici.
           </p>
-          <Link href="/pos" className="mt-5 inline-block rounded-full bg-brown px-5 py-2 text-sm text-cream">
+          <Link href="/pos" prefetch={false} className="mt-5 inline-block rounded-full bg-brown px-5 py-2 text-sm text-cream">
             Ouvrir la caisse
           </Link>
         </div>

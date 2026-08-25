@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/guard";
 import { searchPosProducts } from "@/app/actions/pos";
 import { getOpenSessionForUser, getTillSnapshot } from "@/services/cash.service";
+import { listHeldTickets } from "@/services/held-ticket.service";
 import { PosClient } from "@/components/pos/pos-client";
 import { TillBoard } from "@/components/pos/till-board";
 import { StaffToolbar } from "@/components/staff/toolbar";
@@ -9,7 +10,8 @@ import { BrandLockup } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
-import type { HeldTicketPayload } from "@/lib/pos";
+
+export const dynamic = "force-dynamic";
 
 export default async function PosPage({
   searchParams,
@@ -28,12 +30,7 @@ export default async function PosPage({
     getOpenSessionForUser(session.userId),
     getShopSettings(),
     prisma.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
-    prisma.heldTicket.findMany({
-      where: { cashierId: session.userId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: { id: true, note: true, createdAt: true, payload: true },
-    }),
+    listHeldTickets(session.userId),
   ]);
   const snapshot = open ? await getTillSnapshot(open.id) : null;
   return (
@@ -70,12 +67,7 @@ export default async function PosPage({
             openSession={open ? { id: open.id, openingFloat: open.openingFloat } : null}
             shop={toReceiptShop(settings)}
             canRefund={hasPermission(session, "sales.refund")}
-            initialHeld={heldRows.map((row) => ({
-              id: row.id,
-              note: row.note,
-              createdAt: row.createdAt,
-              payload: row.payload as HeldTicketPayload,
-            }))}
+            initialHeld={heldRows}
           />
         </div>
       </div>

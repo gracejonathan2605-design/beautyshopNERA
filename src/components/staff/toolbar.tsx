@@ -16,7 +16,7 @@ export async function StaffToolbar() {
         </p>
         <div className="flex items-center gap-4">
           {hasPermission(session, "pos.access") ? (
-            <Link href="/pos" className="underline-offset-2 hover:underline">
+            <Link href="/pos" prefetch={false} className="underline-offset-2 hover:underline">
               Caisse
             </Link>
           ) : null}
