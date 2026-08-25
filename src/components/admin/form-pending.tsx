@@ -32,14 +32,17 @@ export function PendingSubmitButton({
   idle,
   pendingLabel,
   disabled,
+  pending: pendingProp,
   className = "rounded-full bg-brown py-3 text-cream disabled:cursor-not-allowed disabled:opacity-60 md:col-span-4",
 }: {
   idle: string;
   pendingLabel: string;
   disabled?: boolean;
+  pending?: boolean;
   className?: string;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const pending = pendingProp ?? status.pending;
   const busy = pending || disabled;
   return (
     <button type="submit" disabled={busy} className={className} aria-busy={pending}>

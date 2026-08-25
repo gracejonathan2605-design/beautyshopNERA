@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { saveProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput } from "@/components/admin/video-input";
@@ -8,9 +8,11 @@ import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
 import { VariantEditor } from "@/components/admin/variant-editor";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
+import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
 import type { CategoryOptionGroup } from "@/lib/catalog";
 
 const INITIAL: ProductFormState = { ok: false };
+const saveProductSafe = wrapProductAction(saveProduct);
 
 export function ProductForm({
   categoryGroups,
@@ -21,7 +23,8 @@ export function ProductForm({
   brands?: { id: string; name: string }[];
   suppliers?: { id: string; name: string }[];
 }) {
-  const [state, action, pending] = useActionState(saveProduct, INITIAL);
+  const [state, action, pending] = useActionState(saveProductSafe, INITIAL);
+  const [, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const [clientError, setClientError] = useState("");
   const [publishing, setPublishing] = useState(false);
@@ -46,10 +49,10 @@ export function ProductForm({
       action={action}
       noValidate
       className="relative mt-6 grid gap-3 rounded-2xl bg-cream p-5 md:grid-cols-4"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
+        event.preventDefault();
         setClientError("");
         if (noCategories) {
-          event.preventDefault();
           setClientError("Installez d’abord le catalogue NERA (Catégories), puis choisissez un rayon.");
           return;
         }
@@ -60,37 +63,42 @@ export function ProductForm({
         const salePrice = String(data.get("variantSalePrice") ?? data.get("salePrice") ?? "").trim();
         const photos = (form.elements.namedItem("photos") as HTMLInputElement | null)?.files;
         if (!name) {
-          event.preventDefault();
           setClientError("Indiquez le nom du produit.");
           return;
         }
         if (!categoryId) {
-          event.preventDefault();
           setClientError("Choisissez une catégorie. Sans rayon, le produit n’apparaît pas en boutique.");
           return;
         }
         if (!salePrice) {
-          event.preventDefault();
           setClientError("Indiquez un prix de vente en FCFA.");
           return;
         }
         if (photos && photos.length > MAX_PRODUCT_PHOTOS) {
-          event.preventDefault();
           setClientError(`Maximum ${MAX_PRODUCT_PHOTOS} photos.`);
           return;
         }
         setPublishing(true);
+        try {
+          const fd = await prepareProductFormData(form);
+          startTransition(() => {
+            action(fd);
+          });
+        } catch (err) {
+          setPublishing(false);
+          setClientError(err instanceof Error ? err.message : "Le fichier n’a pas pu être envoyé.");
+        }
       }}
     >
       <FormBusyOverlay
         active={busy}
         title="Publication en cours"
-        detail="Compression des photos, envoi de la vidéo si besoin, puis apparition en boutique et à la caisse. Cela peut prendre plusieurs secondes."
+        detail="Compression des photos sur votre appareil, puis envoi. Une photo du téléphone trop lourde est réduite automatiquement. Cela peut prendre quelques secondes."
       />
       <div className="md:col-span-4">
         <h2 className="font-serif text-2xl text-wine">Publier un nouveau produit</h2>
         <p className="mt-1 text-sm text-black/55">
-          Nom, rayon, prix — puis Publier. Un bandeau s’affiche pendant la compression des photos.
+          Nom, rayon, prix — puis Publier. Les photos sont compressées sur votre téléphone avant l’envoi.
         </p>
       </div>
       {noCategories ? (
@@ -150,7 +158,7 @@ export function ProductForm({
         SKU généré automatiquement. Après publication, le produit est visible tout de suite en boutique et à la caisse.
       </p>
       <label className="text-sm md:col-span-2">
-        Photos (1 à {MAX_PRODUCT_PHOTOS}) — compressées automatiquement en WebP
+        Photos (1 à {MAX_PRODUCT_PHOTOS}) — jpeg/png/webp, compressées ici avant l’envoi (pas HEIC)
         <input
           name="photos"
           type="file"
@@ -164,6 +172,7 @@ export function ProductForm({
         idle="Publier le produit"
         pendingLabel="Publication en cours…"
         disabled={noCategories}
+        pending={busy}
       />
     </form>
   );

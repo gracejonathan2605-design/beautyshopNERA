@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_VIDEO_SECONDS } from "@/lib/product-media";
+import { MAX_VIDEO_SECONDS, VIDEO_CLIENT_MAX_BYTES, VIDEO_CLIENT_MAX_LABEL } from "@/lib/product-media";
 
 export async function readVideoDuration(file: File) {
   return new Promise<number>((resolve, reject) => {
@@ -20,7 +20,7 @@ export async function readVideoDuration(file: File) {
   });
 }
 
-export function VideoInput({ label = "1 vidéo (40 s max)" }: { label?: string }) {
+export function VideoInput({ label = `1 vidéo (40 s / ${VIDEO_CLIENT_MAX_LABEL} max)` }: { label?: string }) {
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
   const [key, setKey] = useState(0);
@@ -39,6 +39,13 @@ export function VideoInput({ label = "1 vidéo (40 s max)" }: { label?: string }
           setSeconds(0);
           const file = event.target.files?.[0];
           if (!file) return;
+          if (file.size > VIDEO_CLIENT_MAX_BYTES) {
+            setError(
+              `La vidéo fait ${(file.size / (1024 * 1024)).toFixed(1)} Mo. Compressez-la sous ${VIDEO_CLIENT_MAX_LABEL} (limite du serveur), ou publiez le produit sans vidéo.`,
+            );
+            setKey((n) => n + 1);
+            return;
+          }
           try {
             const duration = await readVideoDuration(file);
             if (duration > MAX_VIDEO_SECONDS) {
