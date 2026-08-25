@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { checkoutOrder, type CheckoutState } from "@/app/actions/shop";
+import { useActionState, useMemo, useState, useTransition } from "react";
+import { checkoutOrder, previewCheckoutCoupon, type CheckoutState } from "@/app/actions/shop";
 import { formatCfa } from "@/lib/money";
 import { PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor } from "@/lib/checkout";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
@@ -12,17 +12,48 @@ const INITIAL: CheckoutState = { ok: false };
 export function CheckoutForm({
   subtotal,
   zones,
+  customer,
 }: {
   subtotal: number;
   zones: { id: string; name: string; fee: number }[];
+  customer?: {
+    shippingName: string;
+    shippingPhone: string;
+    shippingAddress: string;
+    shippingCity: string;
+  } | null;
 }) {
   const [state, action, pending] = useActionState(checkoutOrder, INITIAL);
   const [fulfillment, setFulfillment] = useState("PICKUP");
   const [zoneId, setZoneId] = useState(zones[0]?.id ?? "");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponLabel, setCouponLabel] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponBusy, startCoupon] = useTransition();
   const zoneFee = zones.find((z) => z.id === zoneId)?.fee ?? 0;
   const shipping = shippingFeeFor(fulfillment, zoneFee);
-  const total = useMemo(() => payableTotal(subtotal, 0, shipping), [subtotal, shipping]);
+  const total = useMemo(
+    () => payableTotal(subtotal, couponDiscount, shipping),
+    [subtotal, couponDiscount, shipping],
+  );
   const delivery = fulfillment === "DELIVERY";
+
+  function applyCoupon() {
+    startCoupon(async () => {
+      const result = await previewCheckoutCoupon(couponCode, subtotal);
+      if (result.ok) {
+        setCouponDiscount(result.discount);
+        setCouponLabel(result.label);
+        setCouponCode(result.code);
+        setCouponError("");
+      } else {
+        setCouponDiscount(0);
+        setCouponLabel("");
+        setCouponError(result.error);
+      }
+    });
+  }
 
   return (
     <form action={action} className="relative mt-8 space-y-4 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
@@ -72,14 +103,75 @@ export function CheckoutForm({
         <input type="hidden" name="deliveryZoneId" value="" />
       )}
 
-      <input name="shippingName" required placeholder="Nom complet" className="w-full rounded-xl border px-4 py-3" />
-      <input name="shippingPhone" required placeholder="Téléphone" className="w-full rounded-xl border px-4 py-3" />
+      <input
+        name="shippingName"
+        required
+        defaultValue={customer?.shippingName}
+        placeholder="Nom complet"
+        className="w-full rounded-xl border px-4 py-3"
+      />
+      <input
+        name="shippingPhone"
+        required
+        defaultValue={customer?.shippingPhone}
+        placeholder="Téléphone"
+        className="w-full rounded-xl border px-4 py-3"
+      />
       {delivery ? (
         <>
-          <input name="shippingAddress" required placeholder="Adresse de livraison" className="w-full rounded-xl border px-4 py-3" />
-          <input name="shippingCity" required placeholder="Ville / quartier" className="w-full rounded-xl border px-4 py-3" />
+          <input
+            name="shippingAddress"
+            required
+            defaultValue={customer?.shippingAddress}
+            placeholder="Adresse de livraison"
+            className="w-full rounded-xl border px-4 py-3"
+          />
+          <input
+            name="shippingCity"
+            required
+            defaultValue={customer?.shippingCity}
+            placeholder="Ville / quartier"
+            className="w-full rounded-xl border px-4 py-3"
+          />
         </>
       ) : null}
+
+      <div className="rounded-2xl border border-[#eee0e6] bg-[#fffcfb] p-4">
+        <label className="block text-sm">
+          Code promo
+          <span className="mt-1 flex gap-2">
+            <input
+              name="couponCode"
+              value={couponCode}
+              onChange={(e) => {
+                setCouponCode(e.target.value.toUpperCase());
+                setCouponDiscount(0);
+                setCouponLabel("");
+                setCouponError("");
+              }}
+              placeholder="NERA10"
+              className="w-full rounded-xl border px-4 py-3 uppercase"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={applyCoupon}
+              disabled={couponBusy || !couponCode.trim()}
+              className="shrink-0 rounded-xl border border-[#eee0e6] px-4 py-3 text-sm disabled:opacity-50"
+            >
+              {couponBusy ? "…" : "Appliquer"}
+            </button>
+          </span>
+        </label>
+        {couponError ? <p className="mt-2 text-sm text-red-700">{couponError}</p> : null}
+        {couponLabel && couponDiscount > 0 ? (
+          <p className="mt-2 text-sm text-emerald-800">
+            {couponLabel} appliqué : −{formatCfa(couponDiscount)}
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-black/45">Exemple : NERA10 dès 20 000 FCFA d’articles.</p>
+        )}
+      </div>
 
       <PayDeliveryBadges compact />
       <p className="text-sm text-black/55">Livraison rapide sous 24h à Yaoundé. Paiement OM ou MoMo.</p>
@@ -109,6 +201,12 @@ export function CheckoutForm({
           <span>Articles</span>
           <span>{formatCfa(subtotal)}</span>
         </p>
+        {couponDiscount > 0 ? (
+          <p className="mt-1 flex justify-between text-emerald-800">
+            <span>Code promo {couponCode}</span>
+            <span>−{formatCfa(couponDiscount)}</span>
+          </p>
+        ) : null}
         <p className="mt-1 flex justify-between">
           <span>{delivery ? "Livraison 24h (payée en une fois avec la commande)" : "Livraison"}</span>
           <span>{delivery ? formatCfa(shipping) : "Offerte (retrait)"}</span>

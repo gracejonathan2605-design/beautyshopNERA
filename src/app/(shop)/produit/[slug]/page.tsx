@@ -44,6 +44,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             name: v.name,
             salePrice: v.salePrice,
             promoPrice: v.promoPrice,
+            inventories: v.inventories,
           }))}
           whatsappUrl={wa}
         />

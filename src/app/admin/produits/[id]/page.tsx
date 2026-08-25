@@ -38,8 +38,11 @@ export default async function ProductEditPage({ params }: { params: Promise<{ id
         categoryId={product.categoryId ?? ""}
         salePrice={variant?.salePrice ?? 0}
         costPrice={variant?.costPrice ?? 0}
+        promoPrice={variant?.promoPrice ?? null}
         shortDescription={product.shortDescription ?? ""}
         isFeatured={product.isFeatured}
+        isPromo={product.isPromo}
+        isNew={product.isNew}
         photoCount={photos.length}
         hasVideo={Boolean(video)}
         categoryGroups={groupCategoriesForSelect(categories)}

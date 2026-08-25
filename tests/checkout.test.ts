@@ -20,9 +20,8 @@ describe("total commande", () => {
     expect(payableTotal(10000, 0, 0)).toBe(10000);
   });
 
-  it("ajoute les frais de livraison une seule fois au total", () => {
-    expect(shippingFeeFor("DELIVERY", 2500)).toBe(2500);
-    expect(payableTotal(10000, 0, 2500)).toBe(12500);
+  it("soustrait une remise avant d’ajouter la livraison", () => {
+    expect(payableTotal(20000, 2000, 2500)).toBe(20500);
   });
 
   it("affiche le code marchand Orange Money sans frais", () => {

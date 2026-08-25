@@ -5,10 +5,16 @@ export const productCardSelect = {
   name: true,
   slug: true,
   shortDescription: true,
+  isNew: true,
+  isPromo: true,
+  createdAt: true,
   variants: {
     where: { isActive: true, deletedAt: null },
-    take: 1,
-    select: { salePrice: true, promoPrice: true },
+    select: {
+      salePrice: true,
+      promoPrice: true,
+      inventories: { select: { onHand: true, reserved: true } },
+    },
   },
   images: {
     where: { kind: "IMAGE" },

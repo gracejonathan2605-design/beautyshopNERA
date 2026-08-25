@@ -1,10 +1,9 @@
 import { Prisma, StockMovementType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/audit";
+import { availableQty } from "@/lib/stock-display";
 
-export function availableQty(onHand: number, reserved: number) {
-  return onHand - reserved;
-}
+export { availableQty };
 
 async function raiseStockAlerts(
   tx: Prisma.TransactionClient,
