@@ -32,10 +32,10 @@ describe("ticket de caisse", () => {
         number: "POS-2026-0001",
         createdAt: new Date("2026-08-24T10:00:00Z"),
         subtotal: 10000,
-        discount: 0,
-        total: 10000,
-        items: [{ productName: "Sérum", variantName: "30 ml", quantity: 1, unitPrice: 10000, total: 10000 }],
-        payments: [{ method: "CASH", amount: 10000 }],
+        discount: 1500,
+        total: 8500,
+        items: [{ productName: "Sérum", variantName: "30 ml", quantity: 1, unitPrice: 10000, total: 8500, discount: 0 }],
+        payments: [{ method: "CASH", amount: 8500 }],
         cashier: { firstName: "Amina", lastName: "N." },
       },
       shop,
@@ -44,6 +44,7 @@ describe("ticket de caisse", () => {
     expect(text).toContain("NERA");
     expect(text).toContain("POS-2026-0001");
     expect(text).toContain("TOTAL");
+    expect(text).toContain("Remise");
     expect(text).toContain("Espèces");
     expect(text).toContain("Merci et à bientôt");
     expect(text).toContain("RCCM CM-NSI-02-2026-B12-00534");

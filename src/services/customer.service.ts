@@ -9,16 +9,48 @@ export function normalizePhone(value: string) {
 
 export async function findCustomerByPhone(phone: string) {
   const raw = phone.trim();
-  const digits = normalizePhone(raw);
+  const digits = raw.replace(/\D/g, "");
   if (!raw) return null;
+  if (digits.length >= 8) {
+    const needle = `%${digits.slice(-9)}%`;
+    const rows = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Customer"
+      WHERE "deletedAt" IS NULL AND "isActive" = true
+        AND regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g') LIKE ${needle}
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    `;
+    if (rows[0]) {
+      return prisma.customer.findUnique({ where: { id: rows[0].id } });
+    }
+  }
   return prisma.customer.findFirst({
     where: {
       deletedAt: null,
       isActive: true,
-      OR: [{ phone: raw }, ...(digits.length >= 8 ? [{ phone: { contains: digits.slice(-8) } }] : [])],
+      OR: [{ phone: raw }, { phone: { contains: raw, mode: "insensitive" } }],
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function lookupPosCustomer(phone: string) {
+  const customer = await findCustomerByPhone(phone);
+  if (!customer) return null;
+  const sales = await prisma.sale.findMany({
+    where: { customerId: customer.id },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: {
+      id: true,
+      number: true,
+      total: true,
+      status: true,
+      createdAt: true,
+      items: { select: { productName: true, quantity: true }, take: 4 },
+    },
+  });
+  return { ...customer, sales };
 }
 
 export async function createCustomerRecord(input: {

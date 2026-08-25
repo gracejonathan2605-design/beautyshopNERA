@@ -7,6 +7,7 @@ import { availableQty } from "@/services/inventory.service";
 import { unitPrice } from "@/lib/pricing";
 import { hasPermission } from "@/lib/permissions";
 import { AdminFlash } from "@/components/admin/flash";
+import { STOCK_MOVE_REASONS } from "@/lib/stock-move";
 
 export default async function StockAdminPage({
   searchParams,
@@ -79,19 +80,31 @@ export default async function StockAdminPage({
         </form>
       ) : null}
       {canAdjust ? (
-        <form action={saveStockAdjust} className="mt-4 grid gap-3 rounded-2xl bg-cream p-5 md:grid-cols-4">
-          <p className="text-sm text-black/55 md:col-span-4">Ajustement manuel (+ ajout / − perte)</p>
-          <select name="variantId" required className="rounded-xl border px-3 py-2">
-            {options.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.product.name} — {v.name}
-              </option>
-            ))}
-          </select>
-          <input name="quantity" type="number" required placeholder="Qté (+/-)" className="rounded-xl border px-3 py-2" />
-          <input name="comment" placeholder="Commentaire" className="rounded-xl border px-3 py-2" />
-          <button className="rounded-full bg-brown py-2 text-cream">Ajuster</button>
-        </form>
+        <>
+          <form action={saveStockAdjust} className="mt-4 grid gap-3 rounded-2xl bg-cream p-5 md:grid-cols-5">
+            <p className="text-sm text-black/55 md:col-span-5">Mouvement manuel (perte, don, retour, ajustement)</p>
+            <select name="variantId" required className="rounded-xl border px-3 py-2">
+              {options.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.product.name} — {v.name}
+                </option>
+              ))}
+            </select>
+            <select name="type" required className="rounded-xl border px-3 py-2" defaultValue="LOSS">
+              {STOCK_MOVE_REASONS.map((reason) => (
+                <option key={reason.type} value={reason.type}>
+                  {reason.label}
+                </option>
+              ))}
+            </select>
+            <input name="quantity" type="number" required placeholder="Quantité" className="rounded-xl border px-3 py-2" />
+            <input name="comment" placeholder="Commentaire (optionnel)" className="rounded-xl border px-3 py-2" />
+            <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
+          </form>
+          <p className="mt-2 text-sm text-black/50">
+            Perte et don sortent du stock. Retour le réintègre. Ajustement accepte une quantité signée (+/−).
+          </p>
+        </>
       ) : null}
       {purchases.length ? (
         <div className="mt-6">

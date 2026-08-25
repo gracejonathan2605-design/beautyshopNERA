@@ -4,7 +4,7 @@ import { formatCfa } from "@/lib/money";
 import { SALE_STATUS_LABELS } from "@/lib/status-labels";
 import { PAYMENT_LABELS } from "@/lib/receipt";
 import { hasPermission } from "@/lib/permissions";
-import { cancelPosSale } from "@/app/actions/pos";
+import { cancelPosSale, refundPosSaleForm } from "@/app/actions/pos";
 import Link from "next/link";
 
 function formatWhen(date: Date) {
@@ -24,6 +24,7 @@ export default async function SalesAdminPage({
 }) {
   const session = await requireStaff("sales.view");
   const canCancel = hasPermission(session, "sales.cancel");
+  const canRefund = hasPermission(session, "sales.refund");
   const { ok, erreur } = await searchParams;
   const sales = await prisma.sale.findMany({
     orderBy: { createdAt: "desc" },
@@ -80,6 +81,12 @@ export default async function SalesAdminPage({
                 </div>
                 <span className="flex items-center gap-3">
                   <span className="font-serif text-xl text-wine">{formatCfa(s.total)}</span>
+                  {canRefund && s.status === "COMPLETED" ? (
+                    <form action={refundPosSaleForm}>
+                      <input type="hidden" name="saleId" value={s.id} />
+                      <button className="text-sm text-wine">Rembourser</button>
+                    </form>
+                  ) : null}
                   {canCancel && s.status === "COMPLETED" ? (
                     <form action={cancelPosSale}>
                       <input type="hidden" name="saleId" value={s.id} />

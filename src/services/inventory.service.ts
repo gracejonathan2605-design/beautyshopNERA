@@ -133,7 +133,7 @@ export async function adjustStock(input: {
   locationId: string;
   quantity: number;
   userId: string;
-  type: Extract<StockMovementType, "ADJUSTMENT" | "LOSS" | "DONATION">;
+  type: Extract<StockMovementType, "ADJUSTMENT" | "LOSS" | "DONATION" | "RETURN">;
   comment?: string;
 }) {
   if (input.quantity === 0) throw new Error("Quantité nulle");

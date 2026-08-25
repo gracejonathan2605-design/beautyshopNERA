@@ -17,6 +17,11 @@ import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
+import {
+  defaultStockMoveComment,
+  isStockMoveReason,
+  quantityForStockReason,
+} from "@/lib/stock-move";
 
 function refreshCategories() {
   updateTag("catalog");
@@ -512,7 +517,9 @@ export async function deleteProductMedia(formData: FormData) {
 export async function saveStockAdjust(formData: FormData) {
   const session = await requireStaff("stock.adjust");
   const variantId = String(formData.get("variantId"));
-  const quantity = Number(formData.get("quantity"));
+  const rawType = String(formData.get("type") ?? "ADJUSTMENT");
+  const type = isStockMoveReason(rawType) ? rawType : "ADJUSTMENT";
+  const quantity = quantityForStockReason(type, Number(formData.get("quantity")));
   const location = await prisma.location.findFirst({ where: { isDefault: true } });
   if (!location) throw new Error("Magasin manquant");
   await adjustStock({
@@ -520,8 +527,8 @@ export async function saveStockAdjust(formData: FormData) {
     locationId: location.id,
     quantity,
     userId: session.userId,
-    type: quantity < 0 ? "LOSS" : "ADJUSTMENT",
-    comment: String(formData.get("comment") ?? "") || "Ajustement manuel",
+    type,
+    comment: String(formData.get("comment") ?? "").trim() || defaultStockMoveComment(type),
   });
   revalidatePath("/admin/stocks");
 }
