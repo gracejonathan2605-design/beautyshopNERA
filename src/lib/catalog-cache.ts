@@ -79,10 +79,12 @@ export function getCachedProductPage(slug: string) {
         });
       } catch (err) {
         if (!isMissingFlashColumn(err)) throw err;
-        return prisma.product.findUnique({
+        const row = await prisma.product.findUnique({
           where: { slug },
           select: productPageSelectWithoutFlash,
         });
+        if (!row) return null;
+        return { ...row, flashStartAt: null, flashEndAt: null };
       }
     },
     ["product-page", slug],
