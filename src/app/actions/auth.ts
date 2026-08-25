@@ -13,6 +13,7 @@ import {
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { defaultStaffPath } from "@/lib/permissions";
+import { safeNextPath } from "@/lib/safe-path";
 
 export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -36,7 +37,7 @@ export async function loginStaff(formData: FormData) {
     isSuperAdmin: user.role.isSuperAdmin,
     permissions: user.role.permissions.map((p) => p.permission.code),
   };
-  const requested = next.startsWith("/") ? next : "/admin";
+  const requested = safeNextPath(next, "/admin");
   const dest =
     requested === "/admin" || requested === "/admin/"
       ? defaultStaffPath(sessionLike)
@@ -78,6 +79,7 @@ export async function registerCustomer(formData: FormData) {
   }
   const exists = await prisma.customer.findUnique({ where: { email } });
   if (exists) redirect("/compte/inscription?error=exists");
+  const passwordHash = await hashPassword(password);
   const settings = await getShopSettings();
   const customer = await prisma.$transaction(async (tx) => {
     const seq = await nextSequence(tx, "customer");
@@ -88,7 +90,7 @@ export async function registerCustomer(formData: FormData) {
         lastName,
         email,
         phone: phone || null,
-        passwordHash: await hashPassword(password),
+        passwordHash,
       },
     });
   });

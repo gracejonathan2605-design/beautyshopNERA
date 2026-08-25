@@ -17,6 +17,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
     getShopSettings(),
   ]);
   if (!order) notFound();
+  const paid = order.payments.some((p) => p.status === "COMPLETED");
 
   const networkRaw = order.payments[0]?.provider ?? order.payments[0]?.reference ?? "ORANGE";
   const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
@@ -62,27 +63,36 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       <p className="mt-4 text-center text-xs uppercase tracking-[0.28em] text-gold">Commande reçue</p>
       <h1 className="mt-2 text-center font-serif text-4xl text-wine">Merci, nous avons bien reçu votre commande</h1>
       <p className="mt-3 text-center text-black/60">
-        Commande <strong>{order.number}</strong>. Payez maintenant le montant ci-dessous, puis gardez ce reçu.
+        Commande <strong>{order.number}</strong>
+        {paid ? " · Paiement reçu." : ". Payez maintenant le montant ci-dessous, puis gardez ce reçu."}
       </p>
 
-      <section className="mt-8 rounded-[1.7rem] border border-gold/40 bg-champagne/70 p-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-gold">{pay.title}</p>
-        <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>
-        <p className="mt-1 text-sm text-black/70">{pay.name}</p>
-        <p className="mt-3 text-sm leading-relaxed text-black/65">{pay.detail}</p>
-        <p className="mt-4 font-serif text-2xl text-wine">Montant : {formatCfa(order.total)}</p>
-        {order.fulfillment === "DELIVERY" ? (
-          <p className="mt-2 text-sm text-black/55">
-            Livraison {order.deliveryZone?.name ?? ""} incluse ({formatCfa(order.shippingFee)}) — un seul paiement.
+      {paid ? (
+        <section className="mt-8 rounded-[1.7rem] border border-emerald-200 bg-emerald-50 p-6">
+          <p className="font-medium text-emerald-900">Paiement confirmé</p>
+          <p className="mt-2 text-sm text-emerald-800">Montant : {formatCfa(order.total)}</p>
+        </section>
+      ) : (
+        <>
+          <section className="mt-8 rounded-[1.7rem] border border-gold/40 bg-champagne/70 p-6">
+            <p className="text-xs uppercase tracking-[0.2em] text-gold">{pay.title}</p>
+            <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>
+            <p className="mt-1 text-sm text-black/70">{pay.name}</p>
+            <p className="mt-3 text-sm leading-relaxed text-black/65">{pay.detail}</p>
+            <p className="mt-4 font-serif text-2xl text-wine">Montant : {formatCfa(order.total)}</p>
+            {order.fulfillment === "DELIVERY" ? (
+              <p className="mt-2 text-sm text-black/55">
+                Livraison {order.deliveryZone?.name ?? ""} incluse ({formatCfa(order.shippingFee)}) — un seul paiement.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-black/55">Retrait boutique : pas de frais de livraison.</p>
+            )}
+          </section>
+          <p className="mt-5 rounded-2xl bg-white px-4 py-3 text-sm text-black/55">
+            Autre réseau : {other.label} — {other.code} ({other.name}). {other.detail}
           </p>
-        ) : (
-          <p className="mt-2 text-sm text-black/55">Retrait boutique : pas de frais de livraison.</p>
-        )}
-      </section>
-
-      <p className="mt-5 rounded-2xl bg-white px-4 py-3 text-sm text-black/55">
-        Autre réseau : {other.label} — {other.code} ({other.name}). {other.detail}
-      </p>
+        </>
+      )}
 
       <ul className="mt-8 space-y-2">
         {order.items.map((i) => (

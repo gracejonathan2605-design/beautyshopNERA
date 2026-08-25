@@ -33,8 +33,9 @@ export default async function CategoryPage({ params }: Props) {
       deletedAt: null,
       categoryId: { in: descendantIds },
     },
-    include: productCardInclude,
+      include: productCardInclude,
     orderBy: { name: "asc" },
+    take: 80,
   });
 
   return (
@@ -83,15 +84,18 @@ export default async function CategoryPage({ params }: Props) {
 }
 
 async function collectCategoryIds(rootId: string): Promise<string[]> {
-  const ids = [rootId];
   const children = await prisma.category.findMany({
     where: { parentId: rootId, isActive: true, deletedAt: null },
     select: { id: true },
   });
-  for (const child of children) {
-    ids.push(...(await collectCategoryIds(child.id)));
-  }
-  return ids;
+  const childIds = children.map((c) => c.id);
+  const grand = childIds.length
+    ? await prisma.category.findMany({
+        where: { parentId: { in: childIds }, isActive: true, deletedAt: null },
+        select: { id: true },
+      })
+    : [];
+  return [rootId, ...childIds, ...grand.map((g) => g.id)];
 }
 
 export async function generateMetadata({ params }: Props) {

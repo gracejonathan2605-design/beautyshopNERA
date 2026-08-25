@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
-import { productCardInclude } from "@/lib/product-query";
+import { getHomeCatalog } from "@/lib/catalog-cache";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
@@ -37,27 +36,7 @@ export default async function HomePage() {
       </section>
     );
   }
-  const [featured, news, promos, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
-      include: productCardInclude,
-      take: 8,
-    }),
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, isNew: true, deletedAt: null },
-      include: productCardInclude,
-      take: 8,
-    }),
-    prisma.product.findMany({
-      where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
-      include: productCardInclude,
-      take: 8,
-    }),
-    prisma.category.findMany({
-      where: { isActive: true, parentId: null, deletedAt: null },
-      orderBy: { sortOrder: "asc" },
-    }),
-  ]);
+  const { featured, news, promos, categories } = await getHomeCatalog();
 
   return (
     <div>

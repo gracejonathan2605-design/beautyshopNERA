@@ -41,6 +41,16 @@ export function AdminShell({ session, children }: { session: StaffSession; child
       <div className="flex-1">
         <header className="no-print flex items-center justify-between border-b border-[#eee0e6] bg-white/80 px-6 py-4 backdrop-blur">
           <div className="flex items-center gap-3">
+            <details className="relative md:hidden">
+              <summary className="cursor-pointer list-none rounded-full border px-3 py-1 text-sm">Menu</summary>
+              <nav className="absolute left-0 z-30 mt-2 w-56 rounded-2xl border border-[#eee0e6] bg-white p-2 shadow-lg">
+                {LINKS.filter((l) => hasPermission(session, l.permission)).map((l) => (
+                  <Link key={l.href} href={l.href} className="block rounded-xl px-3 py-2 text-sm hover:bg-blush">
+                    {l.label}
+                  </Link>
+                ))}
+              </nav>
+            </details>
             <span className="md:hidden">
               <BrandLockup size="sm" subtitle="Admin" />
             </span>

@@ -4,19 +4,8 @@ import { changeOrderStatus, collectOrderPayment } from "@/app/actions/admin";
 import { formatCfa } from "@/lib/money";
 import { ORDER_STATUS_LABELS } from "@/lib/status-labels";
 import { PAYMENT_LABELS } from "@/lib/receipt";
-import { OrderStatus } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
-
-const STATUSES: OrderStatus[] = [
-  "PENDING",
-  "CONFIRMED",
-  "PREPARING",
-  "READY",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-  "REFUNDED",
-];
+import { ORDER_TRANSITIONS } from "@/lib/order-flow";
 
 function formatWhen(date: Date) {
   return date.toLocaleString("fr-FR", {
@@ -99,7 +88,7 @@ export default async function OrdersAdminPage() {
                       <form action={changeOrderStatus} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="orderId" value={o.id} />
                         <select name="status" defaultValue={o.status} className="rounded-xl border px-3 py-2 text-sm">
-                          {STATUSES.map((s) => (
+                          {[o.status, ...ORDER_TRANSITIONS[o.status]].filter((s, i, a) => a.indexOf(s) === i).map((s) => (
                             <option key={s} value={s}>
                               {ORDER_STATUS_LABELS[s]}
                             </option>

@@ -1,10 +1,13 @@
+import { cache } from "react";
 import Link from "next/link";
 import { getShopSettings } from "@/lib/settings";
 import { getCart } from "@/lib/cart";
-import { prisma } from "@/lib/prisma";
+import { getNavCategories } from "@/lib/catalog-cache";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { BrandLockup, BrandLogo } from "@/components/brand/logo";
+
+const shopSettings = cache(getShopSettings);
 
 function WhatsAppIcon() {
   return (
@@ -18,21 +21,14 @@ function WhatsAppIcon() {
 }
 
 export async function ShopHeader() {
-  let settings = (await getShopSettings().catch(() => null)) ?? {
+  let settings = (await shopSettings().catch(() => null)) ?? {
     name: "NERA Beauté & Shop",
     phone: "",
   };
   let cart: Awaited<ReturnType<typeof getCart>> = [];
   let categories: { id: string; name: string; slug: string }[] = [];
   try {
-    [cart, categories] = await Promise.all([
-      getCart(),
-      prisma.category.findMany({
-        where: { isActive: true, parentId: null, deletedAt: null },
-        orderBy: { sortOrder: "asc" },
-        select: { id: true, name: true, slug: true },
-      }),
-    ]);
+    [cart, categories] = await Promise.all([getCart(), getNavCategories()]);
   } catch {
     cart = [];
     categories = [];
@@ -93,7 +89,7 @@ export async function ShopHeader() {
 }
 
 export async function ShopFooter() {
-  const settings = (await getShopSettings().catch(() => null)) ?? {
+  const settings = (await shopSettings().catch(() => null)) ?? {
     name: "NERA Beauté & Shop",
     slogan: "Beauté, cheveux & mode — Yaoundé",
     address: "Marché Central",

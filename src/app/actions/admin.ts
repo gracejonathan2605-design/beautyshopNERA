@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +17,7 @@ import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 
 function refreshCategories() {
+  updateTag("catalog");
   revalidatePath("/admin/categories");
   revalidatePath("/admin/produits");
   revalidatePath("/");
@@ -170,6 +171,7 @@ async function uniqueSku(name: string) {
 }
 
 function refreshCatalog(slug?: string) {
+  updateTag("catalog");
   revalidatePath("/admin/produits");
   revalidatePath("/boutique");
   revalidatePath("/");
@@ -446,6 +448,7 @@ export async function changeOrderStatus(formData: FormData) {
   if (!orderId || !status) throw new Error("Commande ou statut manquant");
   await updateOrderStatus({ orderId, status, userId: session.userId });
   revalidatePath("/admin/commandes");
+  revalidatePath("/admin/stocks");
 }
 
 export async function collectOrderPayment(formData: FormData) {
@@ -532,5 +535,9 @@ export async function saveSettings(formData: FormData) {
     ticketFooter: String(formData.get("ticketFooter") ?? DEFAULT_SETTINGS.ticketFooter),
   };
   await saveShopSettings(next);
+  updateTag("catalog");
   revalidatePath("/admin/parametres");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/pos");
 }

@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
@@ -45,6 +47,17 @@ export function PosClient({
   const [searching, startSearch] = useTransition();
   const total = useMemo(() => cart.reduce((s, l) => s + unitPrice(l.variant) * l.quantity, 0), [cart]);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      startSearch(async () => setResults(await searchPosProducts(query)));
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  function available(v: Variant) {
+    return v.inventories.reduce((s, i) => s + (i.onHand - i.reserved), 0);
+  }
+
   function add(variant: Variant) {
     setCart((c) => {
       const i = c.find((x) => x.variant.id === variant.id);
@@ -62,6 +75,10 @@ export function PosClient({
 
   function checkout() {
     if (!cart.length || pending) return;
+    if (!openSession) {
+      setError("Ouvrez d’abord la caisse avec le fond du matin.");
+      return;
+    }
     setError(null);
     start(async () => {
       try {
@@ -113,39 +130,41 @@ export function PosClient({
       <section>
         <input
           value={query}
-          onChange={(e) => {
-            const v = e.target.value;
-            setQuery(v);
-            startSearch(async () => setResults(await searchPosProducts(v)));
-          }}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Nom, SKU ou code-barres"
           aria-busy={searching}
           className="w-full rounded-2xl border border-[#eee0e6] bg-white px-4 py-3"
         />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {results.map((v) => (
-            <button
-              type="button"
-              key={v.id}
-              onClick={() => add(v)}
-              className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold"
-            >
-              {v.product.images?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={v.product.images[0].url}
-                  alt=""
-                  loading="lazy"
-                  className="mb-2 h-24 w-full rounded-xl object-cover"
-                />
-              ) : null}
-              <p className="font-medium text-wine">{v.product.name}</p>
-              <p className="text-sm text-black/50">
-                {v.name} · {v.sku}
-              </p>
-              <p className="mt-2">{formatCfa(unitPrice(v))}</p>
-            </button>
-          ))}
+          {results.map((v) => {
+            const qty = available(v);
+            const out = qty <= 0;
+            return (
+              <button
+                type="button"
+                key={v.id}
+                disabled={out}
+                onClick={() => add(v)}
+                className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold disabled:opacity-45"
+              >
+                {v.product.images?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={v.product.images[0].url}
+                    alt=""
+                    loading="lazy"
+                    className="mb-2 h-24 w-full rounded-xl object-cover"
+                  />
+                ) : null}
+                <p className="font-medium text-wine">{v.product.name}</p>
+                <p className="text-sm text-black/50">
+                  {v.name} · {v.sku}
+                </p>
+                <p className="mt-2">{formatCfa(unitPrice(v))}</p>
+                <p className="mt-1 text-xs text-black/40">{out ? "Rupture" : `Stock ${qty}`}</p>
+              </button>
+            );
+          })}
         </div>
       </section>
       <aside className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-5">
@@ -202,7 +221,7 @@ export function PosClient({
         ) : null}
         <button
           type="button"
-          disabled={!cart.length || pending}
+          disabled={!cart.length || pending || !openSession}
           onClick={checkout}
           className="mt-4 w-full rounded-full bg-brown py-3 text-cream disabled:opacity-50"
         >

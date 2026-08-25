@@ -13,10 +13,19 @@ export default async function BoutiquePage({
       status: "ACTIVE",
       onlineVisible: true,
       deletedAt: null,
-      ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" as const } },
+              { shortDescription: { contains: q, mode: "insensitive" as const } },
+              { category: { name: { contains: q, mode: "insensitive" as const } } },
+            ],
+          }
+        : {}),
     },
     include: productCardInclude,
     orderBy: { name: "asc" },
+    take: 60,
   });
 
   return (

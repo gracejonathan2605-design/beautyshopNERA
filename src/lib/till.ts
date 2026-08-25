@@ -35,11 +35,6 @@ export function summarizeTill(input: {
   const payments = completed.flatMap((s) => s.payments).filter((p) => p.status === "COMPLETED");
   const cashSales = payments.filter((p) => p.method === "CASH").reduce((sum, p) => sum + p.amount, 0);
   const otherSales = payments.filter((p) => p.method !== "CASH").reduce((sum, p) => sum + p.amount, 0);
-  const refundedCash = input.sales
-    .filter((s) => s.status === "CANCELLED" || s.status === "REFUNDED")
-    .flatMap((s) => s.payments)
-    .filter((p) => p.method === "CASH")
-    .reduce((sum, p) => sum + p.amount, 0);
   const expensesTotal = input.expenses.reduce((sum, e) => sum + e.amount, 0);
   return {
     sessionId: input.sessionId,
@@ -51,6 +46,6 @@ export function summarizeTill(input: {
     expensesTotal,
     expenses: input.expenses,
     netRevenue: salesTotal - expensesTotal,
-    expectedCash: input.openingFloat + cashSales - refundedCash - expensesTotal,
+    expectedCash: input.openingFloat + cashSales - expensesTotal,
   };
 }

@@ -122,7 +122,8 @@ export async function submitPosSale(input: {
   try {
     const session = await requireStaff("pos.access");
     if (!input.lines.length) return { ok: false, error: "Ajoutez au moins un produit au ticket." };
-    const open = await ensureOpenCashSession(session.userId);
+    const open = await getOpenSessionForUser(session.userId);
+    if (!open) return { ok: false, error: "Ouvrez d’abord la caisse avec le fond du matin." };
     const locationId = open.register.locationId;
     let customerId = input.customerId;
     if (!customerId && (input.customerPhone?.trim() || input.customerName?.trim())) {

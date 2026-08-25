@@ -18,71 +18,70 @@ export function rangeFromPreset(preset: string, from?: string, to?: string): Rep
   return { from: startOfDay(now), to: now };
 }
 
+const ONLINE_REVENUE_STATUSES = ["CONFIRMED", "PREPARING", "READY", "SHIPPED", "DELIVERED"] as const;
+
 export async function getDashboardMetrics(range: ReportRange) {
   const { from, to } = range;
-  const [posSales, orders, expenses, lowStockRows] = await Promise.all([
-    prisma.sale.findMany({
+  const [posAgg, orderAgg, expenses, lowStockRows, posCogsRows, orderCogsRows, top] = await Promise.all([
+    prisma.sale.aggregate({
       where: { status: "COMPLETED", createdAt: { gte: from, lte: to } },
-      include: { items: { include: { variant: true } }, payments: true },
+      _sum: { total: true },
+      _count: true,
     }),
-    prisma.order.findMany({
-      where: {
-        createdAt: { gte: from, lte: to },
-        status: { notIn: ["CANCELLED"] },
-      },
-      include: { items: { include: { variant: true } } },
+    prisma.order.aggregate({
+      where: { createdAt: { gte: from, lte: to }, status: { in: [...ONLINE_REVENUE_STATUSES] } },
+      _sum: { total: true },
+      _count: true,
     }),
     prisma.expense.aggregate({
       where: { date: { gte: from, lte: to } },
       _sum: { amount: true },
     }),
     prisma.$queryRaw<{ count: bigint }[]>`SELECT COUNT(*)::bigint as count FROM "Inventory" WHERE "onHand" - "reserved" <= "minQuantity"`,
+    prisma.$queryRaw<{ cogs: number }[]>`
+      SELECT COALESCE(SUM(i.quantity * v."costPrice"), 0)::int as cogs
+      FROM "SaleItem" i
+      JOIN "Sale" s ON s.id = i."saleId"
+      JOIN "ProductVariant" v ON v.id = i."variantId"
+      WHERE s.status = 'COMPLETED' AND s."createdAt" BETWEEN ${from} AND ${to}
+    `,
+    prisma.$queryRaw<{ cogs: number }[]>`
+      SELECT COALESCE(SUM(i.quantity * v."costPrice"), 0)::int as cogs
+      FROM "OrderItem" i
+      JOIN "Order" o ON o.id = i."orderId"
+      JOIN "ProductVariant" v ON v.id = i."variantId"
+      WHERE o.status IN ('SHIPPED', 'DELIVERED') AND o."createdAt" BETWEEN ${from} AND ${to}
+    `,
+    prisma.$queryRaw<{ name: string; sku: string; qty: bigint; amount: number }[]>`
+      SELECT i."productName" as name, i.sku, SUM(i.quantity)::bigint as qty, SUM(i.total)::int as amount
+      FROM "SaleItem" i
+      JOIN "Sale" s ON s.id = i."saleId"
+      WHERE s.status = 'COMPLETED' AND s."createdAt" BETWEEN ${from} AND ${to}
+      GROUP BY i."productName", i.sku
+      ORDER BY qty DESC
+      LIMIT 8
+    `,
   ]);
 
-  const posRevenue = posSales.reduce((s, sale) => s + sale.total, 0);
-  const onlineRevenue = orders
-    .filter((o) => !["CANCELLED", "PENDING"].includes(o.status))
-    .reduce((s, o) => s + o.total, 0);
+  const posRevenue = posAgg._sum.total ?? 0;
+  const onlineRevenue = orderAgg._sum.total ?? 0;
   const revenue = posRevenue + onlineRevenue;
-
-  let cogs = 0;
-  for (const sale of posSales) {
-    for (const item of sale.items) cogs += item.variant.costPrice * item.quantity;
-  }
-  for (const order of orders.filter((o) => ["SHIPPED", "DELIVERED"].includes(o.status))) {
-    for (const item of order.items) cogs += item.variant.costPrice * item.quantity;
-  }
-
+  const cogs = (posCogsRows[0]?.cogs ?? 0) + (orderCogsRows[0]?.cogs ?? 0);
   const expenseTotal = expenses._sum.amount ?? 0;
-  const profit = revenue - cogs - expenseTotal;
-  const ticketCount = posSales.length + orders.length;
+  const ticketCount = posAgg._count + orderAgg._count;
   const averageBasket = ticketCount ? Math.round(revenue / ticketCount) : 0;
-
-  const low = lowStockRows;
-
-  const top = await prisma.$queryRaw<
-    { name: string; sku: string; qty: bigint; amount: number }[]
-  >`
-    SELECT i."productName" as name, i.sku, SUM(i.quantity)::bigint as qty, SUM(i.total)::int as amount
-    FROM "SaleItem" i
-    JOIN "Sale" s ON s.id = i."saleId"
-    WHERE s.status = 'COMPLETED' AND s."createdAt" BETWEEN ${from} AND ${to}
-    GROUP BY i."productName", i.sku
-    ORDER BY qty DESC
-    LIMIT 8
-  `;
 
   return {
     revenue,
     posRevenue,
     onlineRevenue,
-    posCount: posSales.length,
-    orderCount: orders.length,
+    posCount: posAgg._count,
+    orderCount: orderAgg._count,
     averageBasket,
     cogs,
     expenseTotal,
-    profit,
-    lowStockCount: Number(low[0]?.count ?? 0),
+    profit: revenue - cogs - expenseTotal,
+    lowStockCount: Number(lowStockRows[0]?.count ?? 0),
     topProducts: top.map((t) => ({
       name: t.name,
       sku: t.sku,

@@ -22,6 +22,13 @@ export async function setCartQty(variantId: string, quantity: number) {
   revalidatePath("/");
 }
 
+export async function setCartQtyForm(formData: FormData) {
+  const variantId = String(formData.get("variantId") ?? "");
+  const quantity = Number(formData.get("quantity"));
+  if (!variantId) return;
+  await setCartQty(variantId, Number.isFinite(quantity) ? quantity : 0);
+}
+
 export type CheckoutState = { ok: boolean; error?: string };
 
 export async function checkoutOrder(_prev: CheckoutState | null, formData: FormData): Promise<CheckoutState> {
@@ -53,7 +60,7 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
       shippingCity: String(formData.get("shippingCity") ?? ""),
       couponCode: String(formData.get("couponCode") ?? "") || null,
       notes: String(formData.get("notes") ?? "") || undefined,
-      lines: cart,
+      lines: cart.filter((l) => l.quantity > 0),
       payment: {
         method: "MOBILE_MONEY",
         amount: 0,
