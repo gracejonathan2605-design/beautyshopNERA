@@ -12,6 +12,10 @@ const shop = {
   address: "Marché Central",
   city: "Yaoundé",
   phone: "690000000",
+  email: "nerabeaute-shop@gmail.com",
+  mtnPhone: "676935195",
+  rccm: "CM-NSI-02-2026-B12-00534",
+  nui: "M062618760084L",
   ticketFooter: "Merci et à bientôt",
 };
 
@@ -42,6 +46,11 @@ describe("ticket de caisse", () => {
     expect(text).toContain("TOTAL");
     expect(text).toContain("Espèces");
     expect(text).toContain("Merci et à bientôt");
+    expect(text).toContain("RCCM CM-NSI-02-2026-B12-00534");
+    expect(text).toContain("NUI M062618760084L");
+    expect(text).toContain("OM · MoMo");
+    expect(text).toContain("Livraison 24h");
+    expect(text).toContain("676935195");
   });
 
   it("ouvre WhatsApp avec le texte du ticket", () => {

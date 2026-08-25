@@ -17,6 +17,10 @@ export type ReceiptShop = {
   address?: string;
   city?: string;
   phone?: string;
+  email?: string;
+  mtnPhone?: string;
+  rccm?: string;
+  nui?: string;
   ticketFooter?: string;
 };
 
@@ -114,6 +118,12 @@ export function buildReceiptText(data: ReceiptData) {
     ...(data.shop.address ? wrapLine(data.shop.address) : []),
     ...(data.shop.city ? [centerLine(data.shop.city)] : []),
     ...(data.shop.phone ? [centerLine(data.shop.phone)] : []),
+    ...(data.shop.email ? [centerLine(data.shop.email)] : []),
+    ...(data.shop.mtnPhone ? [centerLine(`MoMo ${data.shop.mtnPhone}`)] : []),
+    ...(data.shop.rccm ? wrapLine(`RCCM ${data.shop.rccm}`) : []),
+    ...(data.shop.nui ? wrapLine(`NUI ${data.shop.nui}`) : []),
+    centerLine("OM · MoMo"),
+    centerLine("Livraison 24h"),
     dashLine(),
     pairLine("Ticket", data.number),
     pairLine("Date", formatReceiptDate(data.date)),

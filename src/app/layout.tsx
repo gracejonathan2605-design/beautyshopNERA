@@ -11,7 +11,7 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   title: "NERA Beauté & Shop",
-  description: "Boutique en ligne — beauté, cheveux et mode à Yaoundé, Cameroun",
+  description: "Boutique en ligne — beauté, cheveux et mode à Yaoundé. Paiement OM & MoMo. Livraison rapide sous 24h.",
   icons: {
     icon: "/brand/nera-logo.jpg",
     apple: "/apple-icon.png",

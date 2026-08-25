@@ -7,6 +7,7 @@ import { getShopSettings } from "@/lib/settings";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
+import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -34,6 +35,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <p className="text-xs uppercase tracking-[0.28em] text-gold">{product.category?.name}</p>
         <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
         <p className="mt-4 text-black/70">{product.description ?? product.shortDescription}</p>
+        <div className="mt-5">
+          <PayDeliveryBadges />
+        </div>
         <ProductBuy
           variants={variants.map((v) => ({
             id: v.id,

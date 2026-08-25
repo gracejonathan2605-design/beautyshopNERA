@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { getShopSettings } from "@/lib/settings";
+import { getShopSettings, DEFAULT_SETTINGS } from "@/lib/settings";
 import { getCart } from "@/lib/cart";
 import { getNavCategories } from "@/lib/catalog-cache";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { BrandLockup, BrandLogo } from "@/components/brand/logo";
+import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
 
 function WhatsAppIcon() {
   return (
@@ -35,8 +36,8 @@ export async function ShopHeader() {
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
       <StaffToolbar />
-      <p className="hidden bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.22em] text-wine sm:block">
-        Yaoundé · Retrait boutique · Livraison · Mobile Money
+      <p className="bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-wine">
+        Yaoundé · OM & MoMo · Livraison rapide sous 24h
       </p>
       <div className="mx-auto flex max-w-6xl min-w-0 items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
@@ -86,16 +87,7 @@ export async function ShopHeader() {
 }
 
 export async function ShopFooter() {
-  const settings = (await getShopSettings().catch(() => null)) ?? {
-    name: "NERA Beauté & Shop",
-    slogan: "Beauté, cheveux & mode — Yaoundé",
-    address: "Marché Central",
-    city: "Yaoundé",
-    country: "Cameroun",
-    phone: "",
-    email: "",
-    terms: "",
-  };
+  const settings = (await getShopSettings().catch(() => null)) ?? DEFAULT_SETTINGS;
   const wa = settings.phone ? whatsappChatUrl(settings.phone, "Bonjour NERA Beauté, j’aimerais un conseil.") : "";
   return (
     <>
@@ -106,6 +98,9 @@ export async function ShopFooter() {
             <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{settings.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{settings.slogan}</p>
+            <div className="mt-5">
+              <PayDeliveryBadges />
+            </div>
           </div>
           <div className="text-sm leading-7 text-black/60">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Boutique</p>
@@ -115,6 +110,7 @@ export async function ShopFooter() {
             </p>
             <p>{settings.phone}</p>
             <p>{settings.email}</p>
+            {settings.mtnPhone ? <p>MoMo / MTN : {settings.mtnPhone}</p> : null}
             {wa ? (
               <a href={wa} className="mt-2 inline-block text-brown underline" target="_blank" rel="noreferrer">
                 Écrire sur WhatsApp
@@ -124,8 +120,15 @@ export async function ShopFooter() {
           <div className="text-sm leading-7 text-black/55">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Service</p>
             <p className="mt-2">Retrait en boutique</p>
-            <p>Livraison Yaoundé</p>
-            <p>Paiement espèces & Mobile Money</p>
+            <p>Livraison rapide sous 24h à Yaoundé</p>
+            <p>Paiement OM, MoMo et espèces</p>
+            <ShopLegalBlock
+              className="mt-4"
+              rccm={settings.rccm}
+              nui={settings.nui}
+              email={settings.email}
+              mtnPhone={settings.mtnPhone}
+            />
             {settings.terms ? <p className="mt-4 text-xs opacity-80">{settings.terms}</p> : null}
           </div>
         </div>

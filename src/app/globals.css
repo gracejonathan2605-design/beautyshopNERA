@@ -114,10 +114,41 @@ button.bg-brown:hover {
   z-index: 40;
 }
 
+.pay-om,
+.pay-momo,
+.pay-24h {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 14px -10px rgba(42, 31, 36, 0.45);
+}
+
+.pay-om {
+  background: #ff6a00;
+  color: #fff;
+}
+
+.pay-momo {
+  background: #ffcc00;
+  color: #1a1200;
+}
+
+.pay-24h {
+  background: #3a2430;
+  color: #fff;
+}
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

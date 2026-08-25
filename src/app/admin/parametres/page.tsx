@@ -29,6 +29,18 @@ export default async function SettingsPage() {
           <input name="email" defaultValue={s.email} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
         </label>
         <label className="text-sm text-black/50">
+          Numéro MTN / MoMo
+          <input name="mtnPhone" defaultValue={s.mtnPhone} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
+        </label>
+        <label className="text-sm text-black/50">
+          RCCM
+          <input name="rccm" defaultValue={s.rccm} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
+        </label>
+        <label className="text-sm text-black/50">
+          NUI
+          <input name="nui" defaultValue={s.nui} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
+        </label>
+        <label className="text-sm text-black/50">
           Adresse
           <input name="address" defaultValue={s.address} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
         </label>

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/product-card";
 import { getCachedBoutique } from "@/lib/catalog-cache";
 import { productCardSelect } from "@/lib/product-query";
+import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 export default async function BoutiquePage({
   searchParams,
@@ -34,6 +35,9 @@ export default async function BoutiquePage({
       <p className="mt-3 max-w-xl text-black/55">
         Soins, mèches, parfums et mode — une sélection claire, à feuilleter sans se presser.
       </p>
+      <div className="mt-5">
+        <PayDeliveryBadges />
+      </div>
       <form className="mt-6">
         <input
           name="q"
