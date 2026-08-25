@@ -43,7 +43,7 @@ export function AdminShell({
         <div className="gold-rule mt-5" />
         <nav className="mt-6 flex flex-col gap-1 text-sm">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-blush">
+            <Link key={l.href} href={l.href} prefetch={l.href === "/pos" ? false : undefined} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-blush">
               <span>{l.label}</span>
               {l.href === "/admin/alertes" && unreadAlerts > 0 ? (
                 <span className="rounded-full bg-brown px-2 py-0.5 text-[10px] text-cream">{unreadAlerts}</span>
@@ -62,7 +62,7 @@ export function AdminShell({
               <summary className="cursor-pointer list-none rounded-full border px-3 py-1 text-sm">Menu</summary>
               <nav className="absolute left-0 z-30 mt-2 w-56 rounded-2xl border border-[#eee0e6] bg-white p-2 shadow-lg">
                 {links.map((l) => (
-                  <Link key={l.href} href={l.href} className="block rounded-xl px-3 py-2 text-sm hover:bg-blush">
+                  <Link key={l.href} href={l.href} prefetch={l.href === "/pos" ? false : undefined} className="block rounded-xl px-3 py-2 text-sm hover:bg-blush">
                     {l.label}
                     {l.href === "/admin/alertes" && unreadAlerts > 0 ? ` (${unreadAlerts})` : ""}
                   </Link>

@@ -8,6 +8,7 @@ import {
 } from "../src/lib/pos";
 import { defaultStockMoveComment, quantityForStockReason } from "../src/lib/stock-move";
 import { ROLE_PRESETS } from "../src/lib/permissions";
+import { isMissingHeldTicketStore } from "../src/services/held-ticket.service";
 
 describe("remises caisse", () => {
   it("applique une remise ligne puis une remise ticket", () => {
@@ -95,5 +96,12 @@ describe("droits caisse", () => {
   it("autorise le caissier à rembourser depuis la caisse", () => {
     expect(ROLE_PRESETS.cashier).toContain("sales.refund");
     expect(ROLE_PRESETS.manager).toContain("sales.refund");
+  });
+});
+
+describe("tickets en attente", () => {
+  it("ne fait pas planter la caisse si le magasin de tickets manque", () => {
+    expect(isMissingHeldTicketStore(new TypeError("heldTicket is undefined"))).toBe(true);
+    expect(isMissingHeldTicketStore(new Error("Stock insuffisant"))).toBe(false);
   });
 });

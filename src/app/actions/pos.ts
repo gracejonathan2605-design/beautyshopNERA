@@ -10,6 +10,9 @@ import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } f
 import { parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import type { HeldTicketPayload } from "@/lib/pos";
+import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@/services/held-ticket.service";
+
+export { listHeldTickets, type HeldTicketRow };
 
 const posSelect = {
   id: true,
@@ -230,13 +233,6 @@ export async function createPosCustomer(input: { firstName: string; lastName?: s
   }
 }
 
-export type HeldTicketRow = {
-  id: string;
-  note: string | null;
-  createdAt: Date;
-  payload: HeldTicketPayload;
-};
-
 export async function parkPosTicket(input: { note?: string; payload: HeldTicketPayload }) {
   try {
     const session = await requireStaff("pos.access");
@@ -268,40 +264,55 @@ export async function parkPosTicket(input: { note?: string; payload: HeldTicketP
     };
   } catch (err) {
     unstable_rethrow(err);
+    if (isMissingHeldTicketStore(err)) {
+      return { ok: false as const, error: "Tickets en attente indisponibles. Encaisser le ticket actuel." };
+    }
     return { ok: false as const, error: err instanceof Error ? err.message : "Mise en attente impossible." };
   }
 }
 
 export async function discardHeldTicket(id: string) {
-  const session = await requireStaff("pos.access");
-  const row = await prisma.heldTicket.findUnique({ where: { id } });
-  if (!row) return { ok: false as const, error: "Ticket introuvable." };
-  if (row.cashierId !== session.userId && !session.isSuperAdmin) {
-    return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+  try {
+    const session = await requireStaff("pos.access");
+    const row = await prisma.heldTicket.findUnique({ where: { id } });
+    if (!row) return { ok: false as const, error: "Ticket introuvable." };
+    if (row.cashierId !== session.userId && !session.isSuperAdmin) {
+      return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+    }
+    await prisma.heldTicket.delete({ where: { id } });
+    revalidatePath("/pos");
+    return { ok: true as const };
+  } catch (err) {
+    unstable_rethrow(err);
+    if (isMissingHeldTicketStore(err)) return { ok: false as const, error: "Tickets en attente indisponibles." };
+    return { ok: false as const, error: err instanceof Error ? err.message : "Suppression impossible." };
   }
-  await prisma.heldTicket.delete({ where: { id } });
-  revalidatePath("/pos");
-  return { ok: true as const };
 }
 
 export async function resumeHeldTicket(id: string) {
-  const session = await requireStaff("pos.access");
-  const row = await prisma.heldTicket.findUnique({ where: { id } });
-  if (!row) return { ok: false as const, error: "Ticket introuvable." };
-  if (row.cashierId !== session.userId && !session.isSuperAdmin) {
-    return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+  try {
+    const session = await requireStaff("pos.access");
+    const row = await prisma.heldTicket.findUnique({ where: { id } });
+    if (!row) return { ok: false as const, error: "Ticket introuvable." };
+    if (row.cashierId !== session.userId && !session.isSuperAdmin) {
+      return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+    }
+    await prisma.heldTicket.delete({ where: { id } });
+    revalidatePath("/pos");
+    return {
+      ok: true as const,
+      ticket: {
+        id: row.id,
+        note: row.note,
+        createdAt: row.createdAt,
+        payload: row.payload as HeldTicketPayload,
+      } satisfies HeldTicketRow,
+    };
+  } catch (err) {
+    unstable_rethrow(err);
+    if (isMissingHeldTicketStore(err)) return { ok: false as const, error: "Tickets en attente indisponibles." };
+    return { ok: false as const, error: err instanceof Error ? err.message : "Reprise impossible." };
   }
-  await prisma.heldTicket.delete({ where: { id } });
-  revalidatePath("/pos");
-  return {
-    ok: true as const,
-    ticket: {
-      id: row.id,
-      note: row.note,
-      createdAt: row.createdAt,
-      payload: row.payload as HeldTicketPayload,
-    } satisfies HeldTicketRow,
-  };
 }
 
 export async function searchPosSales(query: string) {
