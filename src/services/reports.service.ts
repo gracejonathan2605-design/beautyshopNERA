@@ -8,8 +8,12 @@ export type ReportRange = {
 
 export function rangeFromPreset(preset: string, from?: string, to?: string): ReportRange {
   const now = new Date();
-  if (preset === "custom" && from && to) {
-    return { from: new Date(from), to: new Date(to) };
+  if ((preset === "custom" || from || to) && from && to) {
+    const start = new Date(`${from}T00:00:00`);
+    const end = new Date(`${to}T23:59:59.999`);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start <= end) {
+      return { from: start, to: end };
+    }
   }
   if (preset === "7d") return { from: subDays(now, 7), to: now };
   if (preset === "30d") return { from: subDays(now, 30), to: now };

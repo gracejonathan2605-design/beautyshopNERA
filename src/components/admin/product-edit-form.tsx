@@ -21,9 +21,15 @@ export function ProductEditForm({
   isFeatured,
   isPromo,
   isNew,
+  onlineVisible,
+  barcode,
+  brandId,
+  supplierId,
   photoCount,
   hasVideo,
   categoryGroups,
+  brands = [],
+  suppliers = [],
 }: {
   productId: string;
   name: string;
@@ -35,9 +41,15 @@ export function ProductEditForm({
   isFeatured: boolean;
   isPromo: boolean;
   isNew: boolean;
+  onlineVisible: boolean;
+  barcode: string;
+  brandId: string;
+  supplierId: string;
   photoCount: number;
   hasVideo: boolean;
   categoryGroups: CategoryOptionGroup[];
+  brands?: { id: string; name: string }[];
+  suppliers?: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(updateProduct, INITIAL);
   const [clientError, setClientError] = useState("");
@@ -109,6 +121,27 @@ export function ProductEditForm({
         className="rounded-xl border px-3 py-2"
       />
       <input name="costPrice" defaultValue={costPrice} className="rounded-xl border px-3 py-2" />
+      <input name="barcode" defaultValue={barcode} placeholder="Code-barres" className="rounded-xl border px-3 py-2" />
+      {brands.length ? (
+        <select name="brandId" defaultValue={brandId} className="rounded-xl border px-3 py-2">
+          <option value="">Marque</option>
+          {brands.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      {suppliers.length ? (
+        <select name="supplierId" defaultValue={supplierId} className="rounded-xl border px-3 py-2">
+          <option value="">Fournisseur</option>
+          {suppliers.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
       <input
         name="shortDescription"
         defaultValue={shortDescription}
@@ -120,8 +153,11 @@ export function ProductEditForm({
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isPromo" defaultChecked={isPromo} /> Promo
       </label>
-      <label className="flex items-center gap-2 text-sm md:col-span-2">
+      <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isNew" defaultChecked={isNew} /> Nouveauté
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="onlineVisible" defaultChecked={onlineVisible} /> Publié en boutique
       </label>
       {remainingPhotos > 0 ? (
         <label className="text-sm md:col-span-2">

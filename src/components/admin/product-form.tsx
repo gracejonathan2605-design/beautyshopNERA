@@ -6,6 +6,7 @@ import { saveProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput } from "@/components/admin/video-input";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
+import { VariantEditor } from "@/components/admin/variant-editor";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
 import type { CategoryOptionGroup } from "@/lib/catalog";
 
@@ -13,8 +14,12 @@ const INITIAL: ProductFormState = { ok: false };
 
 export function ProductForm({
   categoryGroups,
+  brands = [],
+  suppliers = [],
 }: {
   categoryGroups: CategoryOptionGroup[];
+  brands?: { id: string; name: string }[];
+  suppliers?: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(saveProduct, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
@@ -49,9 +54,10 @@ export function ProductForm({
           return;
         }
         const form = event.currentTarget;
-        const name = String(new FormData(form).get("name") ?? "").trim();
-        const categoryId = String(new FormData(form).get("categoryId") ?? "").trim();
-        const salePrice = String(new FormData(form).get("salePrice") ?? "").trim();
+        const data = new FormData(form);
+        const name = String(data.get("name") ?? "").trim();
+        const categoryId = String(data.get("categoryId") ?? "").trim();
+        const salePrice = String(data.get("variantSalePrice") ?? data.get("salePrice") ?? "").trim();
         const photos = (form.elements.namedItem("photos") as HTMLInputElement | null)?.files;
         if (!name) {
           event.preventDefault();
@@ -106,11 +112,28 @@ export function ProductForm({
       ) : null}
       <input name="name" required placeholder="Nom du produit" className="rounded-xl border px-3 py-2 md:col-span-2" />
       <CategorySelect groups={categoryGroups} className="rounded-xl border px-3 py-2 md:col-span-2" />
-      <input name="salePrice" inputMode="numeric" required placeholder="Prix vente (FCFA)" className="rounded-xl border px-3 py-2" />
-      <input name="promoPrice" inputMode="numeric" placeholder="Prix promo (FCFA)" className="rounded-xl border px-3 py-2" />
-      <input name="costPrice" inputMode="numeric" placeholder="Prix achat (FCFA)" className="rounded-xl border px-3 py-2" />
-      <input name="stock" inputMode="numeric" placeholder="Stock initial" className="rounded-xl border px-3 py-2" />
+      {brands.length ? (
+        <select name="brandId" className="rounded-xl border px-3 py-2">
+          <option value="">Marque (optionnel)</option>
+          {brands.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      {suppliers.length ? (
+        <select name="supplierId" className="rounded-xl border px-3 py-2">
+          <option value="">Fournisseur (optionnel)</option>
+          {suppliers.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
       <input name="shortDescription" placeholder="Petite description" className="rounded-xl border px-3 py-2 md:col-span-2" />
+      <VariantEditor />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isFeatured" /> Vedette
       </label>
@@ -119,6 +142,9 @@ export function ProductForm({
       </label>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isNew" defaultChecked /> Nouveauté
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="onlineVisible" defaultChecked /> Publier en boutique
       </label>
       <p className="text-xs text-black/50 md:col-span-4">
         SKU généré automatiquement. Après publication, le produit est visible tout de suite en boutique et à la caisse.
