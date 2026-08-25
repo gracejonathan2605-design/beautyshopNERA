@@ -1,5 +1,20 @@
 const MAX_EDGE = 1600;
 const WEBP_QUALITY = 0.78;
+const JPEG_QUALITY = 0.82;
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
+}
+
+async function encodeCanvas(canvas: HTMLCanvasElement) {
+  const webp = await canvasToBlob(canvas, "image/webp", WEBP_QUALITY);
+  if (webp && webp.size > 0) return { blob: webp, ext: "webp" as const, type: "image/webp" };
+  const jpeg = await canvasToBlob(canvas, "image/jpeg", JPEG_QUALITY);
+  if (jpeg && jpeg.size > 0) return { blob: jpeg, ext: "jpg" as const, type: "image/jpeg" };
+  throw new Error("Compression impossible sur cet appareil.");
+}
 
 export async function compressImageFile(file: File): Promise<File> {
   if (!file.size) throw new Error("Fichier image vide.");
@@ -21,9 +36,7 @@ export async function compressImageFile(file: File): Promise<File> {
   }
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((next) => (next ? resolve(next) : reject(new Error("Compression WebP impossible."))), "image/webp", WEBP_QUALITY);
-  });
+  const encoded = await encodeCanvas(canvas);
   const name = file.name.replace(/\.[^.]+$/, "") || "photo";
-  return new File([blob], `${name}.webp`, { type: "image/webp" });
+  return new File([encoded.blob], `${name}.${encoded.ext}`, { type: encoded.type });
 }
