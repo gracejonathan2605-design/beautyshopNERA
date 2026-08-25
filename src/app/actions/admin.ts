@@ -17,6 +17,7 @@ import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
+import { assignFlashOnPublish, isPublishedOnline, normalizeFlashDurationDays } from "@/lib/flash";
 import {
   defaultStockMoveComment,
   isStockMoveReason,
@@ -190,6 +191,7 @@ function refreshCatalog(slug?: string) {
   revalidatePath("/admin/produits");
   revalidatePath("/boutique");
   revalidatePath("/");
+  revalidatePath("/flash");
   revalidatePath("/pos");
   if (slug) revalidatePath(`/produit/${slug}`);
 }
@@ -269,11 +271,23 @@ export async function saveProduct(
     const promoPrice = parsePromoPrice(formData.get("promoPrice"), salePrice);
     const isPromo = formData.get("isPromo") === "on" || promoPrice != null;
     const isNew = formData.get("isNew") === "on";
+    const asDraft = formData.get("asDraft") === "on";
+    const status = asDraft ? "DRAFT" : "ACTIVE";
+    const onlineVisible = !asDraft;
     const stock = Math.max(0, parseMoney(formData.get("stock")));
     const sku = await uniqueSku(name);
 
     const locationId = (await prisma.location.findFirst({ where: { isDefault: true } }))?.id;
     if (!locationId) return { ok: false, error: "Aucun magasin par défaut. Relancez le seed ou créez un magasin." };
+
+    const settings = await getShopSettings();
+    const flash = assignFlashOnPublish({
+      alreadyStarted: null,
+      alreadyEnded: null,
+      wasPublished: false,
+      willBePublished: isPublishedOnline({ status, onlineVisible, deletedAt: null }),
+      durationDays: settings.flashDurationDays,
+    });
 
     const product = await prisma.product.create({
       data: {
@@ -282,12 +296,14 @@ export async function saveProduct(
         shortDescription: String(formData.get("shortDescription") ?? "") || null,
         description: String(formData.get("description") ?? "") || null,
         sku,
-        status: "ACTIVE",
+        status,
         categoryId,
         isFeatured: formData.get("isFeatured") === "on",
         isNew,
         isPromo,
-        onlineVisible: true,
+        onlineVisible,
+        flashStartAt: flash.flashStartAt,
+        flashEndAt: flash.flashEndAt,
         variants: {
           create: {
             name: "Standard",
@@ -327,7 +343,9 @@ export async function saveProduct(
       name,
       warning: warning
         ? `${name} est en boutique et à la caisse (SKU ${sku}). ${warning}`
-        : `${name} est en boutique et à la caisse. SKU : ${sku}`,
+        : asDraft
+          ? `${name} est enregistré en brouillon. Il n’apparaît pas encore en FLASH NERA ni en boutique.`
+          : `${name} est en boutique et à la caisse. SKU : ${sku}`,
     };
   } catch (err) {
     unstable_rethrow(err);
@@ -406,6 +424,21 @@ export async function updateProduct(
       return { ok: false, error: "Ce produit a déjà une vidéo. Supprimez-la avant d’en ajouter une autre." };
     }
 
+    const nextStatusRaw = String(formData.get("status") ?? current.status);
+    const nextStatus =
+      nextStatusRaw === "DRAFT" || nextStatusRaw === "INACTIVE" || nextStatusRaw === "ARCHIVED"
+        ? nextStatusRaw
+        : "ACTIVE";
+    const onlineVisible = nextStatus === "ACTIVE" && formData.get("onlineVisible") === "on";
+    const settings = await getShopSettings();
+    const flash = assignFlashOnPublish({
+      alreadyStarted: current.flashStartAt,
+      alreadyEnded: current.flashEndAt,
+      wasPublished: isPublishedOnline(current),
+      willBePublished: isPublishedOnline({ status: nextStatus, onlineVisible, deletedAt: null }),
+      durationDays: settings.flashDurationDays,
+    });
+
     await prisma.product.update({
       where: { id: productId },
       data: {
@@ -415,6 +448,10 @@ export async function updateProduct(
         isFeatured: formData.get("isFeatured") === "on",
         isPromo,
         isNew: formData.get("isNew") === "on",
+        status: nextStatus,
+        onlineVisible,
+        flashStartAt: flash.flashStartAt,
+        flashEndAt: flash.flashEndAt,
       },
     });
     const variant = current.variants[0];
@@ -581,6 +618,7 @@ export async function saveSettings(formData: FormData) {
     city: String(formData.get("city") ?? current.city),
     country: String(formData.get("country") ?? current.country),
     ticketFooter: String(formData.get("ticketFooter") ?? current.ticketFooter),
+    flashDurationDays: normalizeFlashDurationDays(formData.get("flashDurationDays") ?? current.flashDurationDays),
   };
   await saveShopSettings(next);
   updateTag("catalog");

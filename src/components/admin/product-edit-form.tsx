@@ -21,6 +21,8 @@ export function ProductEditForm({
   isFeatured,
   isPromo,
   isNew,
+  status,
+  onlineVisible,
   photoCount,
   hasVideo,
   categoryGroups,
@@ -35,6 +37,8 @@ export function ProductEditForm({
   isFeatured: boolean;
   isPromo: boolean;
   isNew: boolean;
+  status: string;
+  onlineVisible: boolean;
   photoCount: number;
   hasVideo: boolean;
   categoryGroups: CategoryOptionGroup[];
@@ -122,6 +126,17 @@ export function ProductEditForm({
       </label>
       <label className="flex items-center gap-2 text-sm md:col-span-2">
         <input type="checkbox" name="isNew" defaultChecked={isNew} /> Nouveauté
+      </label>
+      <label className="text-sm">
+        Statut
+        <select name="status" defaultValue={status} className="mt-1 w-full rounded-xl border px-3 py-2">
+          <option value="ACTIVE">Publié</option>
+          <option value="DRAFT">Brouillon</option>
+          <option value="INACTIVE">Masqué</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="onlineVisible" defaultChecked={onlineVisible} /> Visible en boutique
       </label>
       {remainingPhotos > 0 ? (
         <label className="text-sm md:col-span-2">

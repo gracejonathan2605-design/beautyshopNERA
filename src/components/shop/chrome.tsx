@@ -51,6 +51,9 @@ export async function ShopHeader() {
           />
         </form>
         <div className="flex shrink-0 items-center gap-3 text-sm">
+          <Link href="/flash" className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+            Flash NERA
+          </Link>
           <Link href="/boutique" className="hidden text-wine/80 hover:text-wine sm:inline">
             Boutique
           </Link>
@@ -119,6 +122,11 @@ export async function ShopFooter() {
           </div>
           <div className="text-sm leading-7 text-black/55">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Service</p>
+            <p className="mt-2">
+              <Link href="/flash" className="text-wine underline-offset-2 hover:underline">
+                FLASH NERA
+              </Link>
+            </p>
             <p className="mt-2">Retrait en boutique</p>
             <p>Livraison rapide sous 24h à Yaoundé</p>
             <p>Paiement OM, MoMo et espèces</p>

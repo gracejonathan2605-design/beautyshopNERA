@@ -6,9 +6,11 @@ import Link from "next/link";
 export function AddToCartButton({
   action,
   label = "Ajouter au panier",
+  className = "mt-8 rounded-full bg-brown px-8 py-3 text-cream disabled:opacity-60",
 }: {
   action: () => Promise<void>;
   label?: string;
+  className?: string;
 }) {
   const [pending, start] = useTransition();
   const [added, setAdded] = useState(false);
@@ -25,7 +27,7 @@ export function AddToCartButton({
             window.setTimeout(() => setAdded(false), 5000);
           });
         }}
-        className="mt-8 rounded-full bg-brown px-8 py-3 text-cream disabled:opacity-60"
+        className={`disabled:opacity-60 ${className}`}
       >
         {pending ? "Ajout…" : label}
       </button>

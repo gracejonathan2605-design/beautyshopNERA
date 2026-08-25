@@ -144,9 +144,35 @@ button.bg-brown:hover {
   background: #3a2430;
   color: #fff;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.flash-count {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wine);
+}
+
+.flash-count-soon {
+  color: #7a3d4e;
+}
+
+.flash-count-urgent {
+  color: var(--brown);
+}
+
+.flash-count-critical {
+  color: var(--brown);
+  animation: flash-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes flash-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {
