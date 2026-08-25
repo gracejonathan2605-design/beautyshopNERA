@@ -45,4 +45,43 @@ describe("caisse du jour", () => {
     expect(snap.netRevenue).toBe(26000);
     expect(snap.expectedCash).toBe(36000);
   });
+
+  it("compte un paiement mixte espèces + MoMo dans le tiroir", () => {
+    const snap = summarizeTill({
+      sessionId: "s1",
+      openingFloat: 10000,
+      sales: [
+        {
+          status: "COMPLETED",
+          total: 15000,
+          payments: [
+            { method: "CASH", status: "COMPLETED", amount: 10000 },
+            { method: "MOBILE_MONEY", status: "COMPLETED", amount: 5000 },
+          ],
+        },
+      ],
+      expenses: [],
+    });
+    expect(snap.cashSales).toBe(10000);
+    expect(snap.otherSales).toBe(5000);
+    expect(snap.expectedCash).toBe(20000);
+  });
+
+  it("retire du tiroir une vente remboursée", () => {
+    const snap = summarizeTill({
+      sessionId: "s1",
+      openingFloat: 10000,
+      sales: [
+        {
+          status: "REFUNDED",
+          total: 8000,
+          payments: [{ method: "CASH", status: "REFUNDED", amount: 8000 }],
+        },
+      ],
+      expenses: [],
+    });
+    expect(snap.salesTotal).toBe(0);
+    expect(snap.cashSales).toBe(0);
+    expect(snap.expectedCash).toBe(10000);
+  });
 });

@@ -5,43 +5,13 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
+import { clampDiscount, settlePosPayments, ticketTotals } from "@/lib/pos";
 
 export type SaleLineInput = {
   variantId: string;
   quantity: number;
+  discount?: number;
 };
-
-function recordPayments(
-  payments: { method: PaymentMethod; amount: number; reference?: string }[],
-  total: number,
-) {
-  if (!payments.length) throw new Error("Indiquez un paiement");
-  for (const payment of payments) {
-    if (!Number.isFinite(payment.amount) || payment.amount <= 0) {
-      throw new Error("Montant de paiement invalide");
-    }
-  }
-  const other = payments.filter((p) => p.method !== "CASH");
-  const cash = payments.filter((p) => p.method === "CASH");
-  const otherTotal = other.reduce((sum, p) => sum + p.amount, 0);
-  if (otherTotal > total) throw new Error("Paiement supérieur au total");
-  const cashNeeded = total - otherTotal;
-  const cashTendered = cash.reduce((sum, p) => sum + p.amount, 0);
-  if (cashTendered < cashNeeded) throw new Error("Paiement insuffisant");
-  const recorded: { method: PaymentMethod; amount: number; reference?: string }[] = other.map((p) => ({
-    method: p.method,
-    amount: Math.round(p.amount),
-    reference: p.reference,
-  }));
-  if (cashNeeded > 0) {
-    recorded.push({
-      method: "CASH",
-      amount: cashNeeded,
-      reference: cash[0]?.reference,
-    });
-  }
-  return recorded;
-}
 
 export async function createPosSale(input: {
   cashierId: string;
@@ -66,33 +36,45 @@ export async function createPosSale(input: {
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
 
-    let subtotal = 0;
-    const items: Prisma.SaleItemUncheckedCreateWithoutSaleInput[] = [];
+    const pricedLines: { variantId: string; quantity: number; unitPrice: number; discount: number; productName: string; variantName: string; sku: string }[] = [];
 
     for (const line of input.lines) {
       const variant = byId.get(line.variantId);
       if (!variant) throw new Error("Variante introuvable ou inactive");
       if (line.quantity <= 0) throw new Error("Quantité invalide");
       const unitPrice = priced(variant);
-      const total = unitPrice * line.quantity;
-      if (total < 0) throw new Error("Ligne au montant invalide");
-      subtotal += total;
-      items.push({
+      const gross = unitPrice * line.quantity;
+      const discount = clampDiscount(line.discount ?? 0, gross);
+      pricedLines.push({
         variantId: variant.id,
+        quantity: line.quantity,
+        unitPrice,
+        discount,
         productName: variant.product.name,
         variantName: variant.name,
         sku: variant.sku,
-        quantity: line.quantity,
-        unitPrice,
-        discount: 0,
-        total,
       });
     }
 
-    const cartDiscount = Math.max(0, Math.round(input.discount ?? 0));
-    if (cartDiscount > subtotal) throw new Error("Remise supérieure au total");
-    const total = subtotal - cartDiscount;
-    const payments = recordPayments(input.payments, total);
+    const totals = ticketTotals(
+      pricedLines.map((line) => ({ unitPrice: line.unitPrice, quantity: line.quantity, discount: line.discount })),
+      input.discount ?? 0,
+    );
+    const items: Prisma.SaleItemUncheckedCreateWithoutSaleInput[] = pricedLines.map((line) => ({
+      variantId: line.variantId,
+      productName: line.productName,
+      variantName: line.variantName,
+      sku: line.sku,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      discount: line.discount,
+      total: line.unitPrice * line.quantity - line.discount,
+    }));
+
+    const subtotal = totals.subtotal;
+    const cartDiscount = totals.cartDiscount;
+    const total = totals.total;
+    const payments = settlePosPayments(input.payments, total);
 
     const sale = await tx.sale.create({
       data: {
@@ -201,6 +183,61 @@ export async function cancelSale(input: { saleId: string; userId: string; restoc
         entityId: sale.id,
         before: { status: "COMPLETED", total: sale.total },
         after: { status: "CANCELLED", restock: input.restock },
+      },
+    });
+
+    return sale;
+  });
+}
+
+export async function refundSale(input: { saleId: string; userId: string; restock?: boolean }) {
+  const restock = input.restock !== false;
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findUnique({
+      where: { id: input.saleId },
+      include: { items: true, payments: true },
+    });
+    if (!sale) throw new Error("Vente introuvable");
+    if (sale.status !== "COMPLETED") throw new Error("Cette vente ne peut plus être remboursée");
+
+    await tx.sale.update({
+      where: { id: sale.id },
+      data: { status: "REFUNDED" },
+    });
+    await tx.payment.updateMany({
+      where: { saleId: sale.id },
+      data: { status: "REFUNDED" },
+    });
+
+    if (restock) {
+      for (const item of sale.items) {
+        await applyStockChange(tx, {
+          variantId: item.variantId,
+          locationId: sale.locationId,
+          type: "RETURN",
+          quantity: item.quantity,
+          userId: input.userId,
+          reference: sale.number,
+          comment: "Retour / remboursement caisse",
+        });
+      }
+    }
+
+    if (sale.customerId) {
+      await tx.customer.update({
+        where: { id: sale.customerId },
+        data: { totalSpent: { decrement: sale.total } },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId: input.userId,
+        action: "SALE_REFUND",
+        entity: "Sale",
+        entityId: sale.id,
+        before: { status: "COMPLETED", total: sale.total },
+        after: { status: "REFUNDED", restock },
       },
     });
 

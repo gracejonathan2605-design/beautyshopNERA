@@ -2,40 +2,43 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
-import { PaymentMethod } from "@prisma/client";
+import { PaymentMethod, Prisma } from "@prisma/client";
 import { requireStaff } from "@/lib/guard";
-import { cancelSale, createPosSale } from "@/services/sale.service";
+import { cancelSale, createPosSale, refundSale } from "@/services/sale.service";
 import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser, recordTillExpense } from "@/services/cash.service";
-import { findOrCreateWalkInCustomer } from "@/services/customer.service";
+import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } from "@/services/customer.service";
 import { parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import type { HeldTicketPayload } from "@/lib/pos";
+
+const posSelect = {
+  id: true,
+  name: true,
+  sku: true,
+  barcode: true,
+  salePrice: true,
+  promoPrice: true,
+  product: {
+    select: {
+      name: true,
+      images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { url: true } },
+    },
+  },
+  inventories: { select: { onHand: true, reserved: true } },
+} as const;
+
+const posActiveWhere = {
+  isActive: true,
+  deletedAt: null,
+  product: { status: "ACTIVE" as const, deletedAt: null },
+};
 
 export async function searchPosProducts(query: string) {
   await requireStaff("pos.access");
   const q = query.trim();
-  const where = {
-    isActive: true,
-    deletedAt: null,
-    product: { status: "ACTIVE" as const, deletedAt: null },
-  };
-  const posSelect = {
-    id: true,
-    name: true,
-    sku: true,
-    barcode: true,
-    salePrice: true,
-    promoPrice: true,
-    product: {
-      select: {
-        name: true,
-        images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { url: true } },
-      },
-    },
-    inventories: { select: { onHand: true, reserved: true } },
-  } as const;
   if (!q) {
     return prisma.productVariant.findMany({
-      where,
+      where: posActiveWhere,
       select: posSelect,
       take: 24,
       orderBy: { product: { name: "asc" } },
@@ -43,7 +46,7 @@ export async function searchPosProducts(query: string) {
   }
   return prisma.productVariant.findMany({
     where: {
-      ...where,
+      ...posActiveWhere,
       OR: [
         { sku: { contains: q, mode: "insensitive" } },
         { barcode: { equals: q } },
@@ -54,6 +57,21 @@ export async function searchPosProducts(query: string) {
     select: posSelect,
     take: 30,
   });
+}
+
+export async function scanPosBarcode(code: string) {
+  await requireStaff("pos.access");
+  const q = code.trim();
+  if (!q) return { ok: false as const, error: "Scannez un code-barres." };
+  const variant = await prisma.productVariant.findFirst({
+    where: {
+      ...posActiveWhere,
+      OR: [{ barcode: q }, { sku: { equals: q, mode: "insensitive" } }],
+    },
+    select: posSelect,
+  });
+  if (!variant) return { ok: false as const, error: `Code inconnu : ${q}` };
+  return { ok: true as const, variant };
 }
 
 function bouncePos(kind: "ok" | "erreur", message?: string): never {
@@ -131,7 +149,7 @@ export async function submitPosSale(input: {
   customerPhone?: string;
   discount?: number;
   notes?: string;
-  lines: { variantId: string; quantity: number }[];
+  lines: { variantId: string; quantity: number; discount?: number }[];
   payments: { method: PaymentMethod; amount: number }[];
 }): Promise<PosSaleResult> {
   try {
@@ -190,10 +208,161 @@ export async function cancelPosSale(formData: FormData) {
   }
 }
 
-export async function findCustomerByPhone(phone: string) {
+export async function searchPosCustomer(phone: string) {
   await requireStaff("customers.view");
   if (!phone.trim()) return null;
-  return prisma.customer.findFirst({
-    where: { phone: { contains: phone.trim() }, isActive: true, deletedAt: null },
+  return lookupPosCustomer(phone);
+}
+
+export async function createPosCustomer(input: { firstName: string; lastName?: string; phone: string }) {
+  try {
+    await requireStaff("customers.create");
+    const customer = await createCustomerRecord({
+      firstName: input.firstName,
+      lastName: input.lastName,
+      phone: input.phone,
+    });
+    revalidatePath("/admin/clients");
+    return { ok: true as const, customer };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false as const, error: err instanceof Error ? err.message : "Création impossible." };
+  }
+}
+
+export type HeldTicketRow = {
+  id: string;
+  note: string | null;
+  createdAt: Date;
+  payload: HeldTicketPayload;
+};
+
+export async function parkPosTicket(input: { note?: string; payload: HeldTicketPayload }) {
+  try {
+    const session = await requireStaff("pos.access");
+    if (!input.payload.lines.length) return { ok: false as const, error: "Le ticket est vide." };
+    const open = await getOpenSessionForUser(session.userId);
+    const count = await prisma.heldTicket.count({ where: { cashierId: session.userId } });
+    if (count >= 20) return { ok: false as const, error: "Trop de tickets en attente (20 max). Encaisser ou reprendre d’abord." };
+    const note =
+      input.note?.trim() ||
+      input.payload.customerName.trim() ||
+      `Ticket ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    const row = await prisma.heldTicket.create({
+      data: {
+        cashierId: session.userId,
+        cashSessionId: open?.id,
+        note,
+        payload: input.payload as unknown as Prisma.InputJsonValue,
+      },
+    });
+    revalidatePath("/pos");
+    return {
+      ok: true as const,
+      ticket: {
+        id: row.id,
+        note: row.note,
+        createdAt: row.createdAt,
+        payload: input.payload,
+      } satisfies HeldTicketRow,
+    };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false as const, error: err instanceof Error ? err.message : "Mise en attente impossible." };
+  }
+}
+
+export async function discardHeldTicket(id: string) {
+  const session = await requireStaff("pos.access");
+  const row = await prisma.heldTicket.findUnique({ where: { id } });
+  if (!row) return { ok: false as const, error: "Ticket introuvable." };
+  if (row.cashierId !== session.userId && !session.isSuperAdmin) {
+    return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+  }
+  await prisma.heldTicket.delete({ where: { id } });
+  revalidatePath("/pos");
+  return { ok: true as const };
+}
+
+export async function resumeHeldTicket(id: string) {
+  const session = await requireStaff("pos.access");
+  const row = await prisma.heldTicket.findUnique({ where: { id } });
+  if (!row) return { ok: false as const, error: "Ticket introuvable." };
+  if (row.cashierId !== session.userId && !session.isSuperAdmin) {
+    return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+  }
+  await prisma.heldTicket.delete({ where: { id } });
+  revalidatePath("/pos");
+  return {
+    ok: true as const,
+    ticket: {
+      id: row.id,
+      note: row.note,
+      createdAt: row.createdAt,
+      payload: row.payload as HeldTicketPayload,
+    } satisfies HeldTicketRow,
+  };
+}
+
+export async function searchPosSales(query: string) {
+  await requireStaff("sales.view");
+  const q = query.trim();
+  const customer = q ? await lookupPosCustomer(q) : null;
+  const sales = await prisma.sale.findMany({
+    where: {
+      status: "COMPLETED",
+      ...(q
+        ? {
+            OR: [
+              { number: { contains: q, mode: "insensitive" } },
+              ...(customer ? [{ customerId: customer.id }] : []),
+            ],
+          }
+        : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+    select: {
+      id: true,
+      number: true,
+      total: true,
+      createdAt: true,
+      customer: { select: { firstName: true, lastName: true, phone: true } },
+      items: { select: { productName: true, quantity: true, total: true } },
+      payments: { select: { method: true, amount: true } },
+    },
   });
+  return sales;
+}
+
+export async function refundPosSale(saleId: string) {
+  try {
+    const session = await requireStaff("sales.refund");
+    if (!saleId) return { ok: false as const, error: "Vente manquante." };
+    await refundSale({ saleId, userId: session.userId, restock: true });
+    revalidatePath("/pos");
+    revalidatePath("/admin/ventes");
+    revalidatePath("/admin/stocks");
+    revalidatePath("/admin/clients");
+    return { ok: true as const };
+  } catch (err) {
+    unstable_rethrow(err);
+    return { ok: false as const, error: err instanceof Error ? err.message : "Remboursement impossible." };
+  }
+}
+
+export async function refundPosSaleForm(formData: FormData) {
+  const saleId = String(formData.get("saleId") ?? "");
+  try {
+    const session = await requireStaff("sales.refund");
+    if (!saleId) bounceVentes("erreur", "Vente manquante.");
+    await refundSale({ saleId, userId: session.userId, restock: true });
+    revalidatePath("/admin/ventes");
+    revalidatePath("/pos");
+    revalidatePath("/admin/stocks");
+    bounceVentes("ok", "Vente remboursée et stock remis.");
+  } catch (err) {
+    unstable_rethrow(err);
+    bounceVentes("erreur", err instanceof Error ? err.message : "Remboursement impossible.");
+  }
 }

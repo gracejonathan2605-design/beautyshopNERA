@@ -178,7 +178,7 @@ export function saleToReceipt(
     subtotal: number;
     discount: number;
     total: number;
-    items: { productName: string; variantName?: string | null; quantity: number; unitPrice: number; total: number }[];
+    items: { productName: string; variantName?: string | null; quantity: number; unitPrice: number; total: number; discount?: number }[];
     payments: { method: string; amount: number }[];
     cashier?: { firstName: string; lastName: string } | null;
     customer?: { firstName: string; lastName: string; phone?: string | null } | null;
@@ -189,6 +189,7 @@ export function saleToReceipt(
   const customerName = sale.customer
     ? `${sale.customer.firstName} ${sale.customer.lastName}`.trim()
     : null;
+  const lineDiscount = sale.items.reduce((sum, item) => sum + (item.discount ?? 0), 0);
   return {
     shop,
     number: sale.number,
@@ -203,7 +204,7 @@ export function saleToReceipt(
       total: item.total,
     })),
     subtotal: sale.subtotal,
-    discount: sale.discount,
+    discount: sale.discount + lineDiscount,
     total: sale.total,
     payments: sale.payments.map((p) => ({ method: p.method, amount: p.amount })),
   };
