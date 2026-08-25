@@ -9,6 +9,8 @@ import {
   remainingMs,
 } from "../src/lib/flash";
 import { promoPercent } from "../src/lib/pricing";
+import { isMissingFlashColumn } from "../src/lib/product-query";
+import { Prisma } from "@prisma/client";
 
 const start = new Date("2026-08-25T15:30:00.000Z");
 
@@ -198,5 +200,17 @@ describe("FLASH NERA — badges et promo", () => {
   it("peut être Flash sans promotion, ou promo sans Flash", () => {
     expect(flashShopBadges({ flash: true, promoPercent: 0 }).map((b) => b.kind)).toEqual(["flash"]);
     expect(flashShopBadges({ flash: false, promoPercent: 20, isPromo: true }).map((b) => b.kind)).toEqual(["promo"]);
+  });
+});
+
+describe("FLASH NERA — schéma", () => {
+  it("reconnaît l’absence de colonnes Flash en base", () => {
+    const err = new Prisma.PrismaClientKnownRequestError("column missing", {
+      code: "P2022",
+      clientVersion: "6.19.3",
+      meta: { column: "Product.flashStartAt" },
+    });
+    expect(isMissingFlashColumn(err)).toBe(true);
+    expect(isMissingFlashColumn(new Error("other"))).toBe(false);
   });
 });

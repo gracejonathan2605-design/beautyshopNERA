@@ -21,8 +21,21 @@ export default async function HomePage() {
   let catalog: Awaited<ReturnType<typeof getHomeCatalog>> | null = null;
   let flash: Awaited<ReturnType<typeof getActiveFlashProducts>> = [];
   try {
-    [settings, catalog, flash] = await Promise.all([getShopSettings(), getHomeCatalog(), getActiveFlashProducts(8)]);
+    settings = await getShopSettings();
   } catch {
+    settings = null;
+  }
+  try {
+    catalog = await getHomeCatalog();
+  } catch {
+    catalog = null;
+  }
+  try {
+    flash = await getActiveFlashProducts(8);
+  } catch {
+    flash = [];
+  }
+  if (!settings && !catalog) {
     return (
       <section className="hero-light px-4 py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">

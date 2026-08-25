@@ -2,7 +2,6 @@ import Link from "next/link";
 import { FlashProductCard, type FlashCardProduct } from "@/components/shop/flash-product-card";
 
 export function FlashSection({ products }: { products: FlashCardProduct[] }) {
-  if (!products.length) return null;
   return (
     <section className="border-y border-[#f0e4ea] bg-[linear-gradient(180deg,#fff8f6_0%,#ffffff_72%)]">
       <div className="mx-auto max-w-6xl px-4 py-12">
@@ -16,13 +15,19 @@ export function FlashSection({ products }: { products: FlashCardProduct[] }) {
             Tout voir
           </Link>
         </div>
-        <div className="mt-7 flex snap-x gap-4 overflow-x-auto pb-3 no-scrollbar md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
-          {products.map((product) => (
-            <div key={product.slug} className="w-[78%] shrink-0 snap-start sm:w-[46%] md:w-auto">
-              <FlashProductCard product={product} />
-            </div>
-          ))}
-        </div>
+        {products.length ? (
+          <div className="mt-7 flex snap-x gap-4 overflow-x-auto pb-3 no-scrollbar md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
+            {products.map((product) => (
+              <div key={product.slug} className="w-[78%] shrink-0 snap-start sm:w-[46%] md:w-auto">
+                <FlashProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-7 rounded-[1.7rem] border border-[#eee0e6] bg-white/80 p-6 text-sm text-black/50">
+            Les nouveautés mises en avant apparaissent ici dès qu’une pièce est publiée en boutique.
+          </p>
+        )}
       </div>
     </section>
   );
