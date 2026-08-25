@@ -3,14 +3,15 @@ import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
 import { getHomeCatalog } from "@/lib/catalog-cache";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
+import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const TRUST = [
+  { title: "Paiement OM & MoMo", text: "Orange Money et MTN Mobile Money, en boutique comme en ligne." },
+  { title: "Livraison 24h", text: "Livraison rapide sous 24h à Yaoundé, ou retrait en magasin." },
   { title: "Sélection premium", text: "Soins, mèches, parfums et mode choisis pour durer." },
-  { title: "Paiement simple", text: "Espèces, Mobile Money ou carte en boutique." },
-  { title: "Yaoundé", text: "Retrait au magasin ou livraison dans la ville." },
   { title: "Conseil NERA", text: "Une équipe pour vous accompagner, pas un catalogue froid." },
 ];
 
@@ -59,6 +60,9 @@ export default async function HomePage() {
               {settings.name}
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{settings.slogan}</p>
+            <div className="mt-6">
+              <PayDeliveryBadges />
+            </div>
             <div className="mt-10 flex flex-wrap gap-3">
               <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-cream">
                 Entrer dans la boutique

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/shop/product-card";
 import { getCachedCategoryPage } from "@/lib/catalog-cache";
+import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,6 +32,9 @@ export default async function CategoryPage({ params }: Props) {
       {category.description ? (
         <p className="mt-3 max-w-2xl text-black/60">{category.description}</p>
       ) : null}
+      <div className="mt-5">
+        <PayDeliveryBadges />
+      </div>
 
       {category.children.length > 0 ? (
         <div className="mt-6 flex flex-wrap gap-1.5">

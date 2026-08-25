@@ -58,6 +58,15 @@ export function ReceiptTicket({
             {data.shop.address ? <p>{data.shop.address}</p> : null}
             {data.shop.city ? <p>{data.shop.city}</p> : null}
             {data.shop.phone ? <p>{data.shop.phone}</p> : null}
+            {data.shop.email ? <p>{data.shop.email}</p> : null}
+            {data.shop.mtnPhone ? <p>MoMo {data.shop.mtnPhone}</p> : null}
+            {data.shop.rccm ? <p className="receipt-legal">RCCM {data.shop.rccm}</p> : null}
+            {data.shop.nui ? <p className="receipt-legal">NUI {data.shop.nui}</p> : null}
+            <p className="receipt-badges mt-2">
+              <span>OM</span>
+              <span>MoMo</span>
+              <span>24h</span>
+            </p>
           </header>
           <p className="my-2 border-t border-dashed border-black/40 pt-2">
             {data.number}

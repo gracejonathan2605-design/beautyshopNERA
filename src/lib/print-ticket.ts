@@ -50,6 +50,27 @@ body {
 .flex { display: flex; }
 .justify-between { justify-content: space-between; }
 .text-sm { font-size: 13px; }
+.receipt-legal {
+  font-size: 10px;
+  text-align: center;
+  line-height: 1.3;
+}
+.receipt-badges {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.5mm;
+  margin: 2mm 0;
+}
+.receipt-badges span {
+  border: 1px solid #000;
+  border-radius: 1mm;
+  padding: 0.6mm 1.6mm;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .font-bold { font-weight: 700; }
 `;
 

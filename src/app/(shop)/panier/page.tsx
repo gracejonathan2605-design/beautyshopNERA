@@ -5,6 +5,7 @@ import { unitPrice } from "@/lib/pricing";
 import { setCartQtyForm } from "@/app/actions/shop";
 import { sellableOnlineWhere } from "@/lib/product-query";
 import Link from "next/link";
+import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 export default async function CartPage() {
   const cart = await getCart();
@@ -75,6 +76,7 @@ export default async function CartPage() {
             </div>
           ))}
           <p className="text-right font-serif text-3xl">Total {formatCfa(total)}</p>
+          <PayDeliveryBadges />
           <Link href="/checkout" className="block rounded-full bg-brown py-3 text-center text-cream">
             Commander
           </Link>

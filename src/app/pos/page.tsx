@@ -4,8 +4,9 @@ import { getOpenSessionForUser, getTillSnapshot } from "@/services/cash.service"
 import { PosClient } from "@/components/pos/pos-client";
 import { TillBoard } from "@/components/pos/till-board";
 import { StaffToolbar } from "@/components/staff/toolbar";
-import { getShopSettings } from "@/lib/settings";
+import { getShopSettings, toReceiptShop } from "@/lib/settings";
 import { BrandLockup } from "@/components/brand/logo";
+import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { prisma } from "@/lib/prisma";
 
 export default async function PosPage({
@@ -36,6 +37,12 @@ export default async function PosPage({
         <p className="mt-1 text-sm text-black/60">
           {session.firstName} {session.lastName}
         </p>
+        <div className="mt-3">
+          <PayDeliveryBadges compact />
+        </div>
+        <p className="mt-2 text-xs text-black/45">
+          {settings.email} · MoMo {settings.mtnPhone} · RCCM {settings.rccm} · NUI {settings.nui}
+        </p>
         {notice ? (
           <p
             className={`mt-4 rounded-xl px-4 py-3 text-sm ${
@@ -53,14 +60,7 @@ export default async function PosPage({
           <PosClient
             initial={products}
             openSession={open ? { id: open.id, openingFloat: open.openingFloat } : null}
-            shop={{
-              name: settings.name,
-              slogan: settings.slogan,
-              address: settings.address,
-              city: `${settings.city}, ${settings.country}`,
-              phone: settings.phone,
-              ticketFooter: settings.ticketFooter,
-            }}
+            shop={toReceiptShop(settings)}
           />
         </div>
       </div>

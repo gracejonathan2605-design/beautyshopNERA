@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatCfa } from "@/lib/money";
-import { getShopSettings } from "@/lib/settings";
+import { getShopSettings, toReceiptShop } from "@/lib/settings";
 import { saleToReceipt } from "@/lib/receipt";
 import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork, PAYMENT_INSTRUCTIONS } from "@/lib/checkout";
 import { BrandLogo } from "@/components/brand/logo";
+import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
 import { getCustomerSession, getStaffSession } from "@/lib/auth";
 import { isValidOrderAccessToken } from "@/lib/order-access";
 
@@ -60,14 +61,7 @@ export default async function OrderPage({
         ? { firstName: order.shippingName, lastName: "", phone: order.shippingPhone }
         : null,
     },
-    {
-      name: settings.name,
-      slogan: settings.slogan,
-      address: settings.address,
-      city: `${settings.city}, ${settings.country}`,
-      phone: settings.phone,
-      ticketFooter: settings.ticketFooter,
-    },
+    toReceiptShop(settings),
   );
 
   return (
@@ -81,6 +75,9 @@ export default async function OrderPage({
         Commande <strong>{order.number}</strong>
         {paid ? " · Paiement reçu." : ". Payez maintenant le montant ci-dessous, puis gardez ce reçu."}
       </p>
+      <div className="mt-5 flex justify-center">
+        <PayDeliveryBadges />
+      </div>
 
       {paid ? (
         <section className="mt-8 rounded-[1.7rem] border border-emerald-200 bg-emerald-50 p-6">
@@ -133,6 +130,13 @@ export default async function OrderPage({
       ) : null}
       <p className="mt-6 text-right font-serif text-3xl text-wine">{formatCfa(order.total)}</p>
       <OrderTicketButton data={receipt} />
+      <ShopLegalBlock
+        className="mt-8 text-center"
+        rccm={settings.rccm}
+        nui={settings.nui}
+        email={settings.email}
+        mtnPhone={settings.mtnPhone}
+      />
     </div>
   );
 }
