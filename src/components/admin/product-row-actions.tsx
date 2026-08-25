@@ -2,17 +2,20 @@
 
 import { useTransition } from "react";
 import { deleteProduct, updateProductPrice } from "@/app/actions/admin";
+import { toggleProductPublish } from "@/app/actions/ops";
 
 export function ProductRowActions({
   productId,
   name,
   variantId,
   salePrice,
+  published,
 }: {
   productId: string;
   name: string;
   variantId: string | null;
   salePrice: number;
+  published: boolean;
 }) {
   const [pending, start] = useTransition();
   return (
@@ -36,8 +39,15 @@ export function ProductRowActions({
         </form>
       ) : null}
       <a href={`/admin/produits/${productId}`} className="rounded-full border px-3 py-1 text-xs">
-        Médias
+        Modifier
       </a>
+      <form action={(formData) => start(() => toggleProductPublish(formData))}>
+        <input type="hidden" name="productId" value={productId} />
+        <input type="hidden" name="publish" value={published ? "0" : "1"} />
+        <button disabled={pending} className="rounded-full border px-3 py-1 text-xs disabled:opacity-60">
+          {published ? "Dépublier" : "Publier"}
+        </button>
+      </form>
       <form
         action={(formData) => {
           if (!confirm(`Supprimer « ${name} » de la boutique et de la caisse ?`)) return;
