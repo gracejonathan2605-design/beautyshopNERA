@@ -289,6 +289,8 @@ model Product {
   isNew            Boolean        @default(true)
   isPromo          Boolean        @default(false)
   onlineVisible    Boolean        @default(true)
+  flashStartAt     DateTime?
+  flashEndAt       DateTime?
   deletedAt        DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -299,6 +301,8 @@ model Product {
   @@index([categoryId])
   @@index([status, onlineVisible, deletedAt])
   @@index([name])
+  @@index([flashEndAt])
+  @@index([status, onlineVisible, flashEndAt])
 }
 
 model ProductVariant {

@@ -7,6 +7,7 @@ import { ProductEditForm } from "@/components/admin/product-edit-form";
 import { groupCategoriesForSelect } from "@/lib/catalog";
 import { AdminFlash } from "@/components/admin/flash";
 import Image from "next/image";
+import { isFlashActive, formatFlashRemainingAdmin, remainingMs } from "@/lib/flash";
 
 export default async function ProductEditPage({
   params,
@@ -51,6 +52,13 @@ export default async function ProductEditPage({
           {product.onlineVisible ? "Dépublier de la boutique" : "Publier en boutique"}
         </button>
       </form>
+      <FlashAdminPanel
+        status={product.status}
+        onlineVisible={product.onlineVisible}
+        flashStartAt={product.flashStartAt}
+        flashEndAt={product.flashEndAt}
+        deletedAt={product.deletedAt}
+      />
       <ProductEditForm
         productId={product.id}
         name={product.name}
@@ -120,5 +128,54 @@ export default async function ProductEditPage({
         ))}
       </div>
     </div>
+  );
+}
+
+function formatAdminWhen(value: Date | null) {
+  if (!value) return "—";
+  return value.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function FlashAdminPanel({
+  status,
+  onlineVisible,
+  flashStartAt,
+  flashEndAt,
+  deletedAt,
+}: {
+  status: string;
+  onlineVisible: boolean;
+  flashStartAt: Date | null;
+  flashEndAt: Date | null;
+  deletedAt: Date | null;
+}) {
+  const active = isFlashActive({ status, onlineVisible, deletedAt, flashStartAt, flashEndAt });
+  const ended = Boolean(flashStartAt && flashEndAt && !active);
+  const state = !flashStartAt ? "AUCUN" : active ? "ACTIF" : ended ? "TERMINÉ" : "INACTIF";
+  return (
+    <section className="mt-5 rounded-2xl border border-[#eee0e6] bg-white p-4">
+      <p className="text-xs uppercase tracking-[0.2em] text-gold">FLASH NERA</p>
+      <p className="mt-1 font-medium text-wine">Statut : {state}</p>
+      <p className="mt-2 text-sm text-black/55">
+        Début : {formatAdminWhen(flashStartAt)}
+        <br />
+        Fin : {formatAdminWhen(flashEndAt)}
+        {active && flashEndAt ? (
+          <>
+            <br />
+            Temps restant : {formatFlashRemainingAdmin(remainingMs(flashEndAt))}
+          </>
+        ) : null}
+      </p>
+      <p className="mt-2 text-xs text-black/40">
+        Une republication ne relance pas le Flash. Modifier le prix ou les photos non plus.
+      </p>
+    </section>
   );
 }

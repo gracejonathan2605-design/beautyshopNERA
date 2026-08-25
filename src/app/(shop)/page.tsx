@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
-import { getHomeCatalog } from "@/lib/catalog-cache";
+import { getHomeCatalog, getActiveFlashProducts } from "@/lib/catalog-cache";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
+import { FlashSection } from "@/components/shop/flash-section";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,8 +19,9 @@ const TRUST = [
 export default async function HomePage() {
   let settings;
   let catalog: Awaited<ReturnType<typeof getHomeCatalog>> | null = null;
+  let flash: Awaited<ReturnType<typeof getActiveFlashProducts>> = [];
   try {
-    [settings, catalog] = await Promise.all([getShopSettings(), getHomeCatalog()]);
+    [settings, catalog, flash] = await Promise.all([getShopSettings(), getHomeCatalog(), getActiveFlashProducts(8)]);
   } catch {
     return (
       <section className="hero-light px-4 py-24">
@@ -48,6 +50,8 @@ export default async function HomePage() {
     );
   }
   const { featured, news, promos, categories } = catalog;
+  const flashIds = new Set(flash.map((p) => p.id));
+  const newsWithoutFlash = news.filter((p) => !flashIds.has(p.id));
 
   return (
     <div>
@@ -75,6 +79,8 @@ export default async function HomePage() {
           <HeroProducts />
         </div>
       </section>
+
+      <FlashSection products={flash} />
 
       <section className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {TRUST.map((item) => (
@@ -111,7 +117,7 @@ export default async function HomePage() {
 
       {[
         ["Sélection NERA", featured],
-        ["Nouveautés", news],
+        ["Nouveautés", newsWithoutFlash],
         ["Promotions", promos],
       ].map(([title, items]) =>
         (items as typeof featured).length ? (

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma, type PromotionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +13,7 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { slugify } from "@/lib/pricing";
 import { parseCfaInput } from "@/lib/money";
 import { buildAutoSku } from "@/lib/sku";
+import { assignFlashOnPublish, isPublishedOnline } from "@/lib/flash";
 
 function bounce(path: string, kind: "ok" | "erreur", message: string): never {
   const q = new URLSearchParams();
@@ -132,11 +133,22 @@ export async function toggleProductPublish(formData: FormData) {
   const publish = String(formData.get("publish") ?? "") === "1";
   const current = await prisma.product.findUnique({ where: { id: productId } });
   if (!current || current.deletedAt) return;
+  const nextStatus = current.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE";
+  const settings = await getShopSettings();
+  const flash = assignFlashOnPublish({
+    alreadyStarted: current.flashStartAt,
+    alreadyEnded: current.flashEndAt,
+    wasPublished: isPublishedOnline(current),
+    willBePublished: isPublishedOnline({ status: nextStatus, onlineVisible: publish, deletedAt: null }),
+    durationDays: settings.flashDurationDays,
+  });
   const product = await prisma.product.update({
     where: { id: productId },
     data: {
       onlineVisible: publish,
-      status: current.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
+      status: nextStatus,
+      flashStartAt: flash.flashStartAt,
+      flashEndAt: flash.flashEndAt,
     },
   });
   await writeAudit({
@@ -146,10 +158,13 @@ export async function toggleProductPublish(formData: FormData) {
     entityId: productId,
     after: { onlineVisible: publish },
   });
+  updateTag("catalog");
   revalidatePath("/admin/produits");
   revalidatePath(`/admin/produits/${productId}`);
   revalidatePath("/boutique");
   revalidatePath("/pos");
+  revalidatePath("/");
+  revalidatePath("/flash");
   revalidatePath(`/produit/${product.slug}`);
 }
 

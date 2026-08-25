@@ -6,8 +6,10 @@ import { getCachedProductPage } from "@/lib/catalog-cache";
 import { getShopSettings } from "@/lib/settings";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { formatCfa } from "@/lib/money";
-import { unitPrice } from "@/lib/pricing";
+import { unitPrice, promoPercent } from "@/lib/pricing";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
+import { ProductFlashMeta } from "@/components/shop/product-flash-meta";
+import { isFlashActive } from "@/lib/flash";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -21,6 +23,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     : [{ id: "catalog", url: catalogPhotoFor(product.slug, product.name), alt: product.name, kind: "IMAGE" as const }];
 
   const price = unitPrice(variants[0]);
+  const flash = isFlashActive(product);
+  const percent = promoPercent(variants[0].salePrice, variants[0].promoPrice);
   const wa = settings.phone
     ? whatsappChatUrl(
         settings.phone,
@@ -33,6 +37,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <ProductGallery name={product.name} media={gallery} />
       <div>
         <p className="text-xs uppercase tracking-[0.28em] text-gold">{product.category?.name}</p>
+        <ProductFlashMeta
+          flash={flash}
+          flashEndAt={product.flashEndAt}
+          promoPercent={percent}
+          isPromo={product.isPromo}
+          isNew={product.isNew}
+        />
         <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
         <p className="mt-4 text-black/70">{product.description ?? product.shortDescription}</p>
         <div className="mt-5">

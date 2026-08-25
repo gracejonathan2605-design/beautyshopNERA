@@ -1,6 +1,17 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { productCardSelect } from "@/lib/product-query";
+import { flashPrismaWhere } from "@/lib/flash";
+
+export async function getActiveFlashProducts(take = 16) {
+  const now = new Date();
+  return prisma.product.findMany({
+    where: flashPrismaWhere(now),
+    select: productCardSelect,
+    orderBy: { flashStartAt: "desc" },
+    take,
+  });
+}
 
 export const getNavCategories = unstable_cache(
   async () =>
@@ -65,6 +76,10 @@ export function getCachedProductPage(slug: string) {
           status: true,
           onlineVisible: true,
           deletedAt: true,
+          isNew: true,
+          isPromo: true,
+          flashStartAt: true,
+          flashEndAt: true,
           category: { select: { name: true } },
           variants: {
             where: { isActive: true, deletedAt: null },

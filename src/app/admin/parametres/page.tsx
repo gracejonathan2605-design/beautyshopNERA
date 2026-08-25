@@ -56,6 +56,20 @@ export default async function SettingsPage() {
           Pied de ticket (imprimé et WhatsApp)
           <textarea name="ticketFooter" defaultValue={s.ticketFooter} rows={3} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
         </label>
+        <label className="text-sm text-black/50">
+          Durée FLASH NERA des nouveaux produits (jours)
+          <input
+            name="flashDurationDays"
+            type="number"
+            min={1}
+            max={90}
+            defaultValue={s.flashDurationDays}
+            className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
+          />
+        </label>
+        <p className="text-xs text-black/45 md:col-span-2">
+          S’applique uniquement aux prochaines premières publications. Les Flash déjà en cours ne bougent pas. Cette durée n’est jamais affichée aux clientes.
+        </p>
         <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
       </form>
     </div>

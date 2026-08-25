@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "./prisma";
 import type { Prisma } from "@prisma/client";
+import { normalizeFlashDurationDays } from "./flash";
 
 export type ShopSettings = {
   name: string;
@@ -18,6 +19,7 @@ export type ShopSettings = {
   taxRate: number;
   ticketFooter: string;
   terms: string;
+  flashDurationDays: number;
   prefixes: {
     order: string;
     sale: string;
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   taxRate: 0,
   ticketFooter: "Merci pour votre achat. Paiement OM & MoMo. Livraison rapide sous 24h.",
   terms: "Les articles d'hygiène et les mèches ouvertes ne sont ni repris ni échangés.",
+  flashDurationDays: 10,
   prefixes: {
     order: "NERA",
     sale: "POS",
@@ -63,6 +66,7 @@ export function mergeShopSettings(stored?: Partial<ShopSettings> | null): ShopSe
   for (const key of LEGAL_KEYS) {
     if (!String(merged[key] ?? "").trim()) merged[key] = DEFAULT_SETTINGS[key];
   }
+  merged.flashDurationDays = normalizeFlashDurationDays(merged.flashDurationDays);
   return merged;
 }
 

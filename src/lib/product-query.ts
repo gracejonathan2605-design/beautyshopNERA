@@ -8,9 +8,15 @@ export const productCardSelect = {
   isNew: true,
   isPromo: true,
   createdAt: true,
+  flashStartAt: true,
+  flashEndAt: true,
+  status: true,
+  onlineVisible: true,
+  deletedAt: true,
   variants: {
     where: { isActive: true, deletedAt: null },
     select: {
+      id: true,
       salePrice: true,
       promoPrice: true,
       inventories: { select: { onHand: true, reserved: true } },

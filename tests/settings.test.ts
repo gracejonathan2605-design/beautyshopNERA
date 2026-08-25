@@ -15,5 +15,11 @@ describe("paramètres boutique", () => {
     expect(merged.phone).toBe("+237 696565654");
     expect(merged.ticketFooter).toContain("Livraison rapide sous 24h");
     expect(merged.prefixes).toEqual(DEFAULT_SETTINGS.prefixes);
+    expect(merged.flashDurationDays).toBe(10);
+  });
+
+  it("normalise une durée Flash invalide vers 10 jours", () => {
+    expect(mergeShopSettings({ flashDurationDays: 0 }).flashDurationDays).toBe(10);
+    expect(mergeShopSettings({ flashDurationDays: 15 }).flashDurationDays).toBe(15);
   });
 });

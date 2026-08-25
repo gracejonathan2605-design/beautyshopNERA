@@ -4,6 +4,11 @@ export function unitPrice(variant: { salePrice: number; promoPrice: number | nul
   return variant.salePrice;
 }
 
+export function promoPercent(salePrice: number, promoPrice: number | null) {
+  if (promoPrice == null || promoPrice <= 0 || promoPrice >= salePrice) return 0;
+  return Math.round(((salePrice - promoPrice) / salePrice) * 100);
+}
+
 export function slugify(value: string) {
   return value
     .normalize("NFD")

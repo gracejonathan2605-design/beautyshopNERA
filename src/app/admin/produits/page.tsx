@@ -5,6 +5,7 @@ import { ProductRowActions } from "@/components/admin/product-row-actions";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { groupCategoriesForSelect } from "@/lib/catalog";
+import { isFlashActive } from "@/lib/flash";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -44,6 +45,7 @@ export default async function ProductsAdminPage() {
               <th className="p-3">Produit</th>
               <th>SKU</th>
               <th>Catégorie</th>
+              <th>FLASH</th>
               <th>Prix</th>
               <th className="p-3">Actions</th>
             </tr>
@@ -68,6 +70,17 @@ export default async function ProductsAdminPage() {
                 </td>
                 <td>{p.variants[0]?.sku}</td>
                 <td>{p.category?.name ?? "—"}</td>
+                <td>
+                  {isFlashActive(p) ? (
+                    <span className="rounded-full bg-blush px-2 py-0.5 text-[11px] uppercase tracking-wide text-wine">
+                      Actif
+                    </span>
+                  ) : p.flashStartAt && p.flashEndAt ? (
+                    <span className="text-black/40">Terminé</span>
+                  ) : (
+                    <span className="text-black/30">—</span>
+                  )}
+                </td>
                 <td>{p.variants[0] ? formatCfa(unitPrice(p.variants[0])) : "—"}</td>
                 <td className="p-3">
                   <ProductRowActions

@@ -143,8 +143,8 @@ export function ProductForm({
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isNew" defaultChecked /> Nouveauté
       </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="onlineVisible" defaultChecked /> Publier en boutique
+      <label className="flex items-center gap-2 text-sm md:col-span-4">
+        <input type="checkbox" name="onlineVisible" defaultChecked /> Publier en boutique (décocher = pas de FLASH NERA tant que ce n’est pas en ligne)
       </label>
       <p className="text-xs text-black/50 md:col-span-4">
         SKU généré automatiquement. Après publication, le produit est visible tout de suite en boutique et à la caisse.
