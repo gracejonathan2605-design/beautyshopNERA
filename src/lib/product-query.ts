@@ -1,6 +1,25 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-export const productCardSelect = {
+export function isMissingFlashColumn(err: unknown) {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2022" &&
+    String(err.meta?.column ?? err.message).includes("flash")
+  );
+}
+
+export async function withFlashProductSelect<T>(
+  run: (select: typeof productCardSelect) => Promise<T>,
+): Promise<T> {
+  try {
+    return await run(productCardSelect);
+  } catch (err) {
+    if (!isMissingFlashColumn(err)) throw err;
+    return run(productCardSelectWithoutFlash as typeof productCardSelect);
+  }
+}
+
+export const productCardSelectWithoutFlash = {
   id: true,
   name: true,
   slug: true,
@@ -8,8 +27,6 @@ export const productCardSelect = {
   isNew: true,
   isPromo: true,
   createdAt: true,
-  flashStartAt: true,
-  flashEndAt: true,
   status: true,
   onlineVisible: true,
   deletedAt: true,
@@ -28,6 +45,12 @@ export const productCardSelect = {
     take: 1,
     select: { url: true, alt: true },
   },
+} satisfies Prisma.ProductSelect;
+
+export const productCardSelect = {
+  ...productCardSelectWithoutFlash,
+  flashStartAt: true,
+  flashEndAt: true,
 } satisfies Prisma.ProductSelect;
 
 export const sellableOnlineWhere = {

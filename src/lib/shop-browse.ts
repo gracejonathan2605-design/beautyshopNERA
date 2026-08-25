@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { productCardSelect } from "@/lib/product-query";
+import { withFlashProductSelect } from "@/lib/product-query";
 import { displayUnitPrice } from "@/lib/stock-display";
 
 export const SHOP_PAGE_SIZE = 24;
@@ -159,10 +159,12 @@ export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?:
     categoryIds = await categoryIdsForSlug(query.rayon);
     if (!categoryIds.length) return paginateItems([], query.page);
   }
-  const products = await prisma.product.findMany({
-    where: shopProductWhere({ q: query.q, categoryIds, vue: query.vue }),
-    select: productCardSelect,
-  });
+  const products = await withFlashProductSelect((select) =>
+    prisma.product.findMany({
+      where: shopProductWhere({ q: query.q, categoryIds, vue: query.vue }),
+      select,
+    }),
+  );
   const sorted = sortShopProducts(products, query.tri);
   return paginateItems(sorted, query.page);
 }
