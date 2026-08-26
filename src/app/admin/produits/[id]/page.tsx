@@ -1,12 +1,11 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
-import { deleteProductMedia } from "@/app/actions/admin";
 import { saveProductVariant, toggleProductPublish } from "@/app/actions/ops";
 import { ProductEditForm } from "@/components/admin/product-edit-form";
+import { ProductMediaGrid } from "@/components/admin/product-media-grid";
 import { groupCategoriesForSelect } from "@/lib/catalog";
 import { AdminFlash } from "@/components/admin/flash";
-import Image from "next/image";
 import { isFlashActive, formatFlashRemainingAdmin, remainingMs } from "@/lib/flash";
 
 export default async function ProductEditPage({
@@ -110,23 +109,14 @@ export default async function ProductEditPage({
         <button className="rounded-full bg-brown px-3 py-2 text-sm text-cream md:col-span-5">Ajouter la variante</button>
       </form>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        {product.images.map((m) => (
-          <figure key={m.id} className="rounded-2xl bg-cream p-2">
-            {m.kind === "VIDEO" ? (
-              <video src={m.url} className="h-32 w-full rounded-xl object-cover" preload="metadata" />
-            ) : (
-              <div className="relative h-32 overflow-hidden rounded-xl">
-                <Image src={m.url} alt={m.alt ?? ""} fill className="object-cover" sizes="200px" loading="lazy" />
-              </div>
-            )}
-            <form action={deleteProductMedia} className="mt-2 text-center">
-              <input type="hidden" name="mediaId" value={m.id} />
-              <button className="text-xs text-red-700">Retirer</button>
-            </form>
-          </figure>
-        ))}
-      </div>
+      <ProductMediaGrid
+        items={product.images.map((m) => ({
+          id: m.id,
+          url: m.url,
+          alt: m.alt,
+          kind: m.kind,
+        }))}
+      />
     </div>
   );
 }
