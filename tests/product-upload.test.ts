@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { uploadActionError, wrapProductAction } from "../src/lib/product-form-submit";
-import { ACTION_PAYLOAD_MAX_BYTES, VIDEO_CLIENT_MAX_BYTES, VIDEO_MAX_BYTES, mediaIdsFromForm } from "../src/lib/product-media";
+import { bulkDraftError, nameFromPhotoFile, uploadActionError, wrapProductAction } from "../src/lib/product-form-submit";
+import { ACTION_PAYLOAD_MAX_BYTES, MAX_BULK_IMPORT, VIDEO_CLIENT_MAX_BYTES, VIDEO_MAX_BYTES, mediaIdsFromForm } from "../src/lib/product-media";
 import { IMAGE_MAX_EDGE } from "../src/lib/image-limits";
 
 describe("envoi photos / vidéos produit", () => {
@@ -57,5 +57,21 @@ describe("envoi photos / vidéos produit", () => {
       expect(readme).not.toContain(leaked);
       expect(seed).not.toContain(leaked);
     }
+  });
+});
+
+describe("import en lot", () => {
+  it("limite le nombre de photos et préremplit le nom depuis le fichier", () => {
+    expect(MAX_BULK_IMPORT).toBeGreaterThanOrEqual(10);
+    expect(MAX_BULK_IMPORT).toBeLessThanOrEqual(40);
+    expect(nameFromPhotoFile(new File([], "lait-karite-nerá.jpg"))).toBe("lait karite nerá");
+    expect(nameFromPhotoFile(new File([], "gloss.png"))).toBe("gloss");
+  });
+
+  it("exige nom, rayon et prix avant publication", () => {
+    expect(bulkDraftError({ name: "", categoryId: "c1", salePrice: "5000" })).toMatch(/nom/);
+    expect(bulkDraftError({ name: "Gloss", categoryId: "", salePrice: "5000" })).toMatch(/rayon/);
+    expect(bulkDraftError({ name: "Gloss", categoryId: "c1", salePrice: "0" })).toMatch(/prix/);
+    expect(bulkDraftError({ name: "Gloss", categoryId: "c1", salePrice: "3500" })).toBeNull();
   });
 });
