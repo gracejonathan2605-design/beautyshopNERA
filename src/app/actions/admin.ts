@@ -401,7 +401,11 @@ export async function saveProduct(
   } catch (err) {
     unstable_rethrow(err);
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return { ok: false, error: "Un produit avec ce nom existe déjà. Changez le nom." };
+      const target = JSON.stringify(err.meta?.target ?? "");
+      if (/sku/i.test(target)) return { ok: false, error: "Ce SKU est déjà pris." };
+      if (/slug/i.test(target)) return { ok: false, error: "Un produit avec un nom trop proche existe déjà. Changez le nom." };
+      if (/barcode/i.test(target)) return { ok: false, error: "Ce code-barres est déjà utilisé." };
+      return { ok: false, error: "Un produit avec ces informations existe déjà." };
     }
     const message = err instanceof Error ? err.message : "Création impossible.";
     return { ok: false, error: message };

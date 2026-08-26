@@ -115,27 +115,42 @@ export function PosClient({
   }
 
   function add(variant: PosVariant) {
-    if (available(variant) <= 0) {
+    const max = available(variant);
+    if (max <= 0) {
       setError(`Rupture : ${variant.product.name}`);
       return;
     }
     setError(null);
+    let blocked = false;
     setCart((current) => {
       const existing = current.find((line) => line.variant.id === variant.id);
+      const nextQty = (existing?.quantity ?? 0) + 1;
+      if (nextQty > max) {
+        blocked = true;
+        return current;
+      }
       if (existing) {
         return current.map((line) =>
-          line.variant.id === variant.id ? { ...line, quantity: line.quantity + 1 } : line,
+          line.variant.id === variant.id ? { ...line, quantity: nextQty } : line,
         );
       }
       return [...current, { variant, quantity: 1, discount: 0 }];
     });
+    if (blocked) {
+      setError(`Stock max atteint (${max}) pour ${variant.product.name}`);
+      return;
+    }
     setFlash(`${variant.product.name} ajouté`);
   }
 
   function setQty(variantId: string, quantity: number) {
     setCart((current) => {
-      if (quantity <= 0) return current.filter((line) => line.variant.id !== variantId);
-      return current.map((line) => (line.variant.id === variantId ? { ...line, quantity } : line));
+      const line = current.find((item) => item.variant.id === variantId);
+      if (!line) return current;
+      const max = available(line.variant);
+      const qty = Math.min(Math.max(0, Math.floor(Number(quantity) || 0)), max);
+      if (qty <= 0) return current.filter((item) => item.variant.id !== variantId);
+      return current.map((item) => (item.variant.id === variantId ? { ...item, quantity: qty } : item));
     });
   }
 
@@ -270,6 +285,7 @@ export function PosClient({
       setMethod(payload.method ?? "CASH");
       setHeld((current) => current.filter((row) => row.id !== id));
       setTab("vente");
+      await discardHeldTicket(id);
     });
   }
 

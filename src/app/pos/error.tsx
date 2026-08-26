@@ -14,7 +14,7 @@ export default function PosErrorPage({
         <p className="mt-3 text-sm text-black/60">
           Réessayez. Si le problème continue, reconnectez-vous puis ouvrez à nouveau la caisse.
         </p>
-        <p className="mt-2 text-xs text-black/40">{error.digest ?? error.message}</p>
+        <p className="mt-2 text-xs text-black/40">{error.digest ? `Réf. ${error.digest}` : "Réessayez dans un instant."}</p>
         <button type="button" onClick={reset} className="mt-6 rounded-full bg-brown px-5 py-2 text-cream">
           Réessayer
         </button>

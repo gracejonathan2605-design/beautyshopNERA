@@ -15,7 +15,7 @@ function formatWhen(date: Date) {
 }
 
 export default async function AlertsPage() {
-  const session = await requireStaff();
+  const session = await requireStaff("dashboard.view");
   const alerts = await prisma.notification.findMany({
     where: { OR: [{ userId: null }, { userId: session.userId }] },
     orderBy: { createdAt: "desc" },

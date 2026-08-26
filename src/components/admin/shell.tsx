@@ -6,7 +6,7 @@ import { BrandLockup } from "@/components/brand/logo";
 
 const LINKS: { href: string; label: string; permission?: PermissionCode }[] = [
   { href: "/admin", label: "Tableau de bord", permission: "dashboard.view" },
-  { href: "/admin/alertes", label: "Alertes" },
+  { href: "/admin/alertes", label: "Alertes", permission: "dashboard.view" },
   { href: "/pos", label: "Caisse POS", permission: "pos.access" },
   { href: "/admin/produits", label: "Produits", permission: "products.view" },
   { href: "/admin/produits/lot", label: "Publier un lot", permission: "products.create" },
@@ -78,12 +78,14 @@ export function AdminShell({
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/admin/alertes" className="relative text-sm text-wine">
-              Alertes
-              {unreadAlerts > 0 ? (
-                <span className="ml-1 rounded-full bg-brown px-2 py-0.5 text-[10px] text-cream">{unreadAlerts}</span>
-              ) : null}
-            </Link>
+            {hasPermission(session, "dashboard.view") ? (
+              <Link href="/admin/alertes" className="relative text-sm text-wine">
+                Alertes
+                {unreadAlerts > 0 ? (
+                  <span className="ml-1 rounded-full bg-brown px-2 py-0.5 text-[10px] text-cream">{unreadAlerts}</span>
+                ) : null}
+              </Link>
+            ) : null}
             <Link href="/" className="text-sm text-brown">
               Voir la boutique
             </Link>

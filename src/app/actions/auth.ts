@@ -54,6 +54,8 @@ export async function logoutStaff() {
 export async function loginCustomer(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const next = String(formData.get("next") ?? "/compte");
+  const fail = `/compte/connexion?error=1&next=${encodeURIComponent(next)}`;
   const customer = await prisma.customer.findUnique({ where: { email } });
   if (!customer?.passwordHash || !customer.isActive) {
     const staff = await prisma.user.findFirst({
@@ -61,12 +63,13 @@ export async function loginCustomer(formData: FormData) {
       select: { id: true },
     });
     if (staff) redirect("/login?hint=staff");
-    redirect("/compte/connexion?error=1");
+    redirect(fail);
   }
   const ok = await verifyPassword(password, customer.passwordHash);
-  if (!ok) redirect("/compte/connexion?error=1");
+  if (!ok) redirect(fail);
   await createCustomerSession(customer.id);
-  redirect("/compte");
+  const dest = safeNextPath(next, "/compte");
+  redirect(dest.startsWith("/admin") || dest.startsWith("/pos") || dest.startsWith("/login") ? "/compte" : dest);
 }
 
 export async function registerCustomer(formData: FormData) {

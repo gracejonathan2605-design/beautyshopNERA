@@ -21,7 +21,7 @@ export default function ErrorPage({
         <span className="font-medium"> DATABASE_URL</span>, <span className="font-medium">DIRECT_URL</span> et
         <span className="font-medium"> AUTH_SECRET</span>.
       </p>
-      <p className="mt-2 text-xs text-black/40">{error.digest ?? error.message}</p>
+      <p className="mt-2 text-xs text-black/40">{error.digest ? `Réf. ${error.digest}` : "Réessayez dans un instant."}</p>
       <button type="button" onClick={reset} className="mt-8 rounded-full bg-brown px-6 py-3 text-cream">
         Réessayer
       </button>

@@ -24,12 +24,13 @@ async function availableForVariant(variantId: string) {
 
 export async function addToCart(variantId: string, quantity = 1) {
   const available = await availableForVariant(variantId);
-  if (available <= 0) return;
+  if (available <= 0) return { ok: false as const };
   const cart = await getCart();
   const current = cart.find((i) => i.variantId === variantId)?.quantity ?? 0;
   await saveCart(upsertCartItem(cart, variantId, Math.min(current + quantity, available)));
   revalidatePath("/panier");
   revalidatePath("/");
+  return { ok: true as const };
 }
 
 export async function setCartQty(variantId: string, quantity: number) {
@@ -77,8 +78,10 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
     const shippingAddress = String(formData.get("shippingAddress") ?? "").trim();
     const shippingCity = String(formData.get("shippingCity") ?? "").trim();
+    if (fulfillment === "DELIVERY" && (!shippingAddress || !shippingCity)) {
+      return { ok: false, error: "Indiquez l’adresse et la ville de livraison." };
+    }
 
-    await saveCart([]);
     try {
       const order = await createOnlineOrder({
         customerId: session?.customerId,
@@ -88,9 +91,9 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
         shippingPhone: phone,
         shippingAddress,
         shippingCity,
-        couponCode: String(formData.get("couponCode") ?? "") || null,
+        couponCode: String(formData.get("couponCode") ?? ""),
         notes: String(formData.get("notes") ?? "") || undefined,
-        lines: cart.filter((l) => l.quantity > 0),
+        lines: cart,
         payment: {
           method: "MOBILE_MONEY",
           amount: 0,
@@ -115,7 +118,6 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
       redirect(orderConfirmationPath(order.number));
     } catch (err) {
       unstable_rethrow(err);
-      await saveCart(cart);
       throw err;
     }
   } catch (err) {

@@ -65,6 +65,8 @@ export function settlePosPayments(
   payments: { method: PaymentMethod; amount: number; reference?: string }[],
   total: number,
 ) {
+  const due = Math.max(0, Math.round(total));
+  if (due <= 0) return [];
   if (!payments.length) throw new Error("Indiquez un paiement");
   for (const payment of payments) {
     if (!Number.isFinite(payment.amount) || payment.amount <= 0) {
@@ -74,8 +76,8 @@ export function settlePosPayments(
   const other = payments.filter((p) => p.method !== "CASH");
   const cash = payments.filter((p) => p.method === "CASH");
   const otherTotal = other.reduce((sum, p) => sum + p.amount, 0);
-  if (otherTotal > total) throw new Error("Paiement supérieur au total");
-  const cashNeeded = total - otherTotal;
+  if (otherTotal > due) throw new Error("Paiement supérieur au total");
+  const cashNeeded = due - otherTotal;
   const cashTendered = cash.reduce((sum, p) => sum + p.amount, 0);
   if (cashTendered < cashNeeded) throw new Error("Paiement insuffisant");
   const recorded: { method: PaymentMethod; amount: number; reference?: string }[] = other.map((p) => ({
@@ -118,14 +120,17 @@ export function buildCheckoutPayments(input: {
   }
 
   const cash = Math.max(0, Math.round(input.cashAmount));
-  const momo = input.momoAmount == null ? Math.max(0, total - cash) : Math.max(0, Math.round(input.momoAmount));
+  const momoCap = Math.max(0, total - cash);
+  const requestedMomo =
+    input.momoAmount == null ? momoCap : Math.max(0, Math.round(input.momoAmount));
+  const momo = Math.min(requestedMomo, momoCap);
   const payments: { method: PaymentMethod; amount: number }[] = [];
   if (cash > 0) payments.push({ method: "CASH", amount: cash });
   if (momo > 0) payments.push({ method: "MOBILE_MONEY", amount: momo });
   const paid = cash + momo;
   return {
     payments,
-    change: Math.max(0, paid - total),
+    change: Math.max(0, cash - (total - momo)),
     remaining: Math.max(0, total - paid),
   };
 }

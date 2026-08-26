@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { couponDiscountAmount, couponLabel, explainCouponFailure } from "../src/lib/coupon";
+import { couponDiscountAmount, couponLabel, explainCouponFailure, normalizeCouponCode } from "../src/lib/coupon";
 import type { Coupon } from "@prisma/client";
 
 function coupon(partial: Partial<Coupon>): Coupon {
@@ -37,5 +37,6 @@ describe("codes promo", () => {
     expect(explainCouponFailure(null, 25000)).toContain("n’existe pas");
     expect(explainCouponFailure(coupon({ isActive: false }), 25000)).toContain("plus actif");
     expect(explainCouponFailure(coupon({ maxUses: 1, usedCount: 1 }), 25000)).toContain("limite");
+    expect(normalizeCouponCode(" nera10 ")).toBe("NERA10");
   });
 });

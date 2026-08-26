@@ -45,6 +45,11 @@ export default async function AccountPage({
           Ces articles sont en rupture. Ils restent visibles en boutique : bientôt de retour.
         </p>
       ) : null}
+      {erreur === "commande" ? (
+        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Cette commande est introuvable sur votre compte.
+        </p>
+      ) : null}
 
       <h2 className="mt-10 font-serif text-3xl">Profil et adresses</h2>
       <p className="mt-2 text-sm text-black/50">

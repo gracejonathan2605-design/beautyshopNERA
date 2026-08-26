@@ -1,6 +1,7 @@
 import type { ProductFormState } from "@/app/actions/admin";
 import { compressImageFile } from "@/lib/client-compress";
 import { ACTION_PAYLOAD_MAX_BYTES, VIDEO_CLIENT_MAX_BYTES } from "@/lib/product-media";
+import { unstable_rethrow } from "next/navigation";
 
 export function uploadActionError(err: unknown) {
   const message = err instanceof Error ? err.message : String(err ?? "");
@@ -17,6 +18,7 @@ export function wrapProductAction(
     try {
       return await action(prev, data);
     } catch (err) {
+      unstable_rethrow(err);
       return { ok: false, error: uploadActionError(err) };
     }
   };

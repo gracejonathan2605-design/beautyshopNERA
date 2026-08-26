@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withFlashProductSelect } from "@/lib/product-query";
 import { displayUnitPrice } from "@/lib/stock-display";
+import { unitPrice } from "@/lib/pricing";
 
 export const SHOP_PAGE_SIZE = 24;
 
@@ -165,7 +166,11 @@ export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?:
       select,
     }),
   );
-  const sorted = sortShopProducts(products, query.tri);
+  const visible =
+    query.vue === "promo"
+      ? products.filter((product) => product.variants.some((variant) => unitPrice(variant) < variant.salePrice))
+      : products;
+  const sorted = sortShopProducts(visible, query.tri);
   return paginateItems(sorted, query.page);
 }
 
