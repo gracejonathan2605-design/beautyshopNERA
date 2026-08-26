@@ -6,11 +6,13 @@ import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { groupCategoriesForSelect } from "@/lib/catalog";
 import { isFlashActive } from "@/lib/flash";
+import { hasPermission } from "@/lib/permissions";
 import Image from "next/image";
 import Link from "next/link";
 
 export default async function ProductsAdminPage() {
-  await requireStaff("products.view");
+  const session = await requireStaff("products.view");
+  const canCreate = hasPermission(session, "products.create");
   const [products, categories, brands, suppliers] = await Promise.all([
     prisma.product.findMany({
       where: { deletedAt: null },
@@ -33,6 +35,22 @@ export default async function ProductsAdminPage() {
         Un écran « Publication en cours » s’affiche pendant la compression des photos. Le SKU est automatique.
         Le produit apparaît ensuite en boutique et à la caisse. Jusqu’à 5 photos, compressées automatiquement (légères en boutique), et 1 vidéo de 40 s / 3,5 Mo.
       </p>
+      {canCreate ? (
+        <Link
+          href="/admin/produits/lot"
+          className="mt-6 flex flex-col gap-1 rounded-2xl border border-gold bg-gold/15 p-5 transition hover:bg-gold/25 md:flex-row md:items-center md:justify-between"
+        >
+          <span>
+            <span className="block font-serif text-2xl text-wine">Publier 10–15 produits</span>
+            <span className="mt-1 block text-sm text-black/60">
+              Plusieurs photos d’un coup, une fiche par image, publication en une opération.
+            </span>
+          </span>
+          <span className="mt-3 inline-flex rounded-full bg-brown px-5 py-2 text-sm font-semibold text-cream md:mt-0">
+            Ouvrir le lot
+          </span>
+        </Link>
+      ) : null}
       <ProductForm
         categoryGroups={groupCategoriesForSelect(categories)}
         brands={brands}
