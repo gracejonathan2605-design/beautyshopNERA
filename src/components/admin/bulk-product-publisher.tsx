@@ -209,13 +209,13 @@ export function BulkProductPublisher({
     const total = ids.length;
     setProgress({ done: 0, total });
     for (const [index, id] of ids.entries()) {
+      setProgress({ done: index + 1, total });
       const row = rowsRef.current.find((item) => item.id === id);
       if (!row || row.status === "ok") continue;
       const issues = bulkDraftIssues(row);
       if (issues.length) {
         failCount += 1;
         patch(id, { status: "error", error: `Informations manquantes : ${issues.join(", ")}.` });
-        setProgress({ done: index + 1, total });
         continue;
       }
       patch(id, { status: "publishing", error: undefined, warning: undefined });
