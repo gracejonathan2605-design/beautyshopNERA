@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { uploadActionError, wrapProductAction } from "../src/lib/product-form-submit";
-import { ACTION_PAYLOAD_MAX_BYTES, VIDEO_CLIENT_MAX_BYTES, VIDEO_MAX_BYTES } from "../src/lib/product-media";
+import { ACTION_PAYLOAD_MAX_BYTES, VIDEO_CLIENT_MAX_BYTES, VIDEO_MAX_BYTES, mediaIdsFromForm } from "../src/lib/product-media";
 import { IMAGE_MAX_EDGE } from "../src/lib/image-limits";
 
 describe("envoi photos / vidéos produit", () => {
@@ -26,6 +26,15 @@ describe("envoi photos / vidéos produit", () => {
     const result = await wrapped(null, new FormData());
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/trop lourdes/);
+  });
+
+  it("lit plusieurs identifiants de médias pour une suppression en masse", () => {
+    const form = new FormData();
+    form.append("mediaId", "a");
+    form.append("mediaId", "b");
+    form.append("mediaId", "a");
+    form.append("mediaId", " ");
+    expect(mediaIdsFromForm(form)).toEqual(["a", "b"]);
   });
 
   it("redimensionne les photos pour rester légères en boutique", () => {

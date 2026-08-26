@@ -12,7 +12,7 @@ import { slugify } from "@/lib/pricing";
 import { getShopSettings, saveShopSettings, type ShopSettings } from "@/lib/settings";
 import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
 import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
-import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS } from "@/lib/product-media";
+import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS, mediaIdsFromForm } from "@/lib/product-media";
 import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
@@ -535,9 +535,22 @@ export async function updateProduct(
 
 export async function deleteProductMedia(formData: FormData) {
   await requireStaff("products.update");
-  const mediaId = String(formData.get("mediaId") ?? "");
-  const media = await prisma.productImage.delete({ where: { id: mediaId }, include: { product: true } });
-  refreshCatalog(media.product.slug);
+  const ids = mediaIdsFromForm(formData);
+  if (!ids.length) return;
+  const rows = await prisma.productImage.findMany({
+    where: { id: { in: ids } },
+    include: { product: { select: { id: true, slug: true } } },
+  });
+  if (!rows.length) return;
+  const productId = rows[0].productId;
+  await prisma.productImage.deleteMany({
+    where: { id: { in: rows.map((row) => row.id) }, productId },
+  });
+  refreshCatalog(rows[0].product.slug);
+  revalidatePath(`/admin/produits/${productId}`);
+  const q = new URLSearchParams();
+  q.set("ok", rows.length > 1 ? `${rows.length} fichiers retirés.` : "Fichier retiré.");
+  redirect(`/admin/produits/${productId}?${q.toString()}`);
 }
 
 export async function saveStockAdjust(formData: FormData) {
