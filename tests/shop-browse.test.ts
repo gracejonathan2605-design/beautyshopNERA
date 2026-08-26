@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseHref, paginateItems, parseBrowseQuery, SHOP_PAGE_SIZE, sortShopProducts } from "../src/lib/shop-browse";
+import { browseHref, catalogPageMeta, paginateItems, parseBrowseQuery, SHOP_PAGE_SIZE, sortShopProducts } from "../src/lib/shop-browse";
 import { productInStock, variantAvailable } from "../src/lib/stock-display";
 
 describe("navigation boutique", () => {
@@ -36,6 +36,7 @@ describe("navigation boutique", () => {
     const page = paginateItems([1, 2, 3, 4, 5], 2, 2);
     expect(page).toEqual({ items: [3, 4], total: 5, page: 2, pages: 3 });
     expect(SHOP_PAGE_SIZE).toBe(24);
+    expect(catalogPageMeta(100, 2).skip).toBe(24);
   });
 });
 

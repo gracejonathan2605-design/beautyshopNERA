@@ -1,19 +1,21 @@
+import { PRODUCT_IMAGE_ACCEPT, isAllowedProductImage } from "./product-images";
+
+export { PRODUCT_IMAGE_ACCEPT };
+
 export const MAX_BULK_PRODUCTS = 15;
 /** Photos trop lourdes (avant compression) : on refuse pour ne pas bloquer le navigateur. */
 export const MAX_BULK_SOURCE_BYTES = 20 * 1024 * 1024;
 
-export const BULK_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+export const BULK_IMAGE_ACCEPT = PRODUCT_IMAGE_ACCEPT;
 
 export function isAllowedBulkImage(file: { type?: string; name: string; size: number }) {
-  if (!file.size) return false;
-  if (file.type && /^image\/(jpeg|png|webp|gif)$/i.test(file.type)) return true;
-  return /\.(jpe?g|png|webp|gif)$/i.test(file.name);
+  return isAllowedProductImage(file);
 }
 
 export function bulkImageRejection(file: { type?: string; name: string; size: number }) {
   if (!file.size) return "Fichier vide.";
   if (file.size > MAX_BULK_SOURCE_BYTES) return "Photo trop lourde (max 20 Mo). Compressez-la ou choisissez-en une autre.";
-  if (!isAllowedBulkImage(file)) return "Format refusé. Jpeg, png, webp ou gif uniquement (pas HEIC).";
+  if (!isAllowedBulkImage(file)) return "Format refusé. Jpeg, png, webp, gif ou HEIC (iPhone).";
   return null;
 }
 

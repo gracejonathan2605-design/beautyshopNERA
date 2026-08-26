@@ -16,7 +16,7 @@ export default function AdminErrorPage({
       <h1 className="font-serif text-3xl text-wine">Cette page n’a pas pu s’afficher</h1>
       <p className="mt-3 max-w-xl text-sm text-black/60">
         {uploadFail
-          ? "L’envoi du fichier a été coupé : la photo ou la vidéo est trop lourde pour le serveur. Ce n’est pas un problème de base de données. Revenez aux produits, envoyez 1 photo (pas HEIC), sans vidéo."
+          ? "L’envoi du fichier a été coupé : la photo ou la vidéo est trop lourde pour le serveur. Ce n’est pas un problème de base de données. Revenez aux produits, envoyez 1 photo (HEIC iPhone accepté), sans vidéo."
           : "Réessayez. Si le problème continue, vérifiez la connexion à la base de données."}
       </p>
       <p className="mt-2 text-xs text-black/40">{error.digest ? `Réf. ${error.digest}` : "Réessayez dans un instant."}</p>

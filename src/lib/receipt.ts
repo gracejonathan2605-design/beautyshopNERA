@@ -48,7 +48,15 @@ export type ReceiptData = {
   discount: number;
   total: number;
   payments: ReceiptPayment[];
+  cashReceived?: number;
+  change?: number;
 };
+
+export function receiptChangeAmount(data: Pick<ReceiptData, "payments" | "total" | "change">) {
+  if (data.change != null && Number.isFinite(data.change)) return Math.max(0, Math.round(data.change));
+  const paid = data.payments.reduce((sum, p) => sum + p.amount, 0);
+  return Math.max(0, paid - data.total);
+}
 
 export function paymentLabel(method: string) {
   return PAYMENT_LABELS[method] ?? method;
@@ -143,8 +151,10 @@ export function buildReceiptText(data: ReceiptData) {
   for (const payment of data.payments) {
     lines.push(pairLine(paymentLabel(payment.method), moneyPlain(payment.amount)));
   }
-  const paid = data.payments.reduce((sum, p) => sum + p.amount, 0);
-  if (paid > data.total) lines.push(pairLine("Monnaie", moneyPlain(paid - data.total)));
+  if ((data.cashReceived ?? 0) > 0) {
+    lines.push(pairLine("Espèces reçues", moneyPlain(data.cashReceived ?? 0)));
+  }
+  lines.push(pairLine("Monnaie", moneyPlain(receiptChangeAmount(data))));
   if (data.shop.ticketFooter) {
     lines.push(dashLine());
     lines.push(...wrapLine(data.shop.ticketFooter));

@@ -1,8 +1,7 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withFlashProductSelect } from "@/lib/product-query";
 import { displayUnitPrice } from "@/lib/stock-display";
-import { unitPrice } from "@/lib/pricing";
 
 export const SHOP_PAGE_SIZE = 24;
 
@@ -146,12 +145,90 @@ export function sortShopProducts<
   return copy;
 }
 
-export function paginateItems<T>(items: T[], page: number, size = SHOP_PAGE_SIZE) {
-  const total = items.length;
+export function catalogSkip(page: number, size = SHOP_PAGE_SIZE) {
+  return Math.max(0, (Math.max(1, page) - 1) * size);
+}
+
+export function catalogPageMeta(total: number, page: number, size = SHOP_PAGE_SIZE) {
   const pages = Math.max(1, Math.ceil(total / size) || 1);
   const safePage = Math.min(Math.max(1, page), pages);
-  const start = (safePage - 1) * size;
-  return { items: items.slice(start, start + size), total, page: safePage, pages };
+  return { total, page: safePage, pages, skip: (safePage - 1) * size, take: size };
+}
+
+export function paginateItems<T>(items: T[], page: number, size = SHOP_PAGE_SIZE) {
+  const meta = catalogPageMeta(items.length, page, size);
+  return {
+    items: items.slice(meta.skip, meta.skip + meta.take),
+    total: meta.total,
+    page: meta.page,
+    pages: meta.pages,
+  };
+}
+
+const EFFECTIVE_PRICE_SQL = Prisma.sql`(
+  SELECT MIN(
+    CASE
+      WHEN v."promoPrice" IS NOT NULL AND v."promoPrice" > 0 AND v."promoPrice" < v."salePrice"
+      THEN v."promoPrice"
+      ELSE v."salePrice"
+    END
+  )
+  FROM "ProductVariant" v
+  WHERE v."productId" = p.id AND v."isActive" = true AND v."deletedAt" IS NULL
+)`;
+
+function shopBrowseSqlWhere(filters: { q?: string; categoryIds?: string[]; vue?: BrowseView }) {
+  const parts: Prisma.Sql[] = [
+    Prisma.sql`p.status = 'ACTIVE' AND p."onlineVisible" = true AND p."deletedAt" IS NULL`,
+  ];
+  if (filters.q) {
+    const like = `%${filters.q}%`;
+    parts.push(Prisma.sql`(
+      p.name ILIKE ${like}
+      OR coalesce(p."shortDescription", '') ILIKE ${like}
+      OR EXISTS (SELECT 1 FROM "Category" c WHERE c.id = p."categoryId" AND c.name ILIKE ${like})
+    )`);
+  }
+  if (filters.categoryIds?.length) {
+    parts.push(Prisma.sql`p."categoryId" IN (${Prisma.join(filters.categoryIds)})`);
+  }
+  if (filters.vue === "new") parts.push(Prisma.sql`p."isNew" = true`);
+  if (filters.vue === "promo") {
+    parts.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM "ProductVariant" v
+      WHERE v."productId" = p.id
+        AND v."isActive" = true
+        AND v."deletedAt" IS NULL
+        AND v."promoPrice" IS NOT NULL
+        AND v."promoPrice" > 0
+        AND v."promoPrice" < v."salePrice"
+    )`);
+  }
+  return Prisma.join(parts, " AND ");
+}
+
+function shopBrowseOrderSql(tri: BrowseSort) {
+  if (tri === "price-asc") return Prisma.sql`${EFFECTIVE_PRICE_SQL} ASC NULLS LAST, p.name ASC`;
+  if (tri === "price-desc") return Prisma.sql`${EFFECTIVE_PRICE_SQL} DESC NULLS LAST, p.name ASC`;
+  if (tri === "newest") return Prisma.sql`p."createdAt" DESC`;
+  return Prisma.sql`p.name ASC`;
+}
+
+async function browseProductPage(query: BrowseQuery, categoryIds?: string[]) {
+  const whereSql = shopBrowseSqlWhere({ q: query.q, categoryIds, vue: query.vue });
+  const countRows = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*)::bigint AS count FROM "Product" p WHERE ${whereSql}
+  `;
+  const total = Number(countRows[0]?.count ?? 0);
+  const meta = catalogPageMeta(total, query.page);
+  if (!total) return { ids: [] as string[], ...meta };
+  const idRows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT p.id FROM "Product" p
+    WHERE ${whereSql}
+    ORDER BY ${shopBrowseOrderSql(query.tri)}
+    LIMIT ${meta.take} OFFSET ${meta.skip}
+  `;
+  return { ids: idRows.map((row) => row.id), ...meta };
 }
 
 export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?: string[]) {
@@ -160,18 +237,26 @@ export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?:
     categoryIds = await categoryIdsForSlug(query.rayon);
     if (!categoryIds.length) return paginateItems([], query.page);
   }
+  const page = await browseProductPage(query, categoryIds);
+  if (!page.ids.length) {
+    return { items: [], total: page.total, page: page.page, pages: page.pages };
+  }
   const products = await withFlashProductSelect((select) =>
     prisma.product.findMany({
-      where: shopProductWhere({ q: query.q, categoryIds, vue: query.vue }),
+      where: { id: { in: page.ids } },
       select,
     }),
   );
-  const visible =
-    query.vue === "promo"
-      ? products.filter((product) => product.variants.some((variant) => unitPrice(variant) < variant.salePrice))
-      : products;
-  const sorted = sortShopProducts(visible, query.tri);
-  return paginateItems(sorted, query.page);
+  const byId = new Map(products.map((product) => [product.id, product]));
+  return {
+    items: page.ids.flatMap((id) => {
+      const product = byId.get(id);
+      return product ? [product] : [];
+    }),
+    total: page.total,
+    page: page.page,
+    pages: page.pages,
+  };
 }
 
 export async function shopRayons() {

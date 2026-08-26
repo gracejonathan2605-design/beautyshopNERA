@@ -61,6 +61,27 @@ export function pickExactScanMatch<T extends { sku: string; barcode: string | nu
   );
 }
 
+export function scanMatchDecision<T extends { sku: string; barcode: string | null }>(
+  matches: T[],
+  code: string,
+): { ok: true; item: T } | { ok: false; error: string } {
+  const needle = code.trim();
+  if (!needle) return { ok: false, error: "Scannez un code-barres." };
+  if (!matches.length) return { ok: false, error: `Code inconnu : ${needle}` };
+  const barcodeHits = matches.filter((item) => item.barcode === needle);
+  if (barcodeHits.length > 1) {
+    return {
+      ok: false,
+      error: `Ce code-barres est utilisé par ${barcodeHits.length} produits. Corrigez-le dans Produits pour éviter un scan ambigu.`,
+    };
+  }
+  if (barcodeHits.length === 1) return { ok: true, item: barcodeHits[0] };
+  const skuHits = matches.filter((item) => item.sku.toLowerCase() === needle.toLowerCase());
+  if (skuHits.length === 1) return { ok: true, item: skuHits[0] };
+  if (matches.length === 1) return { ok: true, item: matches[0] };
+  return { ok: false, error: `Plusieurs produits correspondent à « ${needle} ». Cherchez par nom.` };
+}
+
 export function settlePosPayments(
   payments: { method: PaymentMethod; amount: number; reference?: string }[],
   total: number,

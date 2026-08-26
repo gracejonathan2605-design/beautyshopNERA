@@ -6,6 +6,7 @@ import { VideoInput } from "@/components/admin/video-input";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
+import { PRODUCT_IMAGE_ACCEPT } from "@/lib/product-images";
 import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
 import type { CategoryOptionGroup } from "@/lib/catalog";
 
@@ -174,7 +175,7 @@ export function ProductEditForm({
           <input
             name="photos"
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept={PRODUCT_IMAGE_ACCEPT}
             multiple
             className="mt-1 w-full rounded-xl border px-3 py-2"
           />

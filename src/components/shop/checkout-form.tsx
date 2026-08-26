@@ -117,6 +117,12 @@ export function CheckoutForm({
         placeholder="Téléphone"
         className="w-full rounded-xl border px-4 py-3"
       />
+      {!customer ? (
+        <p className="text-xs text-black/50">
+          Sans compte, la commande est rattachée à ce téléphone. En créant un compte avec le même numéro, vous la
+          retrouverez dans Mon compte.
+        </p>
+      ) : null}
       {delivery ? (
         <>
           <input

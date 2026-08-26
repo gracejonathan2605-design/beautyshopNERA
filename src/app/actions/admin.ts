@@ -18,6 +18,8 @@ import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
 import { assignFlashOnPublish, isPublishedOnline, normalizeFlashDurationDays } from "@/lib/flash";
+import { normalizePendingOrderHours } from "@/lib/pending-orders";
+import { assertUniqueBarcode, firstDuplicateBarcode } from "@/lib/barcode";
 import {
   defaultStockMoveComment,
   isStockMoveReason,
@@ -297,6 +299,13 @@ export async function saveProduct(
             },
           ];
     if (!variantInputs.length) return { ok: false, error: "Indiquez au moins une variante avec un prix." };
+    const duplicate = firstDuplicateBarcode(variantInputs.map((row) => row.barcode));
+    if (duplicate) return { ok: false, error: `Le code-barres « ${duplicate} » est saisi deux fois.` };
+    try {
+      for (const row of variantInputs) await assertUniqueBarcode(row.barcode);
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Code-barres déjà utilisé." };
+    }
 
     const promoPrice = variantInputs[0].promoPrice;
     const isPromo = formData.get("isPromo") === "on" || variantInputs.some((v) => v.promoPrice != null);
@@ -471,6 +480,11 @@ export async function updateProduct(
       include: { variants: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } }, images: true },
     });
     if (!current || current.deletedAt) return { ok: false, error: "Produit introuvable" };
+    try {
+      await assertUniqueBarcode(barcode, current.variants[0]?.id);
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Code-barres déjà utilisé." };
+    }
 
     const photoCount = current.images.filter((m) => m.kind === "IMAGE").length;
     const hasVideo = current.images.some((m) => m.kind === "VIDEO");
@@ -693,6 +707,7 @@ export async function saveSettings(formData: FormData) {
     country: String(formData.get("country") ?? current.country),
     ticketFooter: String(formData.get("ticketFooter") ?? current.ticketFooter),
     flashDurationDays: normalizeFlashDurationDays(formData.get("flashDurationDays") ?? current.flashDurationDays),
+    pendingOrderHours: normalizePendingOrderHours(formData.get("pendingOrderHours") ?? current.pendingOrderHours),
   };
   await saveShopSettings(next);
   updateTag("catalog");

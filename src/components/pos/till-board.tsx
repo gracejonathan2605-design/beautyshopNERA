@@ -5,13 +5,20 @@ import type { TillSnapshot } from "@/lib/till";
 export function TillBoard({
   snapshot,
   categories,
+  openedByName,
 }: {
   snapshot: TillSnapshot;
   categories: { id: string; name: string }[];
+  openedByName?: string;
 }) {
   return (
     <section className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-5">
       <h2 className="font-serif text-2xl text-wine">Caisse du jour</h2>
+      {openedByName ? (
+        <p className="mt-2 rounded-2xl bg-blush px-4 py-2 text-sm font-medium text-wine">
+          Caisse ouverte par {openedByName}
+        </p>
+      ) : null}
       <p className="mt-1 text-sm text-black/50">
         Le fond d’ouverture reste affiché. Les ventes s’ajoutent toutes seules. Une dépense est déduite des recettes
         et des espèces.

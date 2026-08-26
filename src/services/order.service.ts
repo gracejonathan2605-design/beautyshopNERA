@@ -8,6 +8,8 @@ import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
 import { couponDiscountAmount, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
 import { normalizeCartItems } from "@/lib/cart";
+import { findCustomerByPhone } from "@/services/customer.service";
+import { unpaidOrderCutoff } from "@/lib/pending-orders";
 
 export async function createOnlineOrder(input: {
   customerId?: string | null;
@@ -32,6 +34,11 @@ export async function createOnlineOrder(input: {
   }
   const couponCode = normalizeCouponCode(input.couponCode);
   const locationId = await getDefaultLocationId();
+  let customerId = input.customerId ?? null;
+  if (!customerId && input.shippingPhone) {
+    const existing = await findCustomerByPhone(input.shippingPhone);
+    if (existing) customerId = existing.id;
+  }
 
   const order = await prisma.$transaction(async (tx) => {
     const settings = await getShopSettings(tx);
@@ -94,7 +101,7 @@ export async function createOnlineOrder(input: {
     const created = await tx.order.create({
       data: {
         number,
-        customerId: input.customerId ?? undefined,
+        customerId: customerId ?? undefined,
         fulfillment: input.fulfillment,
         subtotal,
         discount,
@@ -150,7 +157,7 @@ export async function createOnlineOrder(input: {
 export async function updateOrderStatus(input: {
   orderId: string;
   status: OrderStatus;
-  userId: string;
+  userId?: string;
 }) {
   const locationId = await getDefaultLocationId();
   return prisma.$transaction(async (tx) => {
@@ -237,7 +244,7 @@ export async function updateOrderStatus(input: {
 
     await tx.auditLog.create({
       data: {
-        userId: input.userId,
+        userId: input.userId || undefined,
         action: "ORDER_STATUS",
         entity: "Order",
         entityId: order.id,
@@ -249,3 +256,32 @@ export async function updateOrderStatus(input: {
     return updated;
   });
 }
+
+export async function releaseExpiredUnpaidOrders(now = new Date()) {
+  const settings = await getShopSettings();
+  const cutoff = unpaidOrderCutoff(now, settings.pendingOrderHours);
+  if (!cutoff) return { cancelled: 0, hours: settings.pendingOrderHours };
+
+  const orders = await prisma.order.findMany({
+    where: {
+      status: "PENDING",
+      createdAt: { lte: cutoff },
+      payments: { none: { status: "COMPLETED" } },
+    },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+    take: 40,
+  });
+
+  let cancelled = 0;
+  for (const order of orders) {
+    try {
+      await updateOrderStatus({ orderId: order.id, status: "CANCELLED" });
+      cancelled += 1;
+    } catch {
+      /* commande déjà traitée ou transition refusée */
+    }
+  }
+  return { cancelled, hours: settings.pendingOrderHours, scanned: orders.length };
+}
+

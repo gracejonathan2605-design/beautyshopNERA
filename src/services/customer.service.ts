@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getShopSettings } from "@/lib/settings";
 import { formatRef, nextSequence } from "@/lib/sequences";
+import { phoneLastNine } from "@/lib/phone-match";
 
 export function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
@@ -32,6 +33,19 @@ export async function findCustomerByPhone(phone: string) {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function attachGuestOrdersByPhone(customerId: string, phone: string) {
+  const lastNine = phoneLastNine(phone);
+  if (!lastNine) return 0;
+  const needle = `%${lastNine}%`;
+  const updated = await prisma.$executeRaw`
+    UPDATE "Order"
+    SET "customerId" = ${customerId}
+    WHERE "customerId" IS NULL
+      AND regexp_replace(coalesce("shippingPhone", ''), '[^0-9]', '', 'g') LIKE ${needle}
+  `;
+  return Number(updated);
 }
 
 export async function lookupPosCustomer(phone: string) {

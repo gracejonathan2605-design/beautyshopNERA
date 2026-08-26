@@ -16,10 +16,17 @@ describe("paramètres boutique", () => {
     expect(merged.ticketFooter).toContain("Livraison rapide sous 24h");
     expect(merged.prefixes).toEqual(DEFAULT_SETTINGS.prefixes);
     expect(merged.flashDurationDays).toBe(10);
+    expect(merged.pendingOrderHours).toBe(24);
   });
 
   it("normalise une durée Flash invalide vers 10 jours", () => {
     expect(mergeShopSettings({ flashDurationDays: 0 }).flashDurationDays).toBe(10);
     expect(mergeShopSettings({ flashDurationDays: 15 }).flashDurationDays).toBe(15);
+  });
+
+  it("normalise le délai de libération des commandes impayées", () => {
+    expect(mergeShopSettings({ pendingOrderHours: 0 }).pendingOrderHours).toBe(0);
+    expect(mergeShopSettings({ pendingOrderHours: 36 }).pendingOrderHours).toBe(36);
+    expect(mergeShopSettings({ pendingOrderHours: -4 }).pendingOrderHours).toBe(24);
   });
 });

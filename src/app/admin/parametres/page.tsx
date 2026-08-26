@@ -67,8 +67,22 @@ export default async function SettingsPage() {
             className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
           />
         </label>
+        <label className="text-sm text-black/50">
+          Libérer le stock des commandes impayées après (heures)
+          <input
+            name="pendingOrderHours"
+            type="number"
+            min={0}
+            max={168}
+            defaultValue={s.pendingOrderHours}
+            className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
+          />
+        </label>
         <p className="text-xs text-black/45 md:col-span-2">
           S’applique uniquement aux prochaines premières publications. Les Flash déjà en cours ne bougent pas. Cette durée n’est jamais affichée aux clientes.
+        </p>
+        <p className="text-xs text-black/45 md:col-span-2">
+          Les commandes en ligne encore « en attente » sans paiement confirmé sont annulées après ce délai, et le stock réservé est libéré. 0 = désactivé. Défaut : 24 heures.
         </p>
         <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
       </form>

@@ -105,7 +105,7 @@ export function BulkProductPublisher({
       else accepted.push(file);
     }
     if (!accepted.length) {
-      setPickerError(rejected[0] || "Choisissez des photos jpeg, png, webp ou gif (pas HEIC).");
+      setPickerError(rejected[0] || "Choisissez des photos jpeg, png, webp, gif ou HEIC.");
       return;
     }
     const room = MAX_BULK_PRODUCTS - rowsRef.current.length;
@@ -263,7 +263,7 @@ export function BulkProductPublisher({
       >
         <p className="font-serif text-2xl text-wine">Choisir 10 à {MAX_BULK_PRODUCTS} photos</p>
         <p className="mt-1 text-sm text-black/55">
-          Une photo = un produit. Jpeg, png, webp ou gif — 20 Mo max, compression automatique. Glissez-déposez ou sélectionnez.
+          Une photo = un produit. Jpeg, png, webp, gif ou HEIC iPhone — 20 Mo max, compression automatique. Glissez-déposez ou sélectionnez.
         </p>
         <input
           ref={fileInputRef}
