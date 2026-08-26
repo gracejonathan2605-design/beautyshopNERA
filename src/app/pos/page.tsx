@@ -1,6 +1,6 @@
 import { requireStaff } from "@/lib/guard";
 import { searchPosProducts } from "@/app/actions/pos";
-import { getOpenSessionForUser, getTillSnapshot } from "@/services/cash.service";
+import { getOpenSessionForUser, getOccupiedCashSession, getTillSnapshot } from "@/services/cash.service";
 import { listHeldTickets } from "@/services/held-ticket.service";
 import { PosClient } from "@/components/pos/pos-client";
 import { TillBoard } from "@/components/pos/till-board";
@@ -33,6 +33,12 @@ export default async function PosPage({
     listHeldTickets(session.userId),
   ]);
   const snapshot = open ? await getTillSnapshot(open.id) : null;
+  const occupied = open ? null : await getOccupiedCashSession(session.userId);
+  const openedByName = open
+    ? `${open.openedBy.firstName} ${open.openedBy.lastName}`.trim()
+    : occupied
+      ? `${occupied.openedBy.firstName} ${occupied.openedBy.lastName}`.trim()
+      : "";
   return (
     <div className="min-h-screen bg-background">
       <StaffToolbar />
@@ -61,10 +67,13 @@ export default async function PosPage({
           </p>
         ) : null}
         <div className="mt-6 space-y-6">
-          {snapshot ? <TillBoard snapshot={snapshot} categories={expenseCategories} /> : null}
+          {snapshot ? (
+            <TillBoard snapshot={snapshot} categories={expenseCategories} openedByName={openedByName} />
+          ) : null}
           <PosClient
             initial={products}
-            openSession={open ? { id: open.id, openingFloat: open.openingFloat } : null}
+            openSession={open ? { id: open.id, openingFloat: open.openingFloat, openedByName } : null}
+            occupiedBy={open ? null : openedByName || null}
             shop={toReceiptShop(settings)}
             canRefund={hasPermission(session, "sales.refund")}
             initialHeld={heldRows}

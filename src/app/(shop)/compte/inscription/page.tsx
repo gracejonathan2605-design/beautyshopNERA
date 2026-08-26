@@ -19,7 +19,10 @@ export default async function RegisterPage({
         <input name="firstName" required placeholder="Prénom" className="w-full rounded-xl border px-4 py-3" />
         <input name="lastName" required placeholder="Nom" className="w-full rounded-xl border px-4 py-3" />
         <input name="email" type="email" required placeholder="Email" className="w-full rounded-xl border px-4 py-3" />
-        <input name="phone" placeholder="Téléphone" className="w-full rounded-xl border px-4 py-3" />
+        <input name="phone" placeholder="Téléphone (WhatsApp)" className="w-full rounded-xl border px-4 py-3" />
+        <p className="text-xs text-black/50">
+          Les commandes déjà passées avec ce téléphone seront rattachées à votre compte.
+        </p>
         <input name="password" type="password" required minLength={8} placeholder="Mot de passe (8+)" className="w-full rounded-xl border px-4 py-3" />
         <button className="w-full rounded-full bg-brown py-3 text-cream">Créer mon compte</button>
       </form>

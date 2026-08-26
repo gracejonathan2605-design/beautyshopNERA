@@ -2,6 +2,7 @@ import { cache } from "react";
 import { prisma } from "./prisma";
 import type { Prisma } from "@prisma/client";
 import { normalizeFlashDurationDays } from "./flash";
+import { DEFAULT_PENDING_ORDER_HOURS, normalizePendingOrderHours } from "./pending-orders";
 
 export type ShopSettings = {
   name: string;
@@ -20,6 +21,8 @@ export type ShopSettings = {
   ticketFooter: string;
   terms: string;
   flashDurationDays: number;
+  /** 0 = pas d’annulation auto. Sinon libère le stock des commandes PENDING impayées. */
+  pendingOrderHours: number;
   prefixes: {
     order: string;
     sale: string;
@@ -45,6 +48,7 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   ticketFooter: "Merci pour votre achat. Paiement OM & MoMo. Livraison rapide sous 24h.",
   terms: "Les articles d'hygiène et les mèches ouvertes ne sont ni repris ni échangés.",
   flashDurationDays: 10,
+  pendingOrderHours: DEFAULT_PENDING_ORDER_HOURS,
   prefixes: {
     order: "NERA",
     sale: "POS",
@@ -67,6 +71,7 @@ export function mergeShopSettings(stored?: Partial<ShopSettings> | null): ShopSe
     if (!String(merged[key] ?? "").trim()) merged[key] = DEFAULT_SETTINGS[key];
   }
   merged.flashDurationDays = normalizeFlashDurationDays(merged.flashDurationDays);
+  merged.pendingOrderHours = normalizePendingOrderHours(merged.pendingOrderHours);
   return merged;
 }
 

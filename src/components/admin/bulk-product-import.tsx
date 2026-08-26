@@ -7,6 +7,7 @@ import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 import type { CategoryOptionGroup } from "@/lib/catalog";
 import { MAX_BULK_IMPORT } from "@/lib/product-media";
+import { PRODUCT_IMAGE_ACCEPT } from "@/lib/product-images";
 import {
   bulkDraftError,
   buildBulkProductFormData,
@@ -185,10 +186,10 @@ export function BulkProductImport({
         </p>
         <label className="mt-4 block cursor-pointer rounded-2xl border border-dashed border-brown/40 bg-white px-4 py-8 text-center">
           <span className="font-medium text-wine">Importer des photos</span>
-          <span className="mt-1 block text-sm text-black/50">jpeg, png ou webp — pas HEIC. Vous pourrez encore modifier chaque fiche.</span>
+          <span className="mt-1 block text-sm text-black/50">jpeg, png, webp ou HEIC iPhone. Vous pourrez encore modifier chaque fiche.</span>
           <input
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept={PRODUCT_IMAGE_ACCEPT}
             multiple
             className="sr-only"
             disabled={noCategories || busy}

@@ -9,7 +9,7 @@ import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser, recordT
 import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } from "@/services/customer.service";
 import { parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import type { HeldTicketPayload } from "@/lib/pos";
+import { scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
 import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@/services/held-ticket.service";
 
 export { listHeldTickets, type HeldTicketRow };
@@ -78,15 +78,17 @@ export async function scanPosBarcode(code: string) {
   const session = await requireStaff("pos.access");
   const q = code.trim();
   if (!q) return { ok: false as const, error: "Scannez un code-barres." };
-  const variant = await prisma.productVariant.findFirst({
+  const matches = await prisma.productVariant.findMany({
     where: {
       ...posActiveWhere,
       OR: [{ barcode: q }, { sku: { equals: q, mode: "insensitive" } }],
     },
     select: posVariantSelect(await posLocationId(session.userId)),
+    take: 8,
   });
-  if (!variant) return { ok: false as const, error: `Code inconnu : ${q}` };
-  return { ok: true as const, variant };
+  const decision = scanMatchDecision(matches, q);
+  if (!decision.ok) return { ok: false as const, error: decision.error };
+  return { ok: true as const, variant: decision.item };
 }
 
 function bouncePos(kind: "ok" | "erreur", message?: string): never {

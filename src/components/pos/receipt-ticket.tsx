@@ -6,6 +6,7 @@ import {
   formatReceiptDate,
   moneyPlain,
   paymentLabel,
+  receiptChangeAmount,
   whatsappReceiptUrl,
   type ReceiptData,
 } from "@/lib/receipt";
@@ -121,6 +122,16 @@ export function ReceiptTicket({
                 <span>{moneyPlain(payment.amount)}</span>
               </p>
             ))}
+            {(data.cashReceived ?? 0) > 0 ? (
+              <p className="flex justify-between">
+                <span>Espèces reçues</span>
+                <span>{moneyPlain(data.cashReceived ?? 0)}</span>
+              </p>
+            ) : null}
+            <p className="mt-1 flex justify-between font-bold">
+              <span>Monnaie</span>
+              <span>{moneyPlain(receiptChangeAmount(data))}</span>
+            </p>
           </div>
           {data.shop.ticketFooter ? (
             <p className="mt-3 text-center opacity-80">{data.shop.ticketFooter}</p>

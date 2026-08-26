@@ -33,12 +33,14 @@ const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "CARD", "OTHER"];
 export function PosClient({
   initial,
   openSession,
+  occupiedBy,
   shop,
   canRefund,
   initialHeld,
 }: {
   initial: PosVariant[];
-  openSession: { id: string; openingFloat: number } | null;
+  openSession: { id: string; openingFloat: number; openedByName?: string } | null;
+  occupiedBy?: string | null;
   shop: ReceiptShop;
   canRefund: boolean;
   initialHeld: HeldTicketRow[];
@@ -231,6 +233,11 @@ export function PosClient({
         }
         const receipt = saleToReceipt(result.sale, shop);
         if (customerPhone) receipt.customerPhone = customerPhone;
+        receipt.change = pay.change;
+        if (method === "CASH" || mixed) {
+          const cashLine = pay.payments.find((row) => row.method === "CASH");
+          if (cashLine) receipt.cashReceived = cashLine.amount;
+        }
         setTicket(receipt);
         clearTicket();
         router.refresh();
@@ -329,11 +336,20 @@ export function PosClient({
 
       {tab === "vente" ? (
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          {!openSession ? (
+          {!openSession && occupiedBy ? (
+            <div className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-6 lg:col-span-2">
+              <h2 className="font-serif text-2xl text-wine">Caisse déjà ouverte</h2>
+              <p className="mt-2 text-sm text-black/60">
+                Caisse ouverte par <strong>{occupiedBy}</strong>. Une caisse = une vendeuse. Demandez-lui de la fermer
+                avant d’ouvrir la vôtre.
+              </p>
+            </div>
+          ) : !openSession ? (
             <form action={openRegister} className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-6 lg:col-span-2">
               <h2 className="font-serif text-2xl text-wine">Ouvrir la caisse</h2>
               <p className="mt-1 text-sm text-black/50">
-                Indiquez l’argent déjà dans le tiroir ce matin. Ce montant restera affiché toute la journée.
+                Indiquez l’argent déjà dans le tiroir ce matin. Ce montant restera affiché toute la journée. Une caisse =
+                une vendeuse.
               </p>
               <label className="mt-4 block text-sm text-black/60" htmlFor="openingFloat">
                 Fond d’ouverture (FCFA)
@@ -423,6 +439,9 @@ export function PosClient({
           </section>
           <aside className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-5">
             <h2 className="font-serif text-2xl text-wine">Ticket en cours</h2>
+            {openSession?.openedByName ? (
+              <p className="mt-1 text-sm font-medium text-wine">Caisse ouverte par {openSession.openedByName}</p>
+            ) : null}
             {held.length ? (
               <ul className="mt-3 space-y-2 rounded-2xl bg-blush/60 p-3 text-sm">
                 {held.map((row) => (

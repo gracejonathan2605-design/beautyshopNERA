@@ -14,6 +14,7 @@ import { slugify } from "@/lib/pricing";
 import { parseCfaInput } from "@/lib/money";
 import { buildAutoSku } from "@/lib/sku";
 import { assignFlashOnPublish, isPublishedOnline } from "@/lib/flash";
+import { assertUniqueBarcode } from "@/lib/barcode";
 
 function bounce(path: string, kind: "ok" | "erreur", message: string): never {
   const q = new URLSearchParams();
@@ -182,6 +183,7 @@ export async function saveProductVariant(formData: FormData) {
     if (salePrice <= 0) throw new Error("Prix de vente invalide.");
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new Error("Produit introuvable.");
+    await assertUniqueBarcode(barcode, variantId || null);
     const promo = promoPrice > 0 && promoPrice < salePrice ? promoPrice : null;
     if (variantId) {
       await prisma.productVariant.update({

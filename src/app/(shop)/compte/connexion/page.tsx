@@ -28,6 +28,7 @@ export default async function CustomerLoginPage({
         <Link href="/compte/inscription" className="underline">
           Créer un compte cliente
         </Link>
+        . Les commandes passées avec le même téléphone seront rattachées automatiquement.
       </p>
     </div>
   );

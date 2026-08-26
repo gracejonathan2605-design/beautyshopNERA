@@ -15,6 +15,7 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { defaultStaffPath } from "@/lib/permissions";
 import { safeNextPath } from "@/lib/safe-path";
+import { attachGuestOrdersByPhone } from "@/services/customer.service";
 
 export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -68,6 +69,7 @@ export async function loginCustomer(formData: FormData) {
   const ok = await verifyPassword(password, customer.passwordHash);
   if (!ok) redirect(fail);
   await createCustomerSession(customer.id);
+  if (customer.phone) await attachGuestOrdersByPhone(customer.id, customer.phone);
   const dest = safeNextPath(next, "/compte");
   redirect(dest.startsWith("/admin") || dest.startsWith("/pos") || dest.startsWith("/login") ? "/compte" : dest);
 }
@@ -107,6 +109,7 @@ export async function registerCustomer(formData: FormData) {
       });
     });
     await createCustomerSession(customer.id);
+    if (phone) await attachGuestOrdersByPhone(customer.id, phone);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       redirect("/compte/inscription?error=exists");

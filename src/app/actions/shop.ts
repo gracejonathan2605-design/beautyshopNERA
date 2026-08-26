@@ -12,6 +12,7 @@ import { quoteCoupon } from "@/lib/coupon";
 import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
+import { attachGuestOrdersByPhone } from "@/services/customer.service";
 
 async function availableForVariant(variantId: string) {
   const variant = await prisma.productVariant.findFirst({
@@ -169,6 +170,7 @@ export async function updateCustomerProfile(
         ...(password.length >= 8 ? { passwordHash: await hashPassword(password) } : {}),
       },
     });
+    if (phone) await attachGuestOrdersByPhone(session.customerId, phone);
     revalidatePath("/compte");
     revalidatePath("/checkout");
     return { ok: true };

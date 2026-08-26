@@ -12,6 +12,6 @@ export async function compressToWebp(file: File): Promise<Buffer> {
       .webp({ quality: IMAGE_WEBP_QUALITY })
       .toBuffer();
   } catch {
-    throw new Error("Image illisible. Utilisez jpeg, png, webp ou gif.");
+    throw new Error("Image illisible. Utilisez jpeg, png, webp, gif — les photos iPhone HEIC sont converties avant l’envoi.");
   }
 }

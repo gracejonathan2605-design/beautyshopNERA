@@ -13,9 +13,19 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "https://nerabeaute.cm"),
   title: "NERA Beauté & Shop",
   description: "Boutique en ligne — beauté, cheveux et mode à Yaoundé. Paiement OM & MoMo. Livraison rapide sous 24h.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "NERA",
+  appleWebApp: {
+    capable: true,
+    title: "NERA",
+    statusBarStyle: "default",
+  },
   icons: {
-    icon: "/brand/nera-logo.jpg",
-    apple: "/apple-icon.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/brand/nera-logo.jpg" },
+    ],
+    apple: "/icons/icon-192.png",
   },
 };
 

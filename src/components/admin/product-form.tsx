@@ -8,6 +8,7 @@ import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
 import { VariantEditor } from "@/components/admin/variant-editor";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
+import { PRODUCT_IMAGE_ACCEPT } from "@/lib/product-images";
 import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
 import type { CategoryOptionGroup } from "@/lib/catalog";
 
@@ -158,11 +159,11 @@ export function ProductForm({
         SKU généré automatiquement. Après publication, le produit est visible tout de suite en boutique et à la caisse.
       </p>
       <label className="text-sm md:col-span-2">
-        Photos (1 à {MAX_PRODUCT_PHOTOS}) — compressées automatiquement en WebP léger (pas HEIC)
+        Photos (1 à {MAX_PRODUCT_PHOTOS}) — compressées automatiquement en WebP (HEIC iPhone converti)
         <input
           name="photos"
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={PRODUCT_IMAGE_ACCEPT}
           multiple
           className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
         />

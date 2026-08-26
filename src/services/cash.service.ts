@@ -160,11 +160,22 @@ export async function closeCashSession(input: {
   });
 }
 
-const sessionInclude = { register: { include: { location: true } } } as const;
+const sessionInclude = {
+  register: { include: { location: true } },
+  openedBy: { select: { firstName: true, lastName: true } },
+} as const;
 
 export async function getOpenSessionForUser(userId: string) {
   return prisma.cashSession.findFirst({
     where: { status: "OPEN", openedById: userId },
+    include: sessionInclude,
+    orderBy: { openedAt: "desc" },
+  });
+}
+
+export async function getOccupiedCashSession(exceptUserId: string) {
+  return prisma.cashSession.findFirst({
+    where: { status: "OPEN", openedById: { not: exceptUserId } },
     include: sessionInclude,
     orderBy: { openedAt: "desc" },
   });

@@ -20,7 +20,7 @@ describe("bulk product drafts", () => {
     expect(isAllowedBulkImage({ type: "image/png", name: "a.png", size: 10 })).toBe(true);
     expect(isAllowedBulkImage({ type: "image/webp", name: "a.webp", size: 10 })).toBe(true);
     expect(isAllowedBulkImage({ type: "image/gif", name: "a.gif", size: 10 })).toBe(true);
-    expect(isAllowedBulkImage({ type: "image/heic", name: "a.heic", size: 10 })).toBe(false);
+    expect(isAllowedBulkImage({ type: "image/heic", name: "a.heic", size: 10 })).toBe(true);
     expect(isAllowedBulkImage({ type: "video/mp4", name: "a.mp4", size: 10 })).toBe(false);
     expect(isAllowedBulkImage({ type: "image/jpeg", name: "a.jpg", size: 0 })).toBe(false);
   });

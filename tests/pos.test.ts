@@ -3,6 +3,7 @@ import {
   buildCheckoutPayments,
   clampDiscount,
   pickExactScanMatch,
+  scanMatchDecision,
   settlePosPayments,
   ticketTotals,
 } from "../src/lib/pos";
@@ -91,6 +92,17 @@ describe("scan code-barres", () => {
     expect(pickExactScanMatch(list, "611000000001")?.sku).toBe("MEC-BW-18");
     expect(pickExactScanMatch(list, "gloss-01")?.sku).toBe("GLOSS-01");
     expect(pickExactScanMatch(list, "ME")).toBeNull();
+  });
+
+  it("signale un code-barres partagé par plusieurs fiches", () => {
+    const decision = scanMatchDecision(
+      [
+        { sku: "A", barcode: "999" },
+        { sku: "B", barcode: "999" },
+      ],
+      "999",
+    );
+    expect(decision.ok).toBe(false);
   });
 });
 
