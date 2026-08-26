@@ -42,3 +42,50 @@ export async function prepareProductFormData(form: HTMLFormElement) {
   }
   return fd;
 }
+
+export function nameFromPhotoFile(file: File) {
+  const base = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return base || "Produit";
+}
+
+export async function buildBulkProductFormData(input: {
+  name: string;
+  categoryId: string;
+  salePrice: string;
+  shortDescription: string;
+  stock: string;
+  brandId?: string;
+  supplierId?: string;
+  onlineVisible: boolean;
+  isNew: boolean;
+  photo: File;
+}) {
+  const fd = new FormData();
+  fd.set("name", input.name.trim());
+  fd.set("categoryId", input.categoryId);
+  fd.set("salePrice", input.salePrice.trim());
+  fd.set("shortDescription", input.shortDescription.trim());
+  fd.set("stock", input.stock.trim());
+  if (input.brandId) fd.set("brandId", input.brandId);
+  if (input.supplierId) fd.set("supplierId", input.supplierId);
+  if (input.onlineVisible) fd.set("onlineVisible", "on");
+  if (input.isNew) fd.set("isNew", "on");
+  const photo = await compressImageFile(input.photo);
+  if (photo.size > ACTION_PAYLOAD_MAX_BYTES) {
+    throw new Error("La photo reste trop lourde après compression. Essayez une autre image.");
+  }
+  fd.append("photos", photo);
+  return fd;
+}
+
+export function bulkDraftError(row: {
+  name: string;
+  categoryId: string;
+  salePrice: string;
+}) {
+  if (!row.name.trim()) return "Indiquez le nom.";
+  if (!row.categoryId.trim()) return "Choisissez un rayon.";
+  const price = Number(String(row.salePrice).replace(/\s/g, "").replace(",", "."));
+  if (!Number.isFinite(price) || price <= 0) return "Indiquez un prix en FCFA.";
+  return null;
+}

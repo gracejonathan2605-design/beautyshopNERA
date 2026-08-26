@@ -1,8 +1,8 @@
-import { BulkProductPublisher } from "@/components/admin/bulk-product-publisher";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
+import { BulkProductPublisher } from "@/components/admin/bulk-product-publisher";
 import { groupCategoriesForSelect } from "@/lib/catalog";
-import Link from "next/link";
 
 export default async function BulkProductsPage() {
   await requireStaff("products.create");
@@ -25,16 +25,16 @@ export default async function BulkProductsPage() {
 
   return (
     <div>
-      <p className="text-sm text-black/50">
-        <Link href="/admin/produits" className="underline">
+      <p className="text-sm">
+        <Link href="/admin/produits" className="text-brown underline">
           ← Produits
         </Link>
       </p>
-      <h1 className="mt-2 font-serif text-4xl">Publier un lot</h1>
+      <h1 className="mt-3 font-serif text-4xl">Publier un lot</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Sélectionnez jusqu’à 15 photos : chaque image devient un produit indépendant. Remplissez les
         fiches sur cette page, puis publiez tout d’un coup. Un échec n’annule pas les autres.
-        Photos compressées automatiquement (comme à la création d’un seul produit).
+        Photos compressées automatiquement. Visible ensuite en boutique et à la caisse.
       </p>
       <div className="mt-6">
         <BulkProductPublisher

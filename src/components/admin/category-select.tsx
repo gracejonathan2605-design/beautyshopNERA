@@ -1,3 +1,5 @@
+import type { ChangeEvent } from "react";
+
 export function CategorySelect({
   groups,
   name = "categoryId",
@@ -11,19 +13,20 @@ export function CategorySelect({
   name?: string;
   defaultValue?: string;
   value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  onChange?: (event: ChangeEvent<HTMLSelectElement>) => void;
   required?: boolean;
   className?: string;
 }) {
-  const controlled = value !== undefined;
+  const common = {
+    name,
+    required,
+    className,
+    onChange,
+  };
   return (
     <select
-      name={name}
-      required={required}
-      value={controlled ? value : undefined}
-      defaultValue={controlled ? undefined : (defaultValue ?? "")}
-      onChange={onChange}
-      className={className}
+      {...common}
+      {...(value !== undefined ? { value } : { defaultValue: defaultValue ?? "" })}
     >
       <option value="">Catégorie (obligatoire)</option>
       {groups.map((group) => (

@@ -32,8 +32,11 @@ export default async function ProductsAdminPage() {
       <h1 className="font-serif text-4xl">Produits</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Remplissez le nom, le rayon et le prix, puis cliquez sur <strong>Publier le produit</strong>.
-        Un écran « Publication en cours » s’affiche pendant la compression des photos. Le SKU est automatique.
-        Le produit apparaît ensuite en boutique et à la caisse. Jusqu’à 5 photos, compressées automatiquement (légères en boutique), et 1 vidéo de 40 s / 3,5 Mo.
+        Pour plusieurs articles :{" "}
+        <Link href="/admin/produits/lot" className="text-brown underline">
+          publier 10–15 produits
+        </Link>
+        , compléter chaque fiche, puis publier d’un coup. Les photos sont compressées automatiquement.
       </p>
       {canCreate ? (
         <Link
