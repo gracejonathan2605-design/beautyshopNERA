@@ -26,8 +26,13 @@ export function couponLabel(type: PromotionType, value: number) {
   return type === "PERCENT" ? `−${value} %` : `−${formatCfa(value)}`;
 }
 
+export function normalizeCouponCode(code: string | null | undefined) {
+  const trimmed = String(code ?? "").trim().toUpperCase();
+  return trimmed || null;
+}
+
 export async function quoteCoupon(code: string, subtotal: number) {
-  const trimmed = code.trim().toUpperCase();
+  const trimmed = normalizeCouponCode(code);
   if (!trimmed) {
     return { ok: false as const, discount: 0, error: "Indiquez un code promo." };
   }

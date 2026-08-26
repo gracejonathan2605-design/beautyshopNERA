@@ -6,7 +6,8 @@ import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
 import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
-import { couponDiscountAmount, explainCouponFailure } from "@/lib/coupon";
+import { couponDiscountAmount, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
+import { normalizeCartItems } from "@/lib/cart";
 
 export async function createOnlineOrder(input: {
   customerId?: string | null;
@@ -22,6 +23,14 @@ export async function createOnlineOrder(input: {
   payment?: { method: PaymentMethod; amount: number; reference?: string; provider?: string };
 }) {
   if (!input.lines.length) throw new Error("Panier vide");
+  const lines = normalizeCartItems(input.lines);
+  if (!lines.length) throw new Error("Panier vide");
+  if (input.fulfillment === "DELIVERY") {
+    if (!input.shippingAddress?.trim() || !input.shippingCity?.trim()) {
+      throw new Error("Indiquez l’adresse et la ville de livraison.");
+    }
+  }
+  const couponCode = normalizeCouponCode(input.couponCode);
   const locationId = await getDefaultLocationId();
 
   const order = await prisma.$transaction(async (tx) => {
@@ -38,17 +47,14 @@ export async function createOnlineOrder(input: {
     }
 
     const variants = await tx.productVariant.findMany({
-      where: { id: { in: input.lines.map((l) => l.variantId) } },
+      where: { id: { in: lines.map((l) => l.variantId) } },
       include: { product: true },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
 
     let subtotal = 0;
     const items: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
-    for (const line of input.lines) {
-      if (!Number.isFinite(line.quantity) || line.quantity <= 0) {
-        throw new Error("Quantité invalide");
-      }
+    for (const line of lines) {
       const variant = byId.get(line.variantId);
       if (!variant || !variant.isActive || variant.deletedAt || variant.product.deletedAt || !variant.product.onlineVisible) {
         throw new Error("Produit indisponible en ligne");
@@ -68,8 +74,8 @@ export async function createOnlineOrder(input: {
     }
 
     let discount = 0;
-    if (input.couponCode) {
-      const coupon = await tx.coupon.findUnique({ where: { code: input.couponCode.toUpperCase() } });
+    if (couponCode) {
+      const coupon = await tx.coupon.findUnique({ where: { code: couponCode } });
       const couponError = explainCouponFailure(coupon, subtotal);
       if (couponError || !coupon) throw new Error(couponError ?? "Coupon invalide");
       discount = couponDiscountAmount(coupon.type, coupon.value, subtotal);
@@ -100,7 +106,7 @@ export async function createOnlineOrder(input: {
         shippingPhone: input.shippingPhone,
         shippingAddress: input.shippingAddress,
         shippingCity: input.shippingCity,
-        couponCode: input.couponCode?.toUpperCase(),
+        couponCode,
         items: { create: items },
         payments: input.payment
           ? {
@@ -117,7 +123,7 @@ export async function createOnlineOrder(input: {
       include: { items: true, payments: true },
     });
 
-    for (const line of input.lines) {
+    for (const line of lines) {
       await applyStockChange(tx, {
         variantId: line.variantId,
         locationId,
@@ -221,6 +227,12 @@ export async function updateOrderStatus(input: {
         where: { orderId: order.id, status: "COMPLETED" },
         data: { status: "REFUNDED" },
       });
+      if (to === "CANCELLED" && order.couponCode) {
+        await tx.coupon.updateMany({
+          where: { code: order.couponCode, usedCount: { gt: 0 } },
+          data: { usedCount: { decrement: 1 } },
+        });
+      }
     }
 
     await tx.auditLog.create({

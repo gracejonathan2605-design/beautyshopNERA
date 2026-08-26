@@ -68,6 +68,18 @@ describe("paiement mixte", () => {
       settlePosPayments([{ method: "MOBILE_MONEY", amount: 20000 }], 15000),
     ).toThrow(/supérieur/);
   });
+
+  it("plafonne le MoMo mixte trop élevé", () => {
+    const split = buildCheckoutPayments({
+      mixed: true,
+      method: "CASH",
+      total: 15000,
+      cashAmount: 5000,
+      momoAmount: 40000,
+    });
+    expect(split.payments.find((p) => p.method === "MOBILE_MONEY")?.amount).toBe(10000);
+    expect(split.remaining).toBe(0);
+  });
 });
 
 describe("scan code-barres", () => {

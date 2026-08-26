@@ -13,6 +13,8 @@ import Link from "next/link";
 export default async function ProductsAdminPage() {
   const session = await requireStaff("products.view");
   const canCreate = hasPermission(session, "products.create");
+  const canUpdate = hasPermission(session, "products.update");
+  const canDelete = hasPermission(session, "products.delete");
   const [products, categories, brands, suppliers] = await Promise.all([
     prisma.product.findMany({
       where: { deletedAt: null },
@@ -54,11 +56,13 @@ export default async function ProductsAdminPage() {
           </span>
         </Link>
       ) : null}
-      <ProductForm
-        categoryGroups={groupCategoriesForSelect(categories)}
-        brands={brands}
-        suppliers={suppliers}
-      />
+      {canCreate ? (
+        <ProductForm
+          categoryGroups={groupCategoriesForSelect(categories)}
+          brands={brands}
+          suppliers={suppliers}
+        />
+      ) : null}
       <div className="mt-6 overflow-x-auto rounded-2xl bg-cream">
         <table className="w-full text-sm">
           <thead>
@@ -81,9 +85,13 @@ export default async function ProductsAdminPage() {
                         <Image src={p.images[0].url} alt="" fill className="object-cover" sizes="40px" loading="lazy" />
                       </span>
                     ) : null}
-                    <Link href={`/admin/produits/${p.id}`} className="underline">
-                      {p.name}
-                    </Link>
+                    {canUpdate ? (
+                      <Link href={`/admin/produits/${p.id}`} className="underline">
+                        {p.name}
+                      </Link>
+                    ) : (
+                      <span>{p.name}</span>
+                    )}
                     <span className="ml-2 text-xs text-black/40">
                       {p.onlineVisible ? "en ligne" : "dépublié"}
                     </span>
@@ -110,6 +118,8 @@ export default async function ProductsAdminPage() {
                     variantId={p.variants[0]?.id ?? null}
                     salePrice={p.variants[0]?.salePrice ?? 0}
                     published={p.onlineVisible}
+                    canUpdate={canUpdate}
+                    canDelete={canDelete}
                   />
                 </td>
               </tr>

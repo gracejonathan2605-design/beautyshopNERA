@@ -14,21 +14,26 @@ import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@
 
 export { listHeldTickets, type HeldTicketRow };
 
-const posSelect = {
-  id: true,
-  name: true,
-  sku: true,
-  barcode: true,
-  salePrice: true,
-  promoPrice: true,
-  product: {
-    select: {
-      name: true,
-      images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { url: true } },
+function posVariantSelect(locationId?: string | null) {
+  return {
+    id: true,
+    name: true,
+    sku: true,
+    barcode: true,
+    salePrice: true,
+    promoPrice: true,
+    product: {
+      select: {
+        name: true,
+        images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { url: true } },
+      },
     },
-  },
-  inventories: { select: { onHand: true, reserved: true } },
-} as const;
+    inventories: {
+      where: { locationId: locationId || "__none__" },
+      select: { onHand: true, reserved: true },
+    },
+  } as const;
+}
 
 const posActiveWhere = {
   isActive: true,
@@ -36,13 +41,20 @@ const posActiveWhere = {
   product: { status: "ACTIVE" as const, deletedAt: null },
 };
 
+async function posLocationId(userId: string) {
+  const open = await getOpenSessionForUser(userId);
+  return open?.register.locationId ?? null;
+}
+
 export async function searchPosProducts(query: string) {
-  await requireStaff("pos.access");
+  const session = await requireStaff("pos.access");
+  const locationId = await posLocationId(session.userId);
+  const select = posVariantSelect(locationId);
   const q = query.trim();
   if (!q) {
     return prisma.productVariant.findMany({
       where: posActiveWhere,
-      select: posSelect,
+      select,
       take: 24,
       orderBy: { product: { name: "asc" } },
     });
@@ -57,13 +69,13 @@ export async function searchPosProducts(query: string) {
         { product: { name: { contains: q, mode: "insensitive" } } },
       ],
     },
-    select: posSelect,
+    select,
     take: 30,
   });
 }
 
 export async function scanPosBarcode(code: string) {
-  await requireStaff("pos.access");
+  const session = await requireStaff("pos.access");
   const q = code.trim();
   if (!q) return { ok: false as const, error: "Scannez un code-barres." };
   const variant = await prisma.productVariant.findFirst({
@@ -71,7 +83,7 @@ export async function scanPosBarcode(code: string) {
       ...posActiveWhere,
       OR: [{ barcode: q }, { sku: { equals: q, mode: "insensitive" } }],
     },
-    select: posSelect,
+    select: posVariantSelect(await posLocationId(session.userId)),
   });
   if (!variant) return { ok: false as const, error: `Code inconnu : ${q}` };
   return { ok: true as const, variant };
@@ -84,11 +96,16 @@ function bouncePos(kind: "ok" | "erreur", message?: string): never {
 }
 
 export async function openRegister(formData: FormData) {
-  const session = await requireStaff("pos.access");
-  const openingFloat = parseCfaInput(String(formData.get("openingFloat") ?? "0"));
-  await ensureOpenCashSession(session.userId, openingFloat);
-  revalidatePath("/pos");
-  bouncePos("ok", "Caisse ouverte.");
+  try {
+    const session = await requireStaff("pos.access");
+    const openingFloat = parseCfaInput(String(formData.get("openingFloat") ?? "0"));
+    await ensureOpenCashSession(session.userId, openingFloat);
+    revalidatePath("/pos");
+    bouncePos("ok", "Caisse ouverte.");
+  } catch (err) {
+    unstable_rethrow(err);
+    bouncePos("erreur", err instanceof Error ? err.message : "Ouverture de caisse impossible.");
+  }
 }
 
 export async function closeRegister(formData: FormData) {
@@ -297,7 +314,6 @@ export async function resumeHeldTicket(id: string) {
     if (row.cashierId !== session.userId && !session.isSuperAdmin) {
       return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
     }
-    await prisma.heldTicket.delete({ where: { id } });
     revalidatePath("/pos");
     return {
       ok: true as const,

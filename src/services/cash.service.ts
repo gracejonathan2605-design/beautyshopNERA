@@ -25,7 +25,9 @@ export async function openCashSession(input: {
   const existing = await prisma.cashSession.findFirst({
     where: { registerId: input.registerId, status: "OPEN" },
   });
-  if (existing) return existing;
+  if (existing) {
+    throw new Error("Cette caisse est déjà ouverte par une autre vendeuse. Fermez-la avant d’en ouvrir une autre.");
+  }
 
   try {
     const session = await prisma.cashSession.create({
@@ -50,7 +52,10 @@ export async function openCashSession(input: {
       const raced = await prisma.cashSession.findFirst({
         where: { registerId: input.registerId, status: "OPEN" },
       });
-      if (raced) return raced;
+      if (raced) {
+        if (raced.openedById === input.userId) return raced;
+        throw new Error("Cette caisse est déjà ouverte par une autre vendeuse. Fermez-la avant d’en ouvrir une autre.");
+      }
     }
     throw err;
   }
@@ -158,14 +163,8 @@ export async function closeCashSession(input: {
 const sessionInclude = { register: { include: { location: true } } } as const;
 
 export async function getOpenSessionForUser(userId: string) {
-  const mine = await prisma.cashSession.findFirst({
-    where: { status: "OPEN", openedById: userId },
-    include: sessionInclude,
-    orderBy: { openedAt: "desc" },
-  });
-  if (mine) return mine;
   return prisma.cashSession.findFirst({
-    where: { status: "OPEN", register: { isActive: true } },
+    where: { status: "OPEN", openedById: userId },
     include: sessionInclude,
     orderBy: { openedAt: "desc" },
   });
