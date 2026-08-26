@@ -9,6 +9,7 @@ const LINKS: { href: string; label: string; permission?: PermissionCode }[] = [
   { href: "/admin/alertes", label: "Alertes" },
   { href: "/pos", label: "Caisse POS", permission: "pos.access" },
   { href: "/admin/produits", label: "Produits", permission: "products.view" },
+  { href: "/admin/produits/lot", label: "Publier un lot", permission: "products.create" },
   { href: "/admin/categories", label: "Rayons", permission: "categories.view" },
   { href: "/admin/stocks", label: "Stocks", permission: "stock.view" },
   { href: "/admin/commandes", label: "Commandes", permission: "orders.view" },

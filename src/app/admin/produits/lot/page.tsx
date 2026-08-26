@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
-import { BulkProductImport } from "@/components/admin/bulk-product-import";
+import { BulkProductPublisher } from "@/components/admin/bulk-product-publisher";
 import { groupCategoriesForSelect } from "@/lib/catalog";
 
 export default async function BulkProductsPage() {
@@ -11,7 +11,11 @@ export default async function BulkProductsPage() {
       where: { isActive: true, deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
-    prisma.brand.findMany({ where: { deletedAt: null, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.brand.findMany({
+      where: { deletedAt: null, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
     prisma.supplier.findMany({
       where: { deletedAt: null, isActive: true },
       orderBy: { name: "asc" },
@@ -26,13 +30,14 @@ export default async function BulkProductsPage() {
           ← Produits
         </Link>
       </p>
-      <h1 className="mt-3 font-serif text-4xl">Import en lot</h1>
+      <h1 className="mt-3 font-serif text-4xl">Publier un lot</h1>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
-        Importez plusieurs photos, complétez nom / rayon / prix sur chaque fiche, puis publiez tout d’un coup. Un produit
-        par photo. Le SKU est automatique. Visible ensuite en boutique et à la caisse.
+        Sélectionnez jusqu’à 15 photos : chaque image devient un produit indépendant. Remplissez les
+        fiches sur cette page, puis publiez tout d’un coup. Un échec n’annule pas les autres.
+        Photos compressées automatiquement. Visible ensuite en boutique et à la caisse.
       </p>
       <div className="mt-6">
-        <BulkProductImport
+        <BulkProductPublisher
           categoryGroups={groupCategoriesForSelect(categories)}
           brands={brands}
           suppliers={suppliers}

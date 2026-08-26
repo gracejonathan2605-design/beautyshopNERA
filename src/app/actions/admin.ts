@@ -305,7 +305,15 @@ export async function saveProduct(
     const brandId = String(formData.get("brandId") ?? "").trim() || null;
     const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
     const status = "ACTIVE";
-    const sku = await uniqueSku(name);
+    const requestedSku = String(formData.get("sku") ?? "").trim().toUpperCase();
+    if (requestedSku) {
+      const [onProduct, onVariant] = await Promise.all([
+        prisma.product.findFirst({ where: { sku: requestedSku } }),
+        prisma.productVariant.findUnique({ where: { sku: requestedSku } }),
+      ]);
+      if (onProduct || onVariant) return { ok: false, error: "Ce SKU est déjà pris." };
+    }
+    const sku = requestedSku || (await uniqueSku(name));
 
     const locationId = (await prisma.location.findFirst({ where: { isDefault: true } }))?.id;
     if (!locationId) return { ok: false, error: "Aucun magasin par défaut. Relancez le seed ou créez un magasin." };
