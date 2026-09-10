@@ -46,7 +46,7 @@ export async function ShopHeader() {
         <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
           <BrandLockup size="sm" priority />
         </Link>
-        <form action="/boutique" className="hidden min-w-0 flex-1 md:block">
+        <form action="/boutique" className="hidden min-w-0 flex-1 md:block" role="search" aria-label="Rechercher dans la boutique">
           <input
             name="q"
             placeholder="Rechercher un produit, une mèche, un parfum…"
@@ -71,7 +71,7 @@ export async function ShopHeader() {
           </Link>
         </div>
       </div>
-      <form action="/boutique" className="px-4 pb-3 md:hidden">
+      <form action="/boutique" className="px-4 pb-3 md:hidden" role="search" aria-label="Rechercher dans la boutique">
         <input
           name="q"
           placeholder="Rechercher…"
@@ -79,7 +79,7 @@ export async function ShopHeader() {
         />
       </form>
       {categories.length ? (
-        <nav className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
+        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
           {categories.map((c) => (
             <Link
               key={c.id}
@@ -114,15 +114,17 @@ export async function ShopFooter() {
           </div>
           <div className="text-sm leading-7 text-black/60">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Boutique</p>
-            <p className="mt-2">{NERA_IDENTITY.streetAddress}</p>
-            <p>
-              {NERA_IDENTITY.addressLocality}, {NERA_IDENTITY.addressCountryName}
-            </p>
-            <p>
-              <a className="hover:underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
-                {NERA_IDENTITY.phoneDisplay}
-              </a>
-            </p>
+            <address className="mt-2 not-italic">
+              <p>{NERA_IDENTITY.streetAddress}</p>
+              <p>
+                {NERA_IDENTITY.addressLocality}, {NERA_IDENTITY.addressCountryName}
+              </p>
+              <p>
+                <a className="hover:underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
+                  {NERA_IDENTITY.phoneDisplay}
+                </a>
+              </p>
+            </address>
             <p>{settings.email}</p>
             {settings.mtnPhone ? <p>MoMo / MTN : {settings.mtnPhone}</p> : null}
             {wa ? (

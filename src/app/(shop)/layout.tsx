@@ -8,7 +8,9 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <ShopHeader />
-      <div className="flex-1">{children}</div>
+      <main id="contenu" className="flex-1">
+        {children}
+      </main>
       <ShopFooter />
     </div>
   );

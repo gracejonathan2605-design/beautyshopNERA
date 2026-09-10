@@ -82,6 +82,7 @@ export default async function ProductPage({ params }: Props) {
           image,
           brand: product.brand?.name,
           category: product.category?.name,
+          sku: product.sku || variants[0]?.sku,
           price,
           inStock,
         })}

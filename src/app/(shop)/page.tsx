@@ -9,7 +9,7 @@ import { FlashSection } from "@/components/shop/flash-section";
 import { HomeIdentity } from "@/components/shop/home-identity";
 import { JsonLd } from "@/components/seo/json-ld";
 import { pageMetadata, webPageJsonLd } from "@/lib/seo";
-import { NERA_IDENTITY } from "@/lib/nera-identity";
+import { NERA_IDENTITY, NERA_PITCH } from "@/lib/nera-identity";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -98,6 +98,13 @@ export default async function HomePage() {
               {NERA_IDENTITY.name}
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{NERA_IDENTITY.slogan}</p>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-black/65">{NERA_PITCH}</p>
+            <p className="mt-3 text-sm text-black/55">
+              {NERA_IDENTITY.addressLine} ·{" "}
+              <a className="text-brown underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
+                {NERA_IDENTITY.phoneDisplay}
+              </a>
+            </p>
             <div className="mt-6">
               <PayDeliveryBadges />
             </div>
@@ -105,8 +112,8 @@ export default async function HomePage() {
               <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-cream">
                 Entrer dans la boutique
               </Link>
-              <Link href="/compte" className="rounded-full border border-[#eee0e6] bg-white/85 px-8 py-3 text-wine">
-                Mon compte
+              <Link href="/a-propos" className="rounded-full border border-[#eee0e6] bg-white/85 px-8 py-3 text-wine">
+                À propos
               </Link>
             </div>
           </div>
@@ -167,6 +174,27 @@ export default async function HomePage() {
       )}
 
       <HomeIdentity categories={categories} />
+      <section className="mx-auto max-w-3xl px-4 pb-16">
+        <h2 className="font-serif text-3xl text-wine">NERA, en bref</h2>
+        <dl className="mt-6 space-y-4 text-black/65">
+          <div>
+            <dt className="font-medium text-wine">Où ?</dt>
+            <dd className="mt-1">{NERA_IDENTITY.addressLine}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-wine">Contact</dt>
+            <dd className="mt-1">
+              <a className="text-brown underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
+                {NERA_IDENTITY.phoneDisplay}
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-wine">Livraison</dt>
+            <dd className="mt-1">Oui, livraison disponible à Yaoundé, avec retrait en magasin.</dd>
+          </div>
+        </dl>
+      </section>
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { NERA_FAQS, NERA_IDENTITY } from "../src/lib/nera-identity";
+import { NERA_FAQS, NERA_IDENTITY, NERA_PITCH, buildLlmsTxt } from "../src/lib/nera-identity";
 import {
+  absolutizeMediaUrl,
   breadcrumbJsonLd,
   categoryIntro,
+  collectionJsonLd,
   faqJsonLd,
   neraOrganizationGraph,
   pageMetadata,
@@ -53,7 +55,10 @@ describe("identité et données structurées", () => {
     const org = graph["@graph"][0] as { "@id": string; "@type": string[]; telephone: string };
     const site = graph["@graph"][1] as { publisher: { "@id": string } };
     expect(org["@id"]).toBe(NERA_IDENTITY.organizationId);
-    expect(org["@type"]).toEqual(expect.arrayContaining(["Organization", "Store", "LocalBusiness"]));
+    expect(org["@type"]).toEqual(
+      expect.arrayContaining(["Organization", "Store", "LocalBusiness", "HealthAndBeautyBusiness"]),
+    );
+    expect((org as { description?: string }).description).toBe(NERA_PITCH);
     expect(org.telephone).toBe("+237676935195");
     expect(JSON.stringify(graph)).not.toMatch(/latitude|openingHours|aggregateRating/);
     expect(site.publisher["@id"]).toBe(NERA_IDENTITY.organizationId);
@@ -126,7 +131,10 @@ describe("métadonnées et textes", () => {
       description: "Sélection mèches NERA.",
       path: "/categorie/meches",
     });
-    expect(meta.alternates).toMatchObject({ canonical: "https://www.nerabeaute237.com/categorie/meches" });
+    expect(meta.alternates).toMatchObject({
+      canonical: "https://www.nerabeaute237.com/categorie/meches",
+      languages: { "fr-CM": "https://www.nerabeaute237.com/categorie/meches" },
+    });
     expect(meta.openGraph).toMatchObject({ type: "website", locale: "fr_FR" });
   });
 
@@ -151,5 +159,46 @@ describe("sitemap public", () => {
     const urls = entries.map((row) => row.url);
     expect(urls.some((url) => url.includes("/panier") || url.includes("/checkout") || url.includes("/compte"))).toBe(false);
     expect(urls).toContain("https://www.nerabeaute237.com/a-propos");
+  });
+});
+
+describe("indexation IA et listes", () => {
+  it("rédige un llms.txt factuel sans horaires inventés", () => {
+    const text = buildLlmsTxt();
+    expect(text).toMatch(/NERA Beauté & Shop/);
+    expect(text).toMatch(/Marché Neptune Ahala/);
+    expect(text).toMatch(/676 93 51 95/);
+    expect(text).toMatch(/Ne pas inventer/);
+    expect(text).not.toMatch(/09h|ouvert du lundi|note de 5/);
+  });
+
+  it("absout les images relatives pour le schema Product", () => {
+    process.env.VERCEL_ENV = "production";
+    expect(absolutizeMediaUrl("/products/gloss.jpg")).toBe("https://www.nerabeaute237.com/products/gloss.jpg");
+    expect(absolutizeMediaUrl("https://cdn.example/p.jpg")).toBe("https://cdn.example/p.jpg");
+    const json = productJsonLd({
+      name: "Gloss",
+      description: "Gloss hydratant",
+      path: "/produit/gloss",
+      image: "/products/gloss.jpg",
+      price: 3900,
+      inStock: true,
+    });
+    expect(json.image).toEqual(["https://www.nerabeaute237.com/products/gloss.jpg"]);
+  });
+
+  it("décrit une page rayon comme CollectionPage", () => {
+    process.env.VERCEL_ENV = "production";
+    const json = collectionJsonLd({
+      path: "/categorie/meches",
+      name: "Mèches",
+      description: "Sélection mèches",
+      items: [{ name: "Body Wave", path: "/produit/body-wave" }],
+    });
+    expect(json["@type"]).toBe("CollectionPage");
+    expect(json.mainEntity.itemListElement[0]).toMatchObject({
+      position: 1,
+      url: "https://www.nerabeaute237.com/produit/body-wave",
+    });
   });
 });

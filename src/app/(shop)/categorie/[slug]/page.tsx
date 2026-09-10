@@ -8,7 +8,7 @@ import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-too
 import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
-import { breadcrumbJsonLd, categoryIntro, pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, categoryIntro, collectionJsonLd, pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -54,6 +54,14 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
+      <JsonLd
+        data={collectionJsonLd({
+          path: `/categorie/${category.slug}`,
+          name: category.name,
+          description: intro,
+          items: result.items.map((product) => ({ name: product.name, path: `/produit/${product.slug}` })),
+        })}
+      />
       <ShopBreadcrumbs
         items={[
           { name: "Accueil", href: "/" },
@@ -69,7 +77,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       </div>
 
       {category.children.length > 0 ? (
-        <div className="mt-6 flex flex-wrap gap-1.5">
+        <nav aria-label="Sous-rayons" className="mt-6 flex flex-wrap gap-1.5">
           {category.children.map((child) => (
             <Link
               key={child.id}
@@ -79,7 +87,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               {child.name}
             </Link>
           ))}
-        </div>
+        </nav>
       ) : null}
 
       <CatalogToolbar

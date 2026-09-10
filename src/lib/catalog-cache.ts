@@ -96,6 +96,7 @@ const productPageSelectWithoutFlash = {
   id: true,
   name: true,
   slug: true,
+  sku: true,
   description: true,
   shortDescription: true,
   status: true,
@@ -110,6 +111,7 @@ const productPageSelectWithoutFlash = {
     select: {
       id: true,
       name: true,
+      sku: true,
       salePrice: true,
       promoPrice: true,
       inventories: shopInventorySelect,

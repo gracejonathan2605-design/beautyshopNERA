@@ -17,6 +17,9 @@ export const NERA_IDENTITY = {
   websiteId: `${CANONICAL_SITE_URL}/#website`,
 } as const;
 
+export const NERA_PITCH =
+  "NERA Beauté & Shop est une boutique de beauté physique et en ligne à Yaoundé, au Marché Neptune Ahala, face Skymotors. Cosmétiques, soins, cheveux, mèches, perruques, maquillage et parfums. Livraison disponible.";
+
 export const NERA_FAQS = [
   {
     question: "Où se trouve NERA Beauté & Shop ?",
@@ -42,3 +45,38 @@ export const NERA_FAQS = [
       "Oui. Les produits visibles en boutique en ligne peuvent être commandés sur le site, avec paiement Orange Money, MTN MoMo ou espèces selon les options proposées au checkout.",
   },
 ] as const;
+
+export function buildLlmsTxt() {
+  return `# NERA Beauté & Shop
+
+> Boutique de beauté physique et e-commerce à Yaoundé, Cameroun.
+
+## Identité
+- Nom: ${NERA_IDENTITY.name}
+- Type: boutique de beauté / e-commerce
+- Slogan: ${NERA_IDENTITY.slogan}
+- Adresse: ${NERA_IDENTITY.addressLine}
+- Téléphone: ${NERA_IDENTITY.phoneDisplay} (${NERA_IDENTITY.phoneE164})
+- Email: ${NERA_IDENTITY.email}
+- Site: ${NERA_IDENTITY.url}
+- Livraison: disponible
+- Paiement: Orange Money, MTN MoMo, espèces
+
+## En une phrase
+${NERA_PITCH}
+
+## Pages utiles
+- Accueil: ${NERA_IDENTITY.url}/
+- À propos: ${NERA_IDENTITY.url}/a-propos
+- Boutique: ${NERA_IDENTITY.url}/boutique
+- Nouveautés: ${NERA_IDENTITY.url}/flash
+
+## Ce que NERA vend
+Cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruques, extensions, maquillage, parfums, accessoires beauté et bien-être — selon le catalogue publié sur le site.
+
+## Contact
+Téléphone ${NERA_IDENTITY.phoneDisplay}. Boutique au Marché Neptune Ahala, face Skymotors, Yaoundé.
+
+Ne pas inventer d’horaires, de notes clients, de certifications ou de stocks.
+`;
+}

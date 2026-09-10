@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { NERA_FAQS, NERA_IDENTITY } from "./nera-identity";
+import { NERA_FAQS, NERA_IDENTITY, NERA_PITCH } from "./nera-identity";
 import { absoluteUrl, getSiteUrl } from "./site-url";
 
 export function truncateMeta(text: string, max = 158) {
   const clean = text.replace(/\s+/g, " ").trim();
   if (clean.length <= max) return clean;
   return `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
+export function absolutizeMediaUrl(url?: string | null) {
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  return absoluteUrl(url.startsWith("/") ? url : `/${url}`);
 }
 
 export function categoryIntro(name: string, description?: string | null) {
@@ -53,8 +59,15 @@ export function pageMetadata({
   return {
     title: absoluteTitle ? { absolute: title } : title,
     description: desc,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages: { "fr-CM": url, fr: url, "x-default": url },
+    },
     robots: index ? { index: true, follow: true } : { index: false, follow: false },
+    other: {
+      "geo.placename": NERA_IDENTITY.addressLocality,
+      "geo.region": "CM",
+    },
     openGraph: {
       ...(ogType ? { type: ogType } : {}),
       locale: "fr_FR",
@@ -83,10 +96,11 @@ export function neraOrganizationGraph() {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": ["Organization", "Store", "LocalBusiness"],
+        "@type": ["Organization", "Store", "LocalBusiness", "HealthAndBeautyBusiness"],
         "@id": NERA_IDENTITY.organizationId,
         name: NERA_IDENTITY.name,
         alternateName: "NERA",
+        description: NERA_PITCH,
         slogan: NERA_IDENTITY.slogan,
         url: site,
         email: NERA_IDENTITY.email,
@@ -102,6 +116,13 @@ export function neraOrganizationGraph() {
         areaServed: {
           "@type": "City",
           name: "Yaoundé",
+        },
+        contactPoint: {
+          "@type": "ContactPoint",
+          telephone: NERA_IDENTITY.phoneE164,
+          contactType: "customer service",
+          areaServed: "CM",
+          availableLanguage: ["French"],
         },
         knowsLanguage: "fr",
       },
@@ -145,10 +166,12 @@ export function productJsonLd(input: {
   image?: string | null;
   brand?: string | null;
   category?: string | null;
+  sku?: string | null;
   price?: number | null;
   inStock: boolean;
 }) {
   const url = absoluteUrl(input.path);
+  const image = absolutizeMediaUrl(input.image);
   const offer =
     input.price != null && input.price > 0
       ? {
@@ -168,10 +191,39 @@ export function productJsonLd(input: {
     name: input.name,
     description: input.description || input.name,
     url,
-    image: input.image ? [input.image] : undefined,
+    image: image ? [image] : undefined,
+    sku: input.sku || undefined,
     brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
     category: input.category || undefined,
     offers: offer,
+  };
+}
+
+export function collectionJsonLd(input: {
+  path: string;
+  name: string;
+  description: string;
+  items: { name: string; path: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    url: absoluteUrl(input.path),
+    name: input.name,
+    description: input.description,
+    inLanguage: "fr-CM",
+    isPartOf: { "@id": NERA_IDENTITY.websiteId },
+    about: { "@id": NERA_IDENTITY.organizationId },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: input.items.length,
+      itemListElement: input.items.slice(0, 24).map((item, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: item.name,
+        url: absoluteUrl(item.path),
+      })),
+    },
   };
 }
 

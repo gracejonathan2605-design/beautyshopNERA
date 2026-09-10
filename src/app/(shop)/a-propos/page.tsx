@@ -38,13 +38,15 @@ export default async function AboutPage() {
         aussi une boutique en ligne pour commander les produits de la sélection NERA.
       </p>
       <h2 className="mt-10 font-serif text-3xl text-wine">Où nous trouver</h2>
-      <p className="mt-3 leading-relaxed text-black/65">{NERA_IDENTITY.addressLine}</p>
-      <p className="mt-2 leading-relaxed text-black/65">
-        Téléphone :{" "}
-        <a className="text-brown underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
-          {NERA_IDENTITY.phoneDisplay}
-        </a>
-      </p>
+      <address className="mt-3 not-italic leading-relaxed text-black/65">
+        <p>{NERA_IDENTITY.addressLine}</p>
+        <p className="mt-2">
+          Téléphone :{" "}
+          <a className="text-brown underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
+            {NERA_IDENTITY.phoneDisplay}
+          </a>
+        </p>
+      </address>
       <div className="mt-5">
         <PayDeliveryBadges />
       </div>
