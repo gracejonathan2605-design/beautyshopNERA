@@ -27,8 +27,10 @@ export default async function SettingsPage({
         <p>{NERA_IDENTITY.slogan}</p>
         <p className="mt-2">{NERA_IDENTITY.addressLine}</p>
         <p>Tél. {NERA_IDENTITY.phoneDisplay}</p>
+        <p className="mt-2">{NERA_IDENTITY.hoursWeekdays}</p>
+        <p>{NERA_IDENTITY.hoursSunday}</p>
         <p className="mt-3 text-xs text-black/50">
-          Nom, slogan, adresse et téléphone public sont figés pour rester identiques sur le site, les tickets POS et
+          Nom, slogan, adresse, téléphone public et horaires sont figés pour rester identiques sur le site, les tickets POS et
           Google. Ils ne se modifient pas ici.
         </p>
       </div>
@@ -86,9 +88,44 @@ export default async function SettingsPage({
 
       <section className="mt-8 rounded-2xl border border-[#eee0e6] bg-white p-5">
         <h2 className="font-serif text-2xl text-wine">Alerte WhatsApp des commandes site</h2>
+        <p className="mt-2 max-w-2xl text-sm text-black/70">
+          Vous collez les 3 valeurs <strong>ici</strong>, dans l’admin NERA — pas dans Green API, pas dans Vercel.
+        </p>
         <p className="mt-2 max-w-2xl text-sm text-black/60">
-          CallMeBot n’envoie souvent <strong>aucune clé</strong> au Cameroun. On utilise Green API : les identifiants
-          s’affichent sur le site, pas dans WhatsApp.
+          Sur Green API : ouvrez <strong>Instances</strong>, cliquez sur votre instance. Copiez uniquement les 3 lignes
+          ci-dessous (ignorez <code>mediaUrl</code>).
+        </p>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-[#eee0e6]">
+          <table className="w-full min-w-[32rem] text-left text-sm">
+            <thead className="bg-blush/50 text-wine">
+              <tr>
+                <th className="px-3 py-2 font-medium">Sur Green API, copiez</th>
+                <th className="px-3 py-2 font-medium">Collez dans le champ NERA</th>
+                <th className="px-3 py-2 font-medium">Exemple</th>
+              </tr>
+            </thead>
+            <tbody className="text-black/70">
+              <tr className="border-t border-[#eee0e6]">
+                <td className="px-3 py-2 font-mono text-xs">idInstance</td>
+                <td className="px-3 py-2">ID instance (idInstance)</td>
+                <td className="px-3 py-2 font-mono text-xs">1103123456</td>
+              </tr>
+              <tr className="border-t border-[#eee0e6] bg-blush/20">
+                <td className="px-3 py-2 font-mono text-xs">apiUrl</td>
+                <td className="px-3 py-2">URL API (apiUrl)</td>
+                <td className="px-3 py-2 font-mono text-xs">https://1103.api.green-api.com</td>
+              </tr>
+              <tr className="border-t border-[#eee0e6]">
+                <td className="px-3 py-2 font-mono text-xs">apiTokenInstance</td>
+                <td className="px-3 py-2">Token API (apiTokenInstance)</td>
+                <td className="px-3 py-2 text-xs">la longue clé secrète</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-black/50">
+          Le numéro qui reçoit les commandes est déjà {NERA_IDENTITY.phoneDisplay} (237676935195). Ne touchez pas à
+          mediaUrl. L’instance doit être autorisée : bouton Get QR, puis WhatsApp → Appareils liés → Lier un appareil.
         </p>
         <p className="mt-2 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           L’URL API est obligatoire. Dans Green API → Instances → votre instance, copiez la ligne <strong>apiUrl</strong>{" "}
@@ -105,6 +142,7 @@ export default async function SettingsPage({
           <li>Créez une instance, puis scannez le QR avec le WhatsApp boutique {NERA_IDENTITY.phoneDisplay}.</li>
           <li>Copiez idInstance, apiTokenInstance et apiUrl, collez-les ci-dessous, enregistrez, puis envoyez un test.</li>
         </ol>
+
         {canUpdate ? (
           <>
             <form action={saveSettings} className="mt-5 grid gap-3 md:grid-cols-2">

@@ -14,6 +14,7 @@ import { slugify } from "@/lib/pricing";
 import { parseCfaInput } from "@/lib/money";
 import { buildAutoSku } from "@/lib/sku";
 import { assignFlashOnPublish, isPublishedOnline } from "@/lib/flash";
+import { publishOnlineBlocker } from "@/lib/catalog-hygiene";
 import { assertUniqueBarcode } from "@/lib/barcode";
 
 function bounce(path: string, kind: "ok" | "erreur", message: string): never {
@@ -138,8 +139,20 @@ export async function toggleProductPublish(formData: FormData) {
   const session = await requireStaff("products.update");
   const productId = String(formData.get("productId") ?? "");
   const publish = String(formData.get("publish") ?? "") === "1";
-  const current = await prisma.product.findUnique({ where: { id: productId } });
+  const current = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { images: { where: { kind: "IMAGE" }, select: { id: true } } },
+  });
   if (!current || current.deletedAt) return;
+  if (publish) {
+    const empty = publishOnlineBlocker({
+      onlineVisible: true,
+      photoCount: current.images.length,
+      shortDescription: current.shortDescription,
+      description: current.description,
+    });
+    if (empty) bounce(`/admin/produits/${productId}`, "erreur", empty);
+  }
   const nextStatus = current.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE";
   const settings = await getShopSettings();
   const flash = assignFlashOnPublish({

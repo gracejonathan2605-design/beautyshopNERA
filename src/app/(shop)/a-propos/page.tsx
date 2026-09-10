@@ -11,7 +11,7 @@ import { getNavCategories } from "@/lib/catalog-cache";
 export const metadata: Metadata = pageMetadata({
   title: "À propos",
   description:
-    "NERA Beauté & Shop est une boutique de beauté à Yaoundé, au Marché Neptune Ahala, face Skymotors. Magasin et e-commerce, livraison disponible.",
+    "NERA Beauté & Shop, boutique de beauté à Yaoundé au Marché Neptune Ahala, face Skymotors. Ouvert lundi à samedi 8h–19h, dimanche 9h–15h. Livraison disponible.",
   path: "/a-propos",
 });
 
@@ -69,6 +69,9 @@ export default async function AboutPage() {
           ))}
         </ul>
       ) : null}
+      <h2 className="mt-10 font-serif text-3xl text-wine">Horaires</h2>
+      <p className="mt-3 leading-relaxed text-black/65">{NERA_IDENTITY.hoursWeekdays}</p>
+      <p className="mt-1 leading-relaxed text-black/65">{NERA_IDENTITY.hoursSunday}</p>
       <h2 className="mt-10 font-serif text-3xl text-wine">Pour qui</h2>
       <p className="mt-3 leading-relaxed text-black/65">
         Pour les clientes qui cherchent des produits de beauté et de soins à Yaoundé, avec un conseil en

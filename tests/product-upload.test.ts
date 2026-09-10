@@ -72,6 +72,7 @@ describe("import en lot", () => {
     expect(bulkDraftError({ name: "", categoryId: "c1", salePrice: "5000" })).toMatch(/nom/);
     expect(bulkDraftError({ name: "Gloss", categoryId: "", salePrice: "5000" })).toMatch(/rayon/);
     expect(bulkDraftError({ name: "Gloss", categoryId: "c1", salePrice: "0" })).toMatch(/prix/);
-    expect(bulkDraftError({ name: "Gloss", categoryId: "c1", salePrice: "3500" })).toBeNull();
+    expect(bulkDraftError({ name: "Gloss", categoryId: "c1", salePrice: "3500" })).toMatch(/description/);
+    expect(bulkDraftError({ name: "Gloss", categoryId: "c1", salePrice: "3500", shortDescription: "Lèvres." })).toBeNull();
   });
 });

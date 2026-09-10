@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { NERA_FAQS, NERA_IDENTITY, NERA_PITCH } from "./nera-identity";
+import { NERA_FAQS, NERA_IDENTITY, NERA_OPENING_HOURS, NERA_PITCH } from "./nera-identity";
 import { absoluteUrl, getSiteUrl } from "./site-url";
 
 export function truncateMeta(text: string, max = 158) {
@@ -124,7 +124,14 @@ export function neraOrganizationGraph() {
           areaServed: "CM",
           availableLanguage: ["French"],
         },
+        currenciesAccepted: "XAF",
+        paymentAccepted: "Cash, Orange Money, MTN Mobile Money",
+        openingHours: ["Mo-Sa 08:00-19:00", "Su 09:00-15:00"],
+        openingHoursSpecification: [...NERA_OPENING_HOURS],
         knowsLanguage: "fr",
+        ...(process.env.GOOGLE_BUSINESS_PROFILE_URL?.trim()
+          ? { sameAs: [process.env.GOOGLE_BUSINESS_PROFILE_URL.trim()] }
+          : {}),
       },
       {
         "@type": "WebSite",

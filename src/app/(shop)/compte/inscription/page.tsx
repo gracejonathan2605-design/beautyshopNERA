@@ -14,7 +14,13 @@ export default async function RegisterPage({
       </div>
       <p className="text-xs uppercase tracking-[0.28em] text-gold">Bienvenue</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Inscription</h1>
-      {error ? <p className="mt-3 text-sm text-red-700">Impossible de créer le compte.</p> : null}
+      {error === "exists" ? (
+        <p className="mt-3 text-sm text-red-700">Cet email ou ce téléphone est déjà utilisé.</p>
+      ) : error ? (
+        <p className="mt-3 text-sm text-red-700">
+          Impossible de créer le compte. Vérifiez les champs, ou contactez-nous au 676 93 51 95.
+        </p>
+      ) : null}
       <form action={registerCustomer} className="mt-8 space-y-3 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
         <input name="firstName" required placeholder="Prénom" className="w-full rounded-xl border px-4 py-3" />
         <input name="lastName" required placeholder="Nom" className="w-full rounded-xl border px-4 py-3" />

@@ -57,8 +57,8 @@ export default async function HomePage() {
             <p className="text-sm uppercase tracking-[0.32em] text-gold">Yaoundé · Cameroun</p>
             <h1 className="mt-4 font-serif text-6xl text-wine">NERA Beauté & Shop</h1>
             <p className="mt-4 max-w-xl text-lg text-black/65">
-              La boutique est en ligne, mais la base n’est pas encore reliée à Vercel. Ajoutez
-              DATABASE_URL et DIRECT_URL (pooler session Supabase) dans Project → Settings → Environment Variables, puis redéployez.
+              La boutique n’a pas pu charger le catalogue. Réessayez dans un instant, ou contactez-nous au{" "}
+              {NERA_IDENTITY.phoneDisplay}.
             </p>
           </div>
           <HeroProducts />
@@ -187,6 +187,14 @@ export default async function HomePage() {
               <a className="text-brown underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
                 {NERA_IDENTITY.phoneDisplay}
               </a>
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-wine">Horaires</dt>
+            <dd className="mt-1">
+              {NERA_IDENTITY.hoursWeekdays}
+              <br />
+              {NERA_IDENTITY.hoursSunday}
             </dd>
           </div>
           <div>
