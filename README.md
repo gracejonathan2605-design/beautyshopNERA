@@ -59,6 +59,8 @@ Le SQL Supabase est géré par `prisma migrate deploy` au build. Si Vercel affic
 2. **Domaine de production** : Settings → Domains → assigner le domaine au dernier déploiement Production.
 3. **Variables d’environnement** (Production + Preview) puis Redeploy : `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
+Le cron des commandes impayées tourne **une fois par jour** (03:00 UTC) : le plan Hobby Vercel refuse les crons horaires et **bloque alors tout déploiement**.
+
 Contrôle : `https://<domaine>/api/health` doit renvoyer `"ok": true`.
 
 ## Démarrage local

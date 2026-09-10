@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { barcodeConflictMessage, firstDuplicateBarcode, normalizeBarcode } from "../src/lib/barcode";
 import { cronAuthorized } from "../src/lib/cron-auth";
@@ -153,5 +154,13 @@ describe("cron", () => {
     expect(cronAuthorized(new Request("https://x"), { secret: "abc" })).toBe(false);
     expect(cronAuthorized(req, { secret: "", nodeEnv: "production" })).toBe(false);
     expect(cronAuthorized(req, { secret: "", nodeEnv: "development" })).toBe(true);
+  });
+
+  it("reste quotidien (plan Vercel Hobby)", () => {
+    const cfg = JSON.parse(readFileSync("vercel.json", "utf8")) as {
+      crons: { schedule: string }[];
+    };
+    const [, hour] = cfg.crons[0].schedule.split(" ");
+    expect(hour).toMatch(/^\d+$/);
   });
 });
