@@ -6,7 +6,7 @@ import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
 import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
-import { couponDiscountAmount, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
+import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
 import { normalizeCartItems } from "@/lib/cart";
 import { findCustomerByPhone } from "@/services/customer.service";
 import { unpaidOrderCutoff } from "@/lib/pending-orders";
@@ -87,10 +87,7 @@ export async function createOnlineOrder(input: {
       if (couponError || !coupon) throw new Error(couponError ?? "Coupon invalide");
       discount = couponDiscountAmount(coupon.type, coupon.value, subtotal);
       const claimed = await tx.coupon.updateMany({
-        where: {
-          id: coupon.id,
-          ...(coupon.maxUses !== null ? { usedCount: { lt: coupon.maxUses } } : {}),
-        },
+        where: couponClaimFilter(coupon),
         data: { usedCount: { increment: 1 } },
       });
       if (claimed.count !== 1) throw new Error("Ce code promo n’est plus disponible.");
@@ -158,102 +155,161 @@ export async function updateOrderStatus(input: {
   orderId: string;
   status: OrderStatus;
   userId?: string;
+  /** Cron : n’annule que si toujours PENDING et sans paiement COMPLETED. */
+  unpaidOnly?: boolean;
 }) {
   const locationId = await getDefaultLocationId();
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${input.orderId} FOR UPDATE`;
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
-      include: { items: true },
+      include: { items: true, payments: true },
     });
     if (!order) throw new Error("Commande introuvable");
-    const from = order.status;
-    const to = input.status;
-    if (from === to) return order;
-    if (!canTransitionOrder(from, to)) {
-      throw new Error("Ce changement de statut n’est pas autorisé (risque de stock).");
-    }
-
-    const effect = stockEffectForTransition(from, to);
-    if (effect === "release") {
-      for (const item of order.items) {
-        await applyStockChange(tx, {
-          variantId: item.variantId,
-          locationId,
-          type: "CANCELLATION",
-          quantity: 0,
-          reserveDelta: -item.quantity,
-          userId: input.userId,
-          reference: order.number,
-          comment: "Libération stock commande",
-        });
-      }
-    } else if (effect === "restock") {
-      for (const item of order.items) {
-        await applyStockChange(tx, {
-          variantId: item.variantId,
-          locationId,
-          type: "RETURN",
-          quantity: item.quantity,
-          userId: input.userId,
-          reference: order.number,
-          comment: "Retour commande",
-        });
-      }
-    } else if (effect === "ship") {
-      for (const item of order.items) {
-        await applyStockChange(tx, {
-          variantId: item.variantId,
-          locationId,
-          type: "SALE_ONLINE",
-          quantity: -item.quantity,
-          reserveDelta: -item.quantity,
-          userId: input.userId,
-          reference: order.number,
-          comment: "Expédition / livraison commande",
-        });
-      }
-      if (order.customerId) {
-        await tx.customer.update({
-          where: { id: order.customerId },
-          data: { totalSpent: { increment: order.total }, lastPurchaseAt: new Date() },
-        });
+    if (input.unpaidOnly) {
+      const paid = order.payments.some((p) => p.status === "COMPLETED");
+      if (order.status !== "PENDING" || paid) {
+        throw new Error("Commande déjà traitée ou payée.");
       }
     }
+    return applyLockedOrderStatus(tx, order, input.status, input.userId, locationId);
+  });
+}
 
-    const updated = await tx.order.update({
-      where: { id: order.id },
-      data: { status: to },
+type LockedOrder = Prisma.OrderGetPayload<{ include: { items: true; payments: true } }>;
+
+async function applyLockedOrderStatus(
+  tx: Prisma.TransactionClient,
+  order: LockedOrder,
+  to: OrderStatus,
+  userId: string | undefined,
+  locationId: string,
+) {
+  const from = order.status;
+  if (from === to) return order;
+  if (!canTransitionOrder(from, to)) {
+    throw new Error("Ce changement de statut n’est pas autorisé (risque de stock).");
+  }
+
+  const claimed = await tx.order.updateMany({
+    where: { id: order.id, status: from },
+    data: { status: to },
+  });
+  if (claimed.count !== 1) {
+    throw new Error("Cette commande a déjà changé de statut.");
+  }
+
+  const effect = stockEffectForTransition(from, to);
+  if (effect === "release") {
+    for (const item of order.items) {
+      await applyStockChange(tx, {
+        variantId: item.variantId,
+        locationId,
+        type: "CANCELLATION",
+        quantity: 0,
+        reserveDelta: -item.quantity,
+        userId,
+        reference: order.number,
+        comment: "Libération stock commande",
+      });
+    }
+  } else if (effect === "restock") {
+    for (const item of order.items) {
+      await applyStockChange(tx, {
+        variantId: item.variantId,
+        locationId,
+        type: "RETURN",
+        quantity: item.quantity,
+        userId,
+        reference: order.number,
+        comment: "Retour commande",
+      });
+    }
+    if (order.customerId) {
+      await tx.customer.update({
+        where: { id: order.customerId },
+        data: { totalSpent: { decrement: order.total } },
+      });
+    }
+  } else if (effect === "ship") {
+    for (const item of order.items) {
+      await applyStockChange(tx, {
+        variantId: item.variantId,
+        locationId,
+        type: "SALE_ONLINE",
+        quantity: -item.quantity,
+        reserveDelta: -item.quantity,
+        userId,
+        reference: order.number,
+        comment: "Expédition / livraison commande",
+      });
+    }
+    if (order.customerId) {
+      await tx.customer.update({
+        where: { id: order.customerId },
+        data: { totalSpent: { increment: order.total }, lastPurchaseAt: new Date() },
+      });
+    }
+  }
+
+  if (to === "CANCELLED" || to === "REFUNDED") {
+    await tx.payment.updateMany({
+      where: { orderId: order.id, status: "PENDING" },
+      data: { status: "FAILED" },
     });
-
-    if (to === "CANCELLED" || to === "REFUNDED") {
-      await tx.payment.updateMany({
-        where: { orderId: order.id, status: "PENDING" },
-        data: { status: "FAILED" },
+    await tx.payment.updateMany({
+      where: { orderId: order.id, status: "COMPLETED" },
+      data: { status: "REFUNDED" },
+    });
+    if (to === "CANCELLED" && order.couponCode) {
+      await tx.coupon.updateMany({
+        where: { code: order.couponCode, usedCount: { gt: 0 } },
+        data: { usedCount: { decrement: 1 } },
       });
-      await tx.payment.updateMany({
-        where: { orderId: order.id, status: "COMPLETED" },
-        data: { status: "REFUNDED" },
-      });
-      if (to === "CANCELLED" && order.couponCode) {
-        await tx.coupon.updateMany({
-          where: { code: order.couponCode, usedCount: { gt: 0 } },
-          data: { usedCount: { decrement: 1 } },
-        });
-      }
     }
+  }
 
-    await tx.auditLog.create({
+  await tx.auditLog.create({
+    data: {
+      userId: userId || undefined,
+      action: "ORDER_STATUS",
+      entity: "Order",
+      entityId: order.id,
+      before: { status: from },
+      after: { status: to },
+    },
+  });
+
+  return { ...order, status: to };
+}
+
+export async function collectCompletedOrderPayment(input: {
+  orderId: string;
+  userId: string;
+  cashierName: string;
+}) {
+  const locationId = await getDefaultLocationId();
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${input.orderId} FOR UPDATE`;
+    const order = await tx.order.findUnique({
+      where: { id: input.orderId },
+      include: { items: true, payments: true },
+    });
+    if (!order) throw new Error("Commande introuvable");
+    const pending = order.payments.find((p) => p.status === "PENDING");
+    if (!pending) throw new Error("Aucun paiement en attente sur cette commande");
+    const claimedPay = await tx.payment.updateMany({
+      where: { id: pending.id, status: "PENDING" },
       data: {
-        userId: input.userId || undefined,
-        action: "ORDER_STATUS",
-        entity: "Order",
-        entityId: order.id,
-        before: { status: from },
-        after: { status: to },
+        status: "COMPLETED",
+        note: `Encaissé par ${input.cashierName}`.trim(),
       },
     });
-
-    return updated;
+    if (claimedPay.count !== 1) throw new Error("Ce paiement a déjà été encaissé.");
+    if (order.status === "PENDING") {
+      await applyLockedOrderStatus(tx, order, "CONFIRMED", input.userId, locationId);
+    }
+    return order;
   });
 }
 
@@ -276,7 +332,7 @@ export async function releaseExpiredUnpaidOrders(now = new Date()) {
   let cancelled = 0;
   for (const order of orders) {
     try {
-      await updateOrderStatus({ orderId: order.id, status: "CANCELLED" });
+      await updateOrderStatus({ orderId: order.id, status: "CANCELLED", unpaidOnly: true });
       cancelled += 1;
     } catch {
       /* commande déjà traitée ou transition refusée */

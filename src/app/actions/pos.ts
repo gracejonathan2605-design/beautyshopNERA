@@ -175,7 +175,7 @@ export async function submitPosSale(input: {
   payments: { method: PaymentMethod; amount: number }[];
 }): Promise<PosSaleResult> {
   try {
-    const session = await requireStaff("pos.access");
+    const session = await requireStaff("pos.access", "sales.create");
     if (!input.lines.length) return { ok: false, error: "Ajoutez au moins un produit au ticket." };
     const open = await getOpenSessionForUser(session.userId);
     if (!open) return { ok: false, error: "Ouvrez d’abord la caisse avec le fond du matin." };
@@ -311,21 +311,26 @@ export async function discardHeldTicket(id: string) {
 export async function resumeHeldTicket(id: string) {
   try {
     const session = await requireStaff("pos.access");
-    const row = await prisma.heldTicket.findUnique({ where: { id } });
-    if (!row) return { ok: false as const, error: "Ticket introuvable." };
-    if (row.cashierId !== session.userId && !session.isSuperAdmin) {
-      return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
-    }
-    revalidatePath("/pos");
-    return {
-      ok: true as const,
-      ticket: {
-        id: row.id,
-        note: row.note,
-        createdAt: row.createdAt,
-        payload: row.payload as HeldTicketPayload,
-      } satisfies HeldTicketRow,
-    };
+    const result = await prisma.$transaction(async (tx) => {
+      const row = await tx.heldTicket.findUnique({ where: { id } });
+      if (!row) return { ok: false as const, error: "Ticket introuvable." };
+      if (row.cashierId !== session.userId && !session.isSuperAdmin) {
+        return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+      }
+      const claimed = await tx.heldTicket.deleteMany({ where: { id: row.id } });
+      if (claimed.count !== 1) return { ok: false as const, error: "Ticket déjà repris." };
+      return {
+        ok: true as const,
+        ticket: {
+          id: row.id,
+          note: row.note,
+          createdAt: row.createdAt,
+          payload: row.payload as HeldTicketPayload,
+        } satisfies HeldTicketRow,
+      };
+    });
+    if (result.ok) revalidatePath("/pos");
+    return result;
   } catch (err) {
     unstable_rethrow(err);
     if (isMissingHeldTicketStore(err)) return { ok: false as const, error: "Tickets en attente indisponibles." };

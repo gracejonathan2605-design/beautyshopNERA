@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
 import { writeAudit } from "@/lib/audit";
 import { adjustStock, receivePurchase } from "@/services/inventory.service";
-import { updateOrderStatus } from "@/services/order.service";
+import { updateOrderStatus, collectCompletedOrderPayment } from "@/services/order.service";
 import { slugify } from "@/lib/pricing";
 import { getShopSettings, saveShopSettings, type ShopSettings } from "@/lib/settings";
 import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
@@ -162,9 +162,7 @@ export type ProductFormState = {
 };
 
 function parseMoney(value: FormDataEntryValue | null) {
-  const raw = String(value ?? "").replace(/\s/g, "").replace(",", ".");
-  const n = Math.round(Number(raw));
-  return Number.isFinite(n) ? n : 0;
+  return parseCfaInput(String(value ?? ""));
 }
 
 function parsePromoPrice(value: FormDataEntryValue | null, salePrice: number) {
@@ -422,7 +420,7 @@ export async function saveProduct(
 }
 
 export async function updateProductPrice(formData: FormData) {
-  await requireStaff("products.update");
+  const session = await requireStaff("products.update");
   const variantId = String(formData.get("variantId") ?? "");
   const salePrice = parseMoney(formData.get("salePrice"));
   if (!variantId || salePrice <= 0) throw new Error("Prix invalide");
@@ -432,6 +430,7 @@ export async function updateProductPrice(formData: FormData) {
     include: { product: true },
   });
   await writeAudit({
+    userId: session.userId,
     action: "PRODUCT_PRICE_UPDATE",
     entity: "ProductVariant",
     entityId: variantId,
@@ -441,7 +440,7 @@ export async function updateProductPrice(formData: FormData) {
 }
 
 export async function deleteProduct(formData: FormData) {
-  await requireStaff("products.delete");
+  const session = await requireStaff("products.delete");
   const productId = String(formData.get("productId") ?? "");
   const product = await prisma.product.update({
     where: { id: productId },
@@ -451,7 +450,13 @@ export async function deleteProduct(formData: FormData) {
     where: { productId },
     data: { deletedAt: new Date(), isActive: false },
   });
-  await writeAudit({ action: "PRODUCT_DELETE", entity: "Product", entityId: productId, after: { name: product.name } });
+  await writeAudit({
+    userId: session.userId,
+    action: "PRODUCT_DELETE",
+    entity: "Product",
+    entityId: productId,
+    after: { name: product.name },
+  });
   refreshCatalog(product.slug);
 }
 
@@ -617,23 +622,11 @@ export async function collectOrderPayment(formData: FormData) {
   const session = await requireStaff("orders.update");
   const orderId = String(formData.get("orderId") ?? "");
   if (!orderId) throw new Error("Commande manquante");
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { payments: true },
+  await collectCompletedOrderPayment({
+    orderId,
+    userId: session.userId,
+    cashierName: `${session.firstName} ${session.lastName}`.trim(),
   });
-  if (!order) throw new Error("Commande introuvable");
-  const pending = order.payments.find((p) => p.status === "PENDING");
-  if (!pending) throw new Error("Aucun paiement en attente sur cette commande");
-  await prisma.payment.update({
-    where: { id: pending.id },
-    data: {
-      status: "COMPLETED",
-      note: `Encaissé par ${session.firstName} ${session.lastName}`.trim(),
-    },
-  });
-  if (order.status === "PENDING") {
-    await updateOrderStatus({ orderId, status: "CONFIRMED", userId: session.userId });
-  }
   revalidatePath("/admin/commandes");
   revalidatePath(`/admin/commandes/${orderId}`);
   revalidatePath("/admin/alertes");

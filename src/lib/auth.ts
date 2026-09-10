@@ -34,11 +34,11 @@ export type CustomerSession = {
   lastName: string;
 };
 
-async function signToken(payload: StaffSession | CustomerSession) {
+async function signToken(payload: StaffSession | CustomerSession, expires: string) {
   return new SignJWT(payload as unknown as JWTPayload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime(expires)
     .sign(secret());
 }
 
@@ -82,7 +82,7 @@ export async function createStaffSession(userId: string) {
     permissions: user.role.permissions.map((p) => p.permission.code as PermissionCode),
   };
 
-  const token = await signToken(session);
+  const token = await signToken(session, "12h");
   const jar = await cookies();
   jar.set(STAFF_COOKIE, token, {
     httpOnly: true,
@@ -106,7 +106,7 @@ export async function createCustomerSession(customerId: string) {
     firstName: customer.firstName,
     lastName: customer.lastName,
   };
-  const token = await signToken(session);
+  const token = await signToken(session, "14d");
   const jar = await cookies();
   jar.set(CUSTOMER_COOKIE, token, {
     httpOnly: true,
@@ -126,10 +126,34 @@ async function readStaffSession(): Promise<StaffSession | null> {
   if (!session || session.kind !== "staff") return null;
   const live = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { isActive: true, deletedAt: true },
+    select: {
+      isActive: true,
+      deletedAt: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      roleId: true,
+      role: {
+        select: {
+          name: true,
+          isSuperAdmin: true,
+          permissions: { select: { permission: { select: { code: true } } } },
+        },
+      },
+    },
   });
   if (!live?.isActive || live.deletedAt) return null;
-  return session;
+  return {
+    kind: "staff",
+    userId: session.userId,
+    email: live.email,
+    firstName: live.firstName,
+    lastName: live.lastName,
+    roleId: live.roleId,
+    roleName: live.role.name,
+    isSuperAdmin: live.role.isSuperAdmin,
+    permissions: live.role.permissions.map((p) => p.permission.code as PermissionCode),
+  };
 }
 
 async function readCustomerSession(): Promise<CustomerSession | null> {

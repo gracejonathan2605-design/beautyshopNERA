@@ -10,20 +10,20 @@ export function normalizePhone(value: string) {
 
 export async function findCustomerByPhone(phone: string) {
   const raw = phone.trim();
-  const digits = raw.replace(/\D/g, "");
+  const lastNine = phoneLastNine(raw);
   if (!raw) return null;
-  if (digits.length >= 8) {
-    const needle = `%${digits.slice(-9)}%`;
+  if (lastNine) {
     const rows = await prisma.$queryRaw<{ id: string }[]>`
       SELECT id FROM "Customer"
       WHERE "deletedAt" IS NULL AND "isActive" = true
-        AND regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g') LIKE ${needle}
+        AND right(regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g'), 9) = ${lastNine}
       ORDER BY "createdAt" DESC
       LIMIT 1
     `;
     if (rows[0]) {
       return prisma.customer.findUnique({ where: { id: rows[0].id } });
     }
+    return null;
   }
   return prisma.customer.findFirst({
     where: {
@@ -38,12 +38,11 @@ export async function findCustomerByPhone(phone: string) {
 export async function attachGuestOrdersByPhone(customerId: string, phone: string) {
   const lastNine = phoneLastNine(phone);
   if (!lastNine) return 0;
-  const needle = `%${lastNine}%`;
   const updated = await prisma.$executeRaw`
     UPDATE "Order"
     SET "customerId" = ${customerId}
     WHERE "customerId" IS NULL
-      AND regexp_replace(coalesce("shippingPhone", ''), '[^0-9]', '', 'g') LIKE ${needle}
+      AND right(regexp_replace(coalesce("shippingPhone", ''), '[^0-9]', '', 'g'), 9) = ${lastNine}
   `;
   return Number(updated);
 }

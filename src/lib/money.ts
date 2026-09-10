@@ -6,8 +6,10 @@ export function formatCfa(amount: number) {
   return `${formatter.format(Math.round(amount))} FCFA`;
 }
 
+/** FCFA n’a pas de sous-unité : espaces, points et virgules sont des séparateurs de milliers (ex. 10.000). */
 export function parseCfaInput(value: string) {
-  const cleaned = value.replace(/\s/g, "").replace(/,/g, "");
+  const cleaned = String(value ?? "").replace(/[\s.,]/g, "");
+  if (!cleaned) return 0;
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.round(n);

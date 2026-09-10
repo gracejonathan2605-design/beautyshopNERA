@@ -95,6 +95,7 @@ export async function closeCashSession(input: {
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "CashSession" WHERE id = ${input.sessionId} FOR UPDATE`;
     const session = await tx.cashSession.findUnique({
       where: { id: input.sessionId },
       select: {
@@ -122,9 +123,11 @@ export async function closeCashSession(input: {
       })),
     });
     const expectedCash = snap.expectedCash;
-    const actualCash =
-      input.actualCash == null || !Number.isFinite(input.actualCash) ? expectedCash : input.actualCash;
-    if (actualCash < 0) throw new Error("Le cash réel ne peut pas être négatif.");
+    const counted = input.actualCash;
+    if (counted != null && (!Number.isFinite(counted) || counted < 0)) {
+      throw new Error("Le cash réel ne peut pas être négatif.");
+    }
+    const actualCash = counted == null || !Number.isFinite(counted) ? Math.max(0, expectedCash) : counted;
     const difference = actualCash - expectedCash;
 
     const closed = await tx.cashSession.update({

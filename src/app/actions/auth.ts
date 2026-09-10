@@ -58,7 +58,7 @@ export async function loginCustomer(formData: FormData) {
   const next = String(formData.get("next") ?? "/compte");
   const fail = `/compte/connexion?error=1&next=${encodeURIComponent(next)}`;
   const customer = await prisma.customer.findUnique({ where: { email } });
-  if (!customer?.passwordHash || !customer.isActive) {
+  if (!customer?.passwordHash || !customer.isActive || customer.deletedAt) {
     const staff = await prisma.user.findFirst({
       where: { email, isActive: true, deletedAt: null },
       select: { id: true },

@@ -31,6 +31,19 @@ export function normalizeCouponCode(code: string | null | undefined) {
   return trimmed || null;
 }
 
+/** Filtre atomique pour incrémenter usedCount (ré-applique actif + dates + plafond). */
+export function couponClaimFilter(coupon: { id: string; maxUses: number | null }, now = new Date()) {
+  return {
+    id: coupon.id,
+    isActive: true as const,
+    AND: [
+      { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+      { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+    ],
+    ...(coupon.maxUses !== null ? { usedCount: { lt: coupon.maxUses } } : {}),
+  };
+}
+
 export async function quoteCoupon(code: string, subtotal: number) {
   const trimmed = normalizeCouponCode(code);
   if (!trimmed) {

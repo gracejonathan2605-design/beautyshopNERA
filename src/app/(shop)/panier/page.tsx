@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { getCart } from "@/lib/cart";
+import { cartCanCheckout, getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { setCartQtyForm } from "@/app/actions/shop";
-import { sellableOnlineWhere } from "@/lib/product-query";
+import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import Link from "next/link";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
@@ -23,7 +23,7 @@ export default async function CartPage({
           name: true,
           salePrice: true,
           promoPrice: true,
-          inventories: { select: { onHand: true, reserved: true } },
+          inventories: shopInventorySelect,
           product: { select: { name: true } },
         },
       })
@@ -35,7 +35,7 @@ export default async function CartPage({
     })
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
   const total = rows.reduce((s, r) => s + unitPrice(r.variant) * r.item.quantity, 0);
-  const canCheckout = rows.some((r) => r.available > 0);
+  const canCheckout = cartCanCheckout(rows.map((r) => ({ available: r.available, quantity: r.item.quantity })));
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -64,6 +64,10 @@ export default async function CartPage({
                 <p>{formatCfa(unitPrice(variant) * item.quantity)}</p>
                 {available <= 0 ? (
                   <p className="mt-1 text-xs text-wine">Bientôt de retour — retirez-le pour commander le reste.</p>
+                ) : available < item.quantity ? (
+                  <p className="mt-1 text-xs text-wine">
+                    Seulement {available} en stock — baissez la quantité pour commander.
+                  </p>
                 ) : null}
               </div>
               <div className="flex items-center gap-2">
@@ -100,7 +104,7 @@ export default async function CartPage({
             </Link>
           ) : (
             <p className="rounded-2xl bg-blush px-4 py-3 text-center text-sm text-wine">
-              Tous les articles sont en rupture. Ils restent visibles en boutique — bientôt de retour.
+              Ajustez ou retirez les articles en rupture avant de commander.
             </p>
           )}
         </div>

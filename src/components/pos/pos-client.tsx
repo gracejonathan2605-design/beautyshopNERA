@@ -208,7 +208,7 @@ export function PosClient({
       setError(`Il reste ${formatCfa(pay.remaining)} à encaisser.`);
       return;
     }
-    if (!pay.payments.length) {
+    if (!pay.payments.length && totals.total > 0) {
       setError("Indiquez un paiement.");
       return;
     }
@@ -292,7 +292,6 @@ export function PosClient({
       setMethod(payload.method ?? "CASH");
       setHeld((current) => current.filter((row) => row.id !== id));
       setTab("vente");
-      await discardHeldTicket(id);
     });
   }
 

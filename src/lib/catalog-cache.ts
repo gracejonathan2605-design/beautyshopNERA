@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isMissingFlashColumn, productCardSelect, withFlashProductSelect } from "@/lib/product-query";
+import { isMissingFlashColumn, productCardSelect, shopInventorySelect, withFlashProductSelect } from "@/lib/product-query";
 import { flashPrismaWhere } from "@/lib/flash";
 
 export async function getActiveFlashProducts(take = 16) {
@@ -111,7 +111,7 @@ const productPageSelectWithoutFlash = {
       name: true,
       salePrice: true,
       promoPrice: true,
-      inventories: { select: { onHand: true, reserved: true } },
+      inventories: shopInventorySelect,
     },
   },
   images: {
