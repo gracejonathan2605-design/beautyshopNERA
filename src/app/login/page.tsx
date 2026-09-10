@@ -5,6 +5,7 @@ import { loginStaff } from "@/app/actions/auth";
 import { getStaffSession } from "@/lib/auth";
 import { defaultStaffPath } from "@/lib/permissions";
 import { BrandLogo } from "@/components/brand/logo";
+import { PasswordField } from "@/components/shop/password-field";
 import { safeNextPath } from "@/lib/safe-path";
 
 export const metadata: Metadata = {
@@ -43,7 +44,14 @@ export default async function LoginPage({
         {error ? <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p> : null}
         <input type="hidden" name="next" value={safeNextPath(next ?? "", "/admin")} />
         <input name="email" type="email" required placeholder="Email" className="mt-6 w-full rounded-xl border border-[#eee0e6] px-4 py-3" />
-        <input name="password" type="password" required placeholder="Mot de passe" className="mt-3 w-full rounded-xl border border-[#eee0e6] px-4 py-3" />
+        <div className="mt-3">
+          <PasswordField
+            required
+            autoComplete="current-password"
+            placeholder="Mot de passe"
+            className="w-full rounded-xl border border-[#eee0e6] px-4 py-3"
+          />
+        </div>
         <button className="mt-6 w-full rounded-full bg-brown py-3 text-cream">Entrer</button>
         <p className="mt-6 text-center text-sm text-black/50">
           <Link href="/" className="underline">Retour à la boutique</Link>
