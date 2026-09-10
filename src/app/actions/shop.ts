@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import { shopPublicError } from "@/lib/shop-public-error";
+import { attachGuestOrdersByPhone } from "@/services/customer.service";
 
 async function availableForVariant(variantId: string) {
   const variant = await prisma.productVariant.findFirst({
