@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "NERA Beauté & Shop",
     short_name: "NERA",
-    description: "Boutique NERA Beauté — beauté, cheveux et mode à Yaoundé. Paiement OM & MoMo.",
+    description: "Boutique NERA Beauté & Shop — beauté à Yaoundé, magasin et e-commerce. Paiement OM & MoMo.",
     start_url: "/",
     scope: "/",
     display: "standalone",

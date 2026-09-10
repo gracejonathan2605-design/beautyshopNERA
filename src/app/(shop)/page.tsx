@@ -1,13 +1,26 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
 import { getHomeCatalog, getActiveFlashProducts } from "@/lib/catalog-cache";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { FlashSection } from "@/components/shop/flash-section";
+import { HomeIdentity } from "@/components/shop/home-identity";
+import { JsonLd } from "@/components/seo/json-ld";
+import { pageMetadata, webPageJsonLd } from "@/lib/seo";
+import { NERA_IDENTITY } from "@/lib/nera-identity";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+export const metadata: Metadata = pageMetadata({
+  title: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
+  description:
+    "NERA Beauté & Shop, boutique de beauté à Yaoundé au Marché Neptune Ahala, face Skymotors. Cosmétiques, soins, cheveux, mèches, perruques, maquillage et parfums — magasin et e-commerce. Livraison disponible.",
+  path: "/",
+  absoluteTitle: true,
+});
 
 const TRUST = [
   { title: "Paiement OM & MoMo", text: "Orange Money et MTN Mobile Money, en boutique comme en ligne." },
@@ -68,15 +81,23 @@ export default async function HomePage() {
 
   return (
     <div>
+      <JsonLd
+        data={webPageJsonLd({
+          path: "/",
+          name: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
+          description:
+            "Boutique de beauté physique et e-commerce à Yaoundé, Marché Neptune Ahala, face Skymotors.",
+        })}
+      />
       <section className="hero-light px-4 py-16 md:py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <div>
             <BrandLogo size="lg" priority className="mb-6" />
             <p className="text-sm uppercase tracking-[0.35em] text-gold">Maison de beauté · Yaoundé</p>
             <h1 className="mt-5 font-serif text-5xl leading-[1.05] text-wine md:text-6xl">
-              {settings.name}
+              {NERA_IDENTITY.name}
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{settings.slogan}</p>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{NERA_IDENTITY.slogan}</p>
             <div className="mt-6">
               <PayDeliveryBadges />
             </div>
@@ -145,19 +166,7 @@ export default async function HomePage() {
         ) : null,
       )}
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <div className="overflow-hidden rounded-[2.2rem] border border-[#eee0e6] bg-linear-to-br from-white via-blush to-champagne px-8 py-14 text-center md:px-16">
-          <p className="text-xs uppercase tracking-[0.3em] text-gold">La maison</p>
-          <h2 className="mt-3 font-serif text-4xl text-wine md:text-5xl">Une boutique où l’on aime rester</h2>
-          <p className="mx-auto mt-4 max-w-xl text-black/55">
-            Lumière claire, conseils chaleureux, produits que vous pouvez toucher. NERA, c’est la grande boutique beauté de
-            Yaoundé — en ligne comme en magasin.
-          </p>
-          <Link href="/boutique" className="mt-8 inline-block rounded-full bg-brown px-8 py-3 text-cream">
-            Voir les produits
-          </Link>
-        </div>
-      </section>
+      <HomeIdentity categories={categories} />
     </div>
   );
 }

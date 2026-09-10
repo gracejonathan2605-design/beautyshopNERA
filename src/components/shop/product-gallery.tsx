@@ -37,7 +37,7 @@ export function ProductGallery({ name, media }: { name: string; media: Media[] }
               onClick={() => setActive(index)}
               className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ${index === active ? "ring-2 ring-brown" : ""}`}
             >
-              <Image src={photo.url} alt="" fill className="object-cover" sizes="64px" loading="lazy" />
+              <Image src={photo.url} alt={`${name} — vue ${index + 1}`} fill className="object-cover" sizes="64px" loading="lazy" />
             </button>
           ))}
         </div>

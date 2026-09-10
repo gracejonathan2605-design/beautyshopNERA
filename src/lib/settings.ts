@@ -33,13 +33,13 @@ export type ShopSettings = {
 
 export const DEFAULT_SETTINGS: ShopSettings = {
   name: "NERA Beauté & Shop",
-  slogan: "Beauté, cheveux & mode — Yaoundé",
-  phone: "+237 696565654",
+  slogan: "Votre Beauté, notre Engagement ❤️",
+  phone: "676 93 51 95",
   email: "nerabeaute-shop@gmail.com",
   mtnPhone: "676935195",
   rccm: "CM-NSI-02-2026-B12-00534",
   nui: "M062618760084L",
-  address: "Marché Central",
+  address: "Marché Neptune Ahala, face Skymotors",
   city: "Yaoundé",
   country: "Cameroun",
   currency: "FCFA",

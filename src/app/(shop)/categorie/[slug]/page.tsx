@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ProductCard } from "@/components/shop/product-card";
 import { getCachedCategoryPage } from "@/lib/catalog-cache";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-toolbar";
+import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
+import { breadcrumbJsonLd, categoryIntro, pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,6 +18,23 @@ type Props = {
   searchParams: Promise<{ q?: string; vue?: string; tri?: string; page?: string }>;
 };
 
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const [{ slug }, raw] = await Promise.all([params, searchParams]);
+  const data = await getCachedCategoryPage(slug);
+  const query = parseBrowseQuery({ ...raw, rayon: slug });
+  const indexable = !query.q && query.vue === "all" && query.page <= 1;
+  if (!data) {
+    return pageMetadata({ title: "Catégorie", description: "Rayon NERA Beauté & Shop.", path: `/categorie/${slug}`, index: false });
+  }
+  const intro = categoryIntro(data.category.name, data.category.description);
+  return pageMetadata({
+    title: data.category.name,
+    description: intro,
+    path: `/categorie/${data.category.slug}`,
+    index: indexable,
+  });
+}
+
 export default async function CategoryPage({ params, searchParams }: Props) {
   const [{ slug }, raw] = await Promise.all([params, searchParams]);
   const data = await getCachedCategoryPage(slug);
@@ -22,22 +43,27 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const query = parseBrowseQuery({ ...raw, rayon: slug });
   const categoryIds = await descendantCategoryIds(category.id);
   const result = await browseShopProducts(query, categoryIds);
+  const intro = categoryIntro(category.name, category.description);
+  const crumbs = [
+    { name: "Accueil", path: "/" },
+    { name: "Boutique", path: "/boutique" },
+    ...(category.parent ? [{ name: category.parent.name, path: `/categorie/${category.parent.slug}` }] : []),
+    { name: category.name, path: `/categorie/${category.slug}` },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <p className="text-sm uppercase tracking-[0.3em] text-brown/70">
-        {category.parent ? (
-          <Link href={`/categorie/${category.parent.slug}`} className="hover:underline">
-            {category.parent.name}
-          </Link>
-        ) : (
-          "Catégorie"
-        )}
-      </p>
-      <h1 className="mt-2 font-serif text-5xl">{category.name}</h1>
-      {category.description ? (
-        <p className="mt-3 max-w-2xl text-black/60">{category.description}</p>
-      ) : null}
+      <JsonLd data={breadcrumbJsonLd(crumbs)} />
+      <ShopBreadcrumbs
+        items={[
+          { name: "Accueil", href: "/" },
+          { name: "Boutique", href: "/boutique" },
+          ...(category.parent ? [{ name: category.parent.name, href: `/categorie/${category.parent.slug}` }] : []),
+          { name: category.name },
+        ]}
+      />
+      <h1 className="mt-3 font-serif text-5xl">{category.name}</h1>
+      <p className="mt-3 max-w-2xl text-black/60">{intro}</p>
       <div className="mt-5">
         <PayDeliveryBadges />
       </div>
@@ -83,10 +109,4 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       />
     </div>
   );
-}
-
-export async function generateMetadata({ params }: Props) {
-  const { slug } = await params;
-  const data = await getCachedCategoryPage(slug);
-  return { title: data ? `${data.category.name} — NERA Beauté` : "Catégorie" };
 }

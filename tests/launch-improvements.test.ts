@@ -129,12 +129,14 @@ describe("ticket monnaie", () => {
 describe("sitemap et pagination SQL", () => {
   it("liste catégories et produits sous le plafond", () => {
     const entries = shopSitemapEntries({
-      base: "https://nerabeaute.cm/",
-      categories: [{ slug: "beaute" }],
+      base: "https://www.nerabeaute237.com/",
+      categories: [{ slug: "beaute" }, { slug: "soins-du-visage" }],
       products: [{ slug: "serum" }, { slug: "gloss" }],
     });
-    expect(entries.some((row) => row.url === "https://nerabeaute.cm/categorie/beaute")).toBe(true);
-    expect(entries.some((row) => row.url === "https://nerabeaute.cm/produit/serum")).toBe(true);
+    expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/categorie/beaute")).toBe(true);
+    expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/categorie/soins-du-visage")).toBe(true);
+    expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/produit/serum")).toBe(true);
+    expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/a-propos")).toBe(true);
     expect(SITEMAP_PRODUCT_CAP).toBe(5000);
   });
 

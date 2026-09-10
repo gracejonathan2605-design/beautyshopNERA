@@ -1,0 +1,196 @@
+import type { Metadata } from "next";
+import { NERA_FAQS, NERA_IDENTITY } from "./nera-identity";
+import { absoluteUrl, getSiteUrl } from "./site-url";
+
+export function truncateMeta(text: string, max = 158) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
+export function categoryIntro(name: string, description?: string | null) {
+  const fromDb = description?.replace(/\s+/g, " ").trim();
+  if (fromDb) return fromDb;
+  return `La sélection ${name} de NERA Beauté & Shop, boutique de beauté à Yaoundé. Commandez en ligne ou passez au Marché Neptune Ahala, face Skymotors.`;
+}
+
+export function productPlainText(description?: string | null, shortDescription?: string | null) {
+  return (description || shortDescription || "").replace(/\s+/g, " ").trim();
+}
+
+export function pageMetadata({
+  title,
+  description,
+  path,
+  image,
+  index = true,
+  ogType = "website",
+  absoluteTitle = false,
+}: {
+  title: string;
+  description: string;
+  path: string;
+  image?: string | null;
+  index?: boolean;
+  ogType?: "website" | "article";
+  absoluteTitle?: boolean;
+}): Metadata {
+  const url = absoluteUrl(path);
+  const desc = truncateMeta(description);
+  const ogImage = image
+    ? [{ url: image, alt: title }]
+    : [{ url: "/brand/nera-hero-products.jpg", alt: `${NERA_IDENTITY.name} — boutique beauté à Yaoundé` }];
+  const fullTitle = title.includes(NERA_IDENTITY.name) ? title : `${title} | ${NERA_IDENTITY.name}`;
+  return {
+    title: absoluteTitle ? { absolute: title } : title,
+    description: desc,
+    alternates: { canonical: url },
+    robots: index ? { index: true, follow: true } : { index: false, follow: false },
+    openGraph: {
+      type: ogType,
+      locale: "fr_FR",
+      siteName: NERA_IDENTITY.name,
+      title: fullTitle,
+      description: desc,
+      url,
+      images: ogImage,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description: desc,
+      images: ogImage.map((row) => row.url),
+    },
+  };
+}
+
+export const noindexMetadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
+export function neraOrganizationGraph() {
+  const site = getSiteUrl();
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["Organization", "Store", "LocalBusiness"],
+        "@id": NERA_IDENTITY.organizationId,
+        name: NERA_IDENTITY.name,
+        alternateName: "NERA",
+        slogan: NERA_IDENTITY.slogan,
+        url: site,
+        email: NERA_IDENTITY.email,
+        telephone: NERA_IDENTITY.phoneE164,
+        image: absoluteUrl("/brand/nera-logo.jpg"),
+        logo: absoluteUrl("/brand/nera-logo.jpg"),
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: NERA_IDENTITY.streetAddress,
+          addressLocality: NERA_IDENTITY.addressLocality,
+          addressCountry: NERA_IDENTITY.addressCountry,
+        },
+        areaServed: {
+          "@type": "City",
+          name: "Yaoundé",
+        },
+        knowsLanguage: "fr",
+      },
+      {
+        "@type": "WebSite",
+        "@id": NERA_IDENTITY.websiteId,
+        url: site,
+        name: NERA_IDENTITY.name,
+        inLanguage: "fr-CM",
+        publisher: { "@id": NERA_IDENTITY.organizationId },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${site}/boutique?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+}
+
+export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+export function productJsonLd(input: {
+  name: string;
+  description: string;
+  path: string;
+  image?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  price?: number | null;
+  inStock: boolean;
+}) {
+  const url = absoluteUrl(input.path);
+  const offer =
+    input.price != null && input.price > 0
+      ? {
+          "@type": "Offer",
+          url,
+          priceCurrency: "XAF",
+          price: String(input.price),
+          availability: input.inStock
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          seller: { "@id": NERA_IDENTITY.organizationId },
+        }
+      : undefined;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: input.name,
+    description: input.description || input.name,
+    url,
+    image: input.image ? [input.image] : undefined,
+    brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
+    category: input.category || undefined,
+    offers: offer,
+  };
+}
+
+export function faqJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: NERA_FAQS.map((row) => ({
+      "@type": "Question",
+      name: row.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: row.answer,
+      },
+    })),
+  };
+}
+
+export function webPageJsonLd(input: { path: string; name: string; description: string }) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${absoluteUrl(input.path)}#webpage`,
+    url: absoluteUrl(input.path),
+    name: input.name,
+    description: input.description,
+    isPartOf: { "@id": NERA_IDENTITY.websiteId },
+    about: { "@id": NERA_IDENTITY.organizationId },
+    inLanguage: "fr-CM",
+  };
+}

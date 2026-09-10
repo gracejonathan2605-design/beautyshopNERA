@@ -1,14 +1,15 @@
 import type { MetadataRoute } from "next";
-
-const BASE = process.env.APP_URL ?? "https://nerabeaute.cm";
+import { getSiteUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
+  const base = getSiteUrl();
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/login", "/admin", "/pos", "/compte", "/checkout", "/panier", "/commande"],
+      disallow: ["/login", "/admin", "/pos", "/compte", "/checkout", "/panier", "/commande", "/api/"],
     },
-    sitemap: `${BASE}/sitemap.xml`,
+    sitemap: `${base}/sitemap.xml`,
+    host: base.replace(/^https?:\/\//, ""),
   };
 }
