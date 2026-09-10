@@ -84,10 +84,15 @@ export function bulkDraftError(row: {
   name: string;
   categoryId: string;
   salePrice: string;
+  shortDescription?: string;
+  onlineVisible?: boolean;
 }) {
   if (!row.name.trim()) return "Indiquez le nom.";
   if (!row.categoryId.trim()) return "Choisissez un rayon.";
   const price = Number(String(row.salePrice).replace(/\s/g, "").replace(",", "."));
   if (!Number.isFinite(price) || price <= 0) return "Indiquez un prix en FCFA.";
+  if (row.onlineVisible !== false && !String(row.shortDescription ?? "").trim()) {
+    return "Ajoutez une courte description avant de publier en boutique.";
+  }
   return null;
 }

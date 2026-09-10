@@ -42,7 +42,7 @@ export async function ShopHeader() {
       <p className="bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-wine">
         Yaoundé · OM & MoMo · Livraison rapide sous 24h
       </p>
-      <div className="mx-auto flex max-w-6xl min-w-0 items-center justify-between gap-3 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
           <BrandLockup size="sm" priority />
         </Link>
@@ -53,23 +53,24 @@ export async function ShopHeader() {
             className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-5 py-2.5 text-sm"
           />
         </form>
-        <div className="flex shrink-0 items-center gap-3 text-sm">
+        <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1 text-sm sm:gap-x-3">
           <Link href="/flash" className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
-            Flash NERA
+            <span className="sm:hidden">Flash</span>
+            <span className="hidden sm:inline">Flash NERA</span>
           </Link>
           <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
             À propos
           </Link>
-          <Link href="/boutique" className="hidden text-wine/80 hover:text-wine sm:inline">
+          <Link href="/boutique" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Boutique
           </Link>
-          <Link href="/compte" className="hidden text-wine/80 hover:text-wine sm:inline">
+          <Link href="/compte" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Compte
           </Link>
-          <Link href="/panier" className="rounded-full bg-brown px-4 py-2 text-cream">
+          <Link href="/panier" className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
             Panier ({count})
           </Link>
-        </div>
+        </nav>
       </div>
       <form action="/boutique" className="px-4 pb-3 md:hidden" role="search" aria-label="Rechercher dans la boutique">
         <input

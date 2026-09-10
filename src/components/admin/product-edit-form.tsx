@@ -78,6 +78,8 @@ export function ProductEditForm({
         const nextName = String(new FormData(form).get("name") ?? "").trim();
         const nextCategory = String(new FormData(form).get("categoryId") ?? "").trim();
         const nextPrice = String(new FormData(form).get("salePrice") ?? "").trim();
+        const nextShort = String(new FormData(form).get("shortDescription") ?? "").trim();
+        const nextOnline = new FormData(form).get("onlineVisible") === "on";
         const photos = (form.elements.namedItem("photos") as HTMLInputElement | null)?.files;
         if (!nextName) {
           setClientError("Indiquez le nom du produit.");
@@ -89,6 +91,14 @@ export function ProductEditForm({
         }
         if (!nextPrice) {
           setClientError("Indiquez un prix de vente en FCFA.");
+          return;
+        }
+        if (nextOnline && photoCount + (photos?.length ?? 0) < 1) {
+          setClientError("Ajoutez au moins une photo avant de publier en boutique.");
+          return;
+        }
+        if (nextOnline && !nextShort) {
+          setClientError("Ajoutez une courte description avant de publier en boutique.");
           return;
         }
         if (photos && photos.length > remainingPhotos) {

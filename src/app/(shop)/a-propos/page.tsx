@@ -69,6 +69,11 @@ export default async function AboutPage() {
           ))}
         </ul>
       ) : null}
+      <h2 className="mt-10 font-serif text-3xl text-wine">Horaires</h2>
+      <p className="mt-3 leading-relaxed text-black/65">
+        Les horaires du magasin se confirment par téléphone ou WhatsApp au {NERA_IDENTITY.phoneDisplay}. Nous ne
+        publions pas d’horaires approximatifs.
+      </p>
       <h2 className="mt-10 font-serif text-3xl text-wine">Pour qui</h2>
       <p className="mt-3 leading-relaxed text-black/65">
         Pour les clientes qui cherchent des produits de beauté et de soins à Yaoundé, avec un conseil en

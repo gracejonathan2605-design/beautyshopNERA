@@ -33,6 +33,8 @@ export type BulkDraftInput = {
   name: string;
   categoryId: string;
   salePrice: string;
+  shortDescription?: string;
+  onlineVisible?: boolean;
 };
 
 export function bulkDraftIssues(row: BulkDraftInput) {
@@ -41,5 +43,6 @@ export function bulkDraftIssues(row: BulkDraftInput) {
   if (!row.categoryId.trim()) issues.push("Catégorie manquante");
   const price = Number(String(row.salePrice).replace(/\s/g, "").replace(",", "."));
   if (!Number.isFinite(price) || Math.round(price) <= 0) issues.push("Prix manquant");
+  if (row.onlineVisible !== false && !String(row.shortDescription ?? "").trim()) issues.push("Description manquante");
   return issues;
 }

@@ -124,7 +124,12 @@ export function neraOrganizationGraph() {
           areaServed: "CM",
           availableLanguage: ["French"],
         },
+        currenciesAccepted: "XAF",
+        paymentAccepted: "Cash, Orange Money, MTN Mobile Money",
         knowsLanguage: "fr",
+        ...(process.env.GOOGLE_BUSINESS_PROFILE_URL?.trim()
+          ? { sameAs: [process.env.GOOGLE_BUSINESS_PROFILE_URL.trim()] }
+          : {}),
       },
       {
         "@type": "WebSite",

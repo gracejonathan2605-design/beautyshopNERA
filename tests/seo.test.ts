@@ -61,6 +61,7 @@ describe("identité et données structurées", () => {
     expect((org as { description?: string }).description).toBe(NERA_PITCH);
     expect(org.telephone).toBe("+237676935195");
     expect(JSON.stringify(graph)).not.toMatch(/latitude|openingHours|aggregateRating/);
+    expect(org).not.toHaveProperty("sameAs");
     expect(site.publisher["@id"]).toBe(NERA_IDENTITY.organizationId);
   });
 

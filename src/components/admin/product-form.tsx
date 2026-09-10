@@ -62,6 +62,8 @@ export function ProductForm({
         const name = String(data.get("name") ?? "").trim();
         const categoryId = String(data.get("categoryId") ?? "").trim();
         const salePrice = String(data.get("variantSalePrice") ?? data.get("salePrice") ?? "").trim();
+        const shortDescription = String(data.get("shortDescription") ?? "").trim();
+        const onlineVisible = data.get("onlineVisible") === "on";
         const photos = (form.elements.namedItem("photos") as HTMLInputElement | null)?.files;
         if (!name) {
           setClientError("Indiquez le nom du produit.");
@@ -73,6 +75,14 @@ export function ProductForm({
         }
         if (!salePrice) {
           setClientError("Indiquez un prix de vente en FCFA.");
+          return;
+        }
+        if (onlineVisible && (!photos || photos.length === 0)) {
+          setClientError("Ajoutez au moins une photo avant de publier en boutique.");
+          return;
+        }
+        if (onlineVisible && !shortDescription) {
+          setClientError("Ajoutez une courte description avant de publier en boutique.");
           return;
         }
         if (photos && photos.length > MAX_PRODUCT_PHOTOS) {
@@ -99,7 +109,7 @@ export function ProductForm({
       <div className="md:col-span-4">
         <h2 className="font-serif text-2xl text-wine">Publier un nouveau produit</h2>
         <p className="mt-1 text-sm text-black/55">
-          Nom, rayon, prix — puis Publier. Les photos lourdes du téléphone sont réduites automatiquement (WebP, 1400 px) pour s’ouvrir vite en boutique.
+          Pour publier en boutique : nom, rayon, prix, <strong>une photo</strong> et une courte description. Sans photo ni texte, le produit reste hors ligne (caisse seulement si vous décochez « Publier en boutique »).
         </p>
       </div>
       {noCategories ? (

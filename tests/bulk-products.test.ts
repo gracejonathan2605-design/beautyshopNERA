@@ -42,10 +42,17 @@ describe("bulk product drafts", () => {
       "Nom manquant",
       "Catégorie manquante",
       "Prix manquant",
+      "Description manquante",
     ]);
-    expect(bulkDraftIssues({ name: "Sérum", categoryId: "cat_1", salePrice: "8500" })).toEqual([]);
+    expect(bulkDraftIssues({ name: "Sérum", categoryId: "cat_1", salePrice: "8500" })).toEqual([
+      "Description manquante",
+    ]);
+    expect(bulkDraftIssues({ name: "Sérum", categoryId: "cat_1", salePrice: "8500", shortDescription: "Éclat" })).toEqual(
+      [],
+    );
     expect(bulkDraftIssues({ name: "Sérum", categoryId: "cat_1", salePrice: "0" })).toEqual([
       "Prix manquant",
+      "Description manquante",
     ]);
   });
 
