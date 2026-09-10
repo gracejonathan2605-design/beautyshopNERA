@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Outfit } from "next/font/google";
 import "./globals.css";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
@@ -12,6 +12,12 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
   preload: false,
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#fffcfb",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),

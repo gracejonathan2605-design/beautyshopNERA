@@ -44,11 +44,20 @@ describe("pages légères (petite connexion)", () => {
     expect(src("src/app/(shop)/page.tsx")).toMatch(/PRODUCT_GRID_HOME_CLASS/);
   });
 
-  it("ne précharge pas le hero en plus du logo d’en-tête", () => {
-    expect(src("src/app/(shop)/page.tsx")).not.toMatch(/BrandLogo size="lg" priority/);
+  it("n’envoie pas le gros visuel d’accueil sur téléphone", () => {
     const logo = src("src/components/brand/logo.tsx");
     const hero = logo.slice(logo.indexOf("export function HeroProducts"));
-    expect(hero).not.toMatch(/priority/);
+    expect(hero).toMatch(/hidden/);
+    expect(hero).toMatch(/md:block/);
+    expect(hero).toMatch(/max-width: 767px\) 1px/);
+    expect(src("src/app/(shop)/page.tsx")).toMatch(/BrandLogo size="lg" className="mb-6 hidden md:block"/);
+  });
+
+  it("compacte l’en-tête mobile : une seule rangée de rayons, sans préchargement", () => {
+    const chrome = src("src/components/shop/chrome.tsx");
+    expect(chrome).toMatch(/overflow-x-auto/);
+    expect(chrome).toMatch(/prefetch=\{false\}/);
+    expect(src("src/components/shop/trust-badges.tsx").trimStart().startsWith('"use client"')).toBe(false);
   });
 
   it("ne charge plus 80 produits pour une fiche rayon", () => {

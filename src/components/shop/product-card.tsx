@@ -56,7 +56,7 @@ export function ProductCard({
           src={photo}
           alt={photoAlt}
           fill
-          className={`object-cover transition duration-500 group-hover:scale-105 ${inStock ? "" : "grayscale-[0.35]"}`}
+          className={`object-cover md:transition md:duration-500 md:group-hover:scale-105 ${inStock ? "" : "grayscale-[0.35]"}`}
           sizes={PRODUCT_CARD_SIZES}
           quality={SHOP_IMAGE_QUALITY}
           loading="lazy"

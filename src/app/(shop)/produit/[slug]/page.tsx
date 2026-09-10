@@ -114,7 +114,7 @@ export default async function ProductPage({ params }: Props) {
             isPromo={product.isPromo}
             isNew={product.isNew}
           />
-          <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
+          <h1 className="mt-2 font-serif text-3xl text-wine md:text-5xl">{product.name}</h1>
           {product.brand?.name ? <p className="mt-2 text-sm text-black/50">{product.brand.name}</p> : null}
           <ProductCopy description={product.description} shortDescription={product.shortDescription} />
           <ProductFacts
@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: Props) {
             variants={variants.map((v) => ({ name: v.name }))}
           />
           <div className="mt-5">
-            <PayDeliveryBadges />
+            <PayDeliveryBadges compact />
           </div>
           <ProductBuy
             variants={variants.map((v) => ({

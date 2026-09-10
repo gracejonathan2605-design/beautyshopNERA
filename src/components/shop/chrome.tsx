@@ -57,7 +57,7 @@ export async function ShopHeader() {
         Yaoundé · OM & MoMo · Livraison rapide sous 24h
       </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
-        <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
+        <Link href="/" prefetch={false} className="min-w-0 shrink" aria-label={settings.name}>
           <BrandLockup size="sm" priority />
         </Link>
         <form action="/boutique" className="hidden min-w-0 flex-1 md:block" role="search" aria-label="Rechercher dans la boutique">
@@ -68,20 +68,20 @@ export async function ShopHeader() {
           />
         </form>
         <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1 text-sm sm:gap-x-3">
-          <Link href="/flash" className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/flash" prefetch={false} className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             <span className="sm:hidden">Flash</span>
             <span className="hidden sm:inline">Flash NERA</span>
           </Link>
-          <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
+          <Link href="/a-propos" prefetch={false} className="hidden text-wine/80 hover:text-wine sm:inline">
             À propos
           </Link>
-          <Link href="/boutique" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/boutique" prefetch={false} className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Boutique
           </Link>
-          <Link href="/compte" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/compte" prefetch={false} className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Compte
           </Link>
-          <Link href="/panier" className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
+          <Link href="/panier" prefetch={false} className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
             Panier ({count})
           </Link>
         </nav>
@@ -94,13 +94,13 @@ export async function ShopHeader() {
         />
       </form>
       {categories.length ? (
-        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
+        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-4 pb-3 no-scrollbar md:flex-wrap md:justify-center">
           {categories.map((c) => (
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
               prefetch={false}
-              className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
+              className="max-w-full shrink-0 rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
             >
               {c.name}
             </Link>
@@ -117,10 +117,10 @@ export async function ShopFooter() {
   return (
     <>
       <JsonLd data={neraOrganizationGraph()} />
-      <footer className="mt-20 border-t border-[#eee0e6] bg-white/75">
+      <footer className="defer-paint mt-12 border-t border-[#eee0e6] bg-white/75 md:mt-20">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
-            <BrandLogo size="lg" />
+            <BrandLogo size="md" />
             <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{NERA_IDENTITY.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{NERA_IDENTITY.slogan}</p>
