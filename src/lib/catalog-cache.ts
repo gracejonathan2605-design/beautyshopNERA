@@ -3,19 +3,25 @@ import { prisma } from "@/lib/prisma";
 import { isMissingFlashColumn, productCardSelect, shopInventorySelect, withFlashProductSelect } from "@/lib/product-query";
 import { flashPrismaWhere } from "@/lib/flash";
 
-export async function getActiveFlashProducts(take = 16) {
-  const now = new Date();
-  try {
-    return await prisma.product.findMany({
-      where: flashPrismaWhere(now),
-      select: productCardSelect,
-      orderBy: { flashStartAt: "desc" },
-      take,
-    });
-  } catch (err) {
-    if (isMissingFlashColumn(err)) return [];
-    throw err;
-  }
+export function getActiveFlashProducts(take = 8) {
+  return unstable_cache(
+    async () => {
+      const now = new Date();
+      try {
+        return await prisma.product.findMany({
+          where: flashPrismaWhere(now),
+          select: productCardSelect,
+          orderBy: { flashStartAt: "desc" },
+          take,
+        });
+      } catch (err) {
+        if (isMissingFlashColumn(err)) return [];
+        throw err;
+      }
+    },
+    ["flash-products", String(take)],
+    { revalidate: 45, tags: ["catalog"] },
+  )();
 }
 
 export const getNavCategories = unstable_cache(
@@ -37,7 +43,7 @@ export const getHomeCatalog = unstable_cache(
         prisma.product.findMany({
           where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
           select,
-          take: 8,
+          take: 6,
         }),
         prisma.product.findMany({
           where: {
@@ -48,13 +54,13 @@ export const getHomeCatalog = unstable_cache(
             createdAt: { gte: since },
           },
           select,
-          take: 8,
+          take: 6,
           orderBy: { createdAt: "desc" },
         }),
         prisma.product.findMany({
           where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
           select,
-          take: 8,
+          take: 6,
         }),
         prisma.category.findMany({
           where: { isActive: true, parentId: null, deletedAt: null },
@@ -150,27 +156,7 @@ export function getCachedCategoryPage(slug: string) {
         },
       });
       if (!category || category.deletedAt || !category.isActive) return null;
-      const childIds = category.children.map((c) => c.id);
-      const grand = childIds.length
-        ? await prisma.category.findMany({
-            where: { parentId: { in: childIds }, isActive: true, deletedAt: null },
-            select: { id: true },
-          })
-        : [];
-      const products = await withFlashProductSelect((select) =>
-        prisma.product.findMany({
-          where: {
-            status: "ACTIVE",
-            onlineVisible: true,
-            deletedAt: null,
-            categoryId: { in: [category.id, ...childIds, ...grand.map((g) => g.id)] },
-          },
-          select,
-          orderBy: { name: "asc" },
-          take: 80,
-        }),
-      );
-      return { category, products };
+      return { category };
     },
     ["category-page", slug],
     { revalidate: 45, tags: ["catalog"] },

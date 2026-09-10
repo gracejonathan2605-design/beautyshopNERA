@@ -9,8 +9,8 @@ import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
 import { breadcrumbJsonLd, categoryIntro, collectionJsonLd, pageMetadata } from "@/lib/seo";
+import { PRODUCT_GRID_CLASS } from "@/lib/image-limits";
 
-export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Props = {
@@ -102,7 +102,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           Aucun produit dans cette catégorie pour le moment.
         </p>
       ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+        <div className={`mt-8 ${PRODUCT_GRID_CLASS}`}>
           {result.items.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

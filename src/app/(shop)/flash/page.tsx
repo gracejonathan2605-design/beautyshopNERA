@@ -3,8 +3,8 @@ import { getActiveFlashProducts } from "@/lib/catalog-cache";
 import { FlashProductCard } from "@/components/shop/flash-product-card";
 import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
 import { pageMetadata } from "@/lib/seo";
+import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
 
-export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata: Metadata = pageMetadata({
@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function FlashPage() {
-  const products = await getActiveFlashProducts(48);
+  const products = await getActiveFlashProducts(24);
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "FLASH NERA" }]} />
@@ -22,7 +22,7 @@ export default async function FlashPage() {
       <h1 className="mt-3 font-serif text-5xl text-wine md:text-6xl">FLASH NERA</h1>
       <p className="mt-4 max-w-2xl text-lg text-black/55">Les nouveautés du moment — une sélection qui ne reste pas longtemps en avant.</p>
       {products.length ? (
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+        <div className={`mt-10 ${PRODUCT_GRID_HOME_CLASS}`}>
           {products.map((product) => (
             <FlashProductCard key={product.id} product={product} />
           ))}

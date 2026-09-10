@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withFlashProductSelect } from "@/lib/product-query";
 import { displayUnitPrice } from "@/lib/stock-display";
 
-export const SHOP_PAGE_SIZE = 24;
+export const SHOP_PAGE_SIZE = 12;
 
 export type BrowseSort = "name" | "price-asc" | "price-desc" | "newest";
 export type BrowseView = "all" | "new" | "promo";

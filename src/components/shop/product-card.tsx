@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatCfa } from "@/lib/money";
@@ -8,8 +5,9 @@ import { promoPercent, unitPrice } from "@/lib/pricing";
 import { catalogPhotoFor } from "@/lib/product-photos";
 import { displayVariant, productInStock } from "@/lib/stock-display";
 import { isFlashActive } from "@/lib/flash";
+import { PRODUCT_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
 import { ProductBadges } from "@/components/shop/product-badges";
-import { FlashCountdown } from "@/components/shop/flash-countdown";
+import { ProductCardFlash } from "@/components/shop/product-card-flash";
 
 export function ProductCard({
   product,
@@ -33,7 +31,6 @@ export function ProductCard({
     images?: { url: string; alt: string | null }[];
   };
 }) {
-  const [flashGone, setFlashGone] = useState(false);
   const variant = displayVariant(product.variants);
   const price = variant ? unitPrice(variant) : 0;
   const percent = variant ? promoPercent(variant.salePrice, variant.promoPrice) : 0;
@@ -41,18 +38,17 @@ export function ProductCard({
   const inStock = productInStock(product.variants);
   const photo = product.images?.[0]?.url ?? catalogPhotoFor(product.slug, product.name);
   const photoAlt = product.images?.[0]?.alt ?? product.name;
-  const flash =
-    !flashGone &&
-    isFlashActive({
-      status: product.status ?? "ACTIVE",
-      onlineVisible: product.onlineVisible ?? true,
-      deletedAt: product.deletedAt,
-      flashStartAt: product.flashStartAt,
-      flashEndAt: product.flashEndAt,
-    });
+  const flash = isFlashActive({
+    status: product.status ?? "ACTIVE",
+    onlineVisible: product.onlineVisible ?? true,
+    deletedAt: product.deletedAt,
+    flashStartAt: product.flashStartAt,
+    flashEndAt: product.flashEndAt,
+  });
   return (
     <Link
       href={`/produit/${product.slug}`}
+      prefetch={false}
       className="group overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)] transition hover:-translate-y-0.5 hover:border-gold/50"
     >
       <div className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
@@ -61,7 +57,8 @@ export function ProductCard({
           alt={photoAlt}
           fill
           className={`object-cover transition duration-500 group-hover:scale-105 ${inStock ? "" : "grayscale-[0.35]"}`}
-          sizes="(max-width: 768px) 100vw, 25vw"
+          sizes={PRODUCT_CARD_SIZES}
+          quality={SHOP_IMAGE_QUALITY}
           loading="lazy"
         />
         <div className="absolute left-3 top-3">
@@ -73,8 +70,8 @@ export function ProductCard({
           </span>
         ) : null}
       </div>
-      <div className="p-4">
-        <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
+      <div className="p-3 sm:p-4">
+        <h3 className="font-serif text-lg leading-snug text-wine sm:text-xl">{product.name}</h3>
         <p className="mt-1 line-clamp-2 text-sm text-black/50">{product.shortDescription}</p>
         <p className="mt-3 text-sm font-medium text-wine">
           {onPromo && variant ? (
@@ -82,9 +79,7 @@ export function ProductCard({
           ) : null}
           {formatCfa(price)}
         </p>
-        {flash && product.flashEndAt ? (
-          <FlashCountdown endAt={product.flashEndAt} onExpired={() => setFlashGone(true)} />
-        ) : null}
+        {flash && product.flashEndAt ? <ProductCardFlash endAt={product.flashEndAt} /> : null}
         {!inStock ? <p className="mt-1 text-xs text-black/45">Indisponible pour le moment</p> : null}
       </div>
     </Link>

@@ -35,8 +35,8 @@ describe("navigation boutique", () => {
     expect(byPrice).toEqual(["A", "C", "B"]);
     const page = paginateItems([1, 2, 3, 4, 5], 2, 2);
     expect(page).toEqual({ items: [3, 4], total: 5, page: 2, pages: 3 });
-    expect(SHOP_PAGE_SIZE).toBe(24);
-    expect(catalogPageMeta(100, 2).skip).toBe(24);
+    expect(SHOP_PAGE_SIZE).toBe(12);
+    expect(catalogPageMeta(100, 2).skip).toBe(12);
   });
 });
 

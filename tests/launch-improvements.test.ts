@@ -143,7 +143,7 @@ describe("sitemap et pagination SQL", () => {
   it("calcule skip/take sans tout charger", () => {
     expect(catalogSkip(1)).toBe(0);
     expect(catalogSkip(3, 24)).toBe(48);
-    expect(SHOP_PAGE_SIZE).toBe(24);
+    expect(SHOP_PAGE_SIZE).toBe(12);
     expect(catalogPageMeta(50, 3, 24)).toEqual({ total: 50, page: 3, pages: 3, skip: 48, take: 24 });
     expect(catalogPageMeta(10, 9, 24).page).toBe(1);
   });

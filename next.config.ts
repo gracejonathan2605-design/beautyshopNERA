@@ -7,7 +7,11 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
-    formats: ["image/avif", "image/webp"],
+    // WebP seul : l’AVIF est plus lourd à encoder au 1er hit (lent sur 2G).
+    formats: ["image/webp"],
+    qualities: [50, 64, 75],
+    deviceSizes: [360, 414, 640, 750, 828, 1080],
+    imageSizes: [48, 64, 96, 128, 256],
     minimumCacheTTL: 60 * 60 * 24 * 14,
     remotePatterns: [
       {
@@ -27,6 +31,7 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
+    optimizePackageImports: ["lucide-react"],
     serverActions: {
       // Next autorise plus, mais Vercel coupe le corps HTTP vers ~4,5 Mo.
       // Les photos sont donc compressées côté navigateur avant l’action.
@@ -40,7 +45,7 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
       },
       {
-        source: "/icons/:path*",
+        source: "/products/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
       },
     ];

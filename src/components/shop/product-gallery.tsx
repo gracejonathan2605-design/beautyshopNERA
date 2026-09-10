@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
 
 type Media = { id: string; url: string; alt: string | null; kind: "IMAGE" | "VIDEO" };
 
@@ -21,6 +22,7 @@ export function ProductGallery({ name, media }: { name: string; media: Media[] }
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 50vw"
+            quality={SHOP_IMAGE_QUALITY}
             loading={active === 0 ? "eager" : "lazy"}
             priority={active === 0}
           />
