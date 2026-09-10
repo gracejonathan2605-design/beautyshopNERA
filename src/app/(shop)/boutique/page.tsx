@@ -34,7 +34,7 @@ export default async function BoutiquePage({
   const [rayons, result] = await Promise.all([shopRayons(), browseShopProducts(query)]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Accueil", path: "/" },
@@ -52,12 +52,12 @@ export default async function BoutiquePage({
       />
       <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "Boutique" }]} />
       <p className="mt-3 text-xs uppercase tracking-[0.28em] text-gold">Maison NERA</p>
-      <h1 className="mt-2 font-serif text-5xl text-wine">Boutique</h1>
+      <h1 className="mt-2 font-serif text-3xl text-wine md:text-5xl">Boutique</h1>
       <p className="mt-3 max-w-xl text-black/55">
         Soins, mèches, parfums et mode — filtrez par rayon, nouveauté ou promo. Les ruptures restent visibles.
       </p>
       <div className="mt-5">
-        <PayDeliveryBadges />
+        <PayDeliveryBadges compact />
       </div>
       <CatalogToolbar query={query} rayons={rayons} basePath="/boutique" />
       {query.q || query.rayon || query.vue !== "all" ? (

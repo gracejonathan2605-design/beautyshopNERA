@@ -1,5 +1,3 @@
-"use client";
-
 function OmMark() {
   return (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" aria-hidden>

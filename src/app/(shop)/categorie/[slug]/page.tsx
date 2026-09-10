@@ -52,7 +52,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
       <JsonLd
         data={collectionJsonLd({
@@ -70,19 +70,20 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           { name: category.name },
         ]}
       />
-      <h1 className="mt-3 font-serif text-5xl">{category.name}</h1>
+      <h1 className="mt-3 font-serif text-3xl md:text-5xl">{category.name}</h1>
       <p className="mt-3 max-w-2xl text-black/60">{intro}</p>
       <div className="mt-5">
-        <PayDeliveryBadges />
+        <PayDeliveryBadges compact />
       </div>
 
       {category.children.length > 0 ? (
-        <nav aria-label="Sous-rayons" className="mt-6 flex flex-wrap gap-1.5">
+        <nav aria-label="Sous-rayons" className="mt-6 flex gap-1.5 overflow-x-auto no-scrollbar md:flex-wrap">
           {category.children.map((child) => (
             <Link
               key={child.id}
               href={`/categorie/${child.slug}`}
-              className="max-w-full rounded-full border border-black/10 bg-cream px-3 py-1.5 text-xs hover:border-brown sm:text-sm"
+              prefetch={false}
+              className="max-w-full shrink-0 rounded-full border border-black/10 bg-cream px-3 py-1.5 text-xs hover:border-brown sm:text-sm"
             >
               {child.name}
             </Link>

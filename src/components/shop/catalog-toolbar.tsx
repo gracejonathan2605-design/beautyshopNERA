@@ -89,6 +89,7 @@ export function CatalogPagination({
         {page > 1 ? (
           <Link
             href={browseHref(basePath, query, { page: page - 1 })}
+            prefetch={false}
             className="rounded-full border border-[#eee0e6] px-4 py-2 text-wine"
           >
             Précédent
@@ -97,6 +98,7 @@ export function CatalogPagination({
         {page < pages ? (
           <Link
             href={browseHref(basePath, query, { page: page + 1 })}
+            prefetch={false}
             className="rounded-full bg-brown px-4 py-2 text-cream"
           >
             Suivant
