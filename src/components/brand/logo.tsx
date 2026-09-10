@@ -34,6 +34,7 @@ export function BrandLogo({
       height={px}
       priority={priority}
       className={`rounded-full object-cover shadow-[0_8px_24px_-12px_rgba(58,36,48,0.45)] ${className}`}
+      sizes={`${px}px`}
     />
   );
 }

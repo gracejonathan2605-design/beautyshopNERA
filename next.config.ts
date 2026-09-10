@@ -7,6 +7,8 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 14,
     remotePatterns: [
       {
         protocol: "https",
@@ -30,6 +32,18 @@ const nextConfig: NextConfig = {
       // Les photos sont donc compressées côté navigateur avant l’action.
       bodySizeLimit: "4.5mb",
     },
+  },
+  async headers() {
+    return [
+      {
+        source: "/brand/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
+      },
+    ];
   },
 };
 

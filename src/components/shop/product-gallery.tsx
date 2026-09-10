@@ -13,7 +13,7 @@ export function ProductGallery({ name, media }: { name: string; media: Media[] }
 
   return (
     <div>
-      <div className="relative min-h-80 overflow-hidden rounded-[2rem] bg-linear-to-br from-blush to-champagne">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-linear-to-br from-blush to-champagne">
         {current ? (
           <Image
             src={current.url}

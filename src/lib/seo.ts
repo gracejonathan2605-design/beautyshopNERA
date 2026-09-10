@@ -18,6 +18,14 @@ export function productPlainText(description?: string | null, shortDescription?:
   return (description || shortDescription || "").replace(/\s+/g, " ").trim();
 }
 
+/** Structure le texte existant. N’invente aucune caractéristique. */
+export function splitProductCopy(description?: string | null, shortDescription?: string | null) {
+  const short = shortDescription?.replace(/\s+/g, " ").trim() || "";
+  const long = description?.replace(/\s+/g, " ").trim() || "";
+  if (short && long && short !== long) return { lead: short, body: long };
+  return { lead: "", body: long || short };
+}
+
 export function pageMetadata({
   title,
   description,
@@ -32,7 +40,8 @@ export function pageMetadata({
   path: string;
   image?: string | null;
   index?: boolean;
-  ogType?: "website" | "article";
+  /** `null` : ne pas émettre og:type via l’API Next (ex. product, géré en balise). */
+  ogType?: "website" | "article" | null;
   absoluteTitle?: boolean;
 }): Metadata {
   const url = absoluteUrl(path);
@@ -47,7 +56,7 @@ export function pageMetadata({
     alternates: { canonical: url },
     robots: index ? { index: true, follow: true } : { index: false, follow: false },
     openGraph: {
-      type: ogType,
+      ...(ogType ? { type: ogType } : {}),
       locale: "fr_FR",
       siteName: NERA_IDENTITY.name,
       title: fullTitle,

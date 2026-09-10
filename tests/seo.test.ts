@@ -7,6 +7,7 @@ import {
   neraOrganizationGraph,
   pageMetadata,
   productJsonLd,
+  splitProductCopy,
   truncateMeta,
 } from "../src/lib/seo";
 import { getSiteUrl } from "../src/lib/site-url";
@@ -112,6 +113,12 @@ describe("métadonnées et textes", () => {
     expect(categoryIntro("Mèches")).toMatch(/Yaoundé/);
   });
 
+  it("structure une description courte sans inventer de caractéristiques", () => {
+    expect(splitProductCopy("Texte long", "Accroche")).toEqual({ lead: "Accroche", body: "Texte long" });
+    expect(splitProductCopy(null, "Gloss hydratant")).toEqual({ lead: "", body: "Gloss hydratant" });
+    expect(splitProductCopy("", "")).toEqual({ lead: "", body: "" });
+  });
+
   it("pose une canonical et un Open Graph sur chaque page helper", () => {
     process.env.VERCEL_ENV = "production";
     const meta = pageMetadata({
@@ -121,6 +128,16 @@ describe("métadonnées et textes", () => {
     });
     expect(meta.alternates).toMatchObject({ canonical: "https://www.nerabeaute237.com/categorie/meches" });
     expect(meta.openGraph).toMatchObject({ type: "website", locale: "fr_FR" });
+  });
+
+  it("omet og:type Next sur une fiche produit (balise product ailleurs)", () => {
+    const meta = pageMetadata({
+      title: "Gloss",
+      description: "Gloss hydratant",
+      path: "/produit/gloss",
+      ogType: null,
+    });
+    expect(meta.openGraph && "type" in meta.openGraph ? meta.openGraph.type : undefined).toBeUndefined();
   });
 });
 

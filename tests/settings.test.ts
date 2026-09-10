@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS, mergeShopSettings } from "../src/lib/settings";
+import { DEFAULT_SETTINGS, mergeShopSettings, toReceiptShop } from "../src/lib/settings";
 
 describe("paramètres boutique", () => {
   it("complète RCCM, NUI, email et MoMo si la base n’a pas encore ces champs", () => {
@@ -12,11 +12,26 @@ describe("paramètres boutique", () => {
     expect(merged.mtnPhone).toBe("676935195");
     expect(merged.rccm).toBe("CM-NSI-02-2026-B12-00534");
     expect(merged.nui).toBe("M062618760084L");
-    expect(merged.phone).toBe("+237 696565654");
+    expect(merged.phone).toBe("676 93 51 95");
+    expect(merged.address).toBe("Marché Neptune Ahala, face Skymotors");
+    expect(merged.slogan).toBe("Votre Beauté, notre Engagement ❤️");
     expect(merged.ticketFooter).toContain("Livraison rapide sous 24h");
     expect(merged.prefixes).toEqual(DEFAULT_SETTINGS.prefixes);
     expect(merged.flashDurationDays).toBe(10);
     expect(merged.pendingOrderHours).toBe(24);
+  });
+
+  it("aligne les tickets POS sur le NAP officiel même si la base a l’ancien numéro", () => {
+    const shop = toReceiptShop(
+      mergeShopSettings({
+        phone: "+237 696565654",
+        address: "Marché Central",
+        slogan: "Beauté, cheveux & mode — Yaoundé",
+      }),
+    );
+    expect(shop.phone).toBe("676 93 51 95");
+    expect(shop.address).toBe("Marché Neptune Ahala, face Skymotors");
+    expect(shop.name).toBe("NERA Beauté & Shop");
   });
 
   it("normalise une durée Flash invalide vers 10 jours", () => {

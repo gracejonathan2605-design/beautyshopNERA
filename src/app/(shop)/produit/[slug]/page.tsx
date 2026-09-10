@@ -13,10 +13,12 @@ import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { ProductFlashMeta } from "@/components/shop/product-flash-meta";
 import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
 import { JsonLd } from "@/components/seo/json-ld";
+import { ProductOpenGraphTags } from "@/components/seo/product-open-graph";
 import { isFlashActive } from "@/lib/flash";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, productPlainText, truncateMeta } from "@/lib/seo";
 import { productInStock } from "@/lib/stock-display";
+import { ProductCopy, ProductFacts } from "@/components/shop/product-copy";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -36,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: truncateMeta(desc),
     path: `/produit/${product.slug}`,
     image,
+    ogType: null,
   });
 }
 
@@ -69,6 +72,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
+      <ProductOpenGraphTags price={price} inStock={inStock} brand={product.brand?.name} />
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
       <JsonLd
         data={productJsonLd({
@@ -110,7 +114,14 @@ export default async function ProductPage({ params }: Props) {
           />
           <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
           {product.brand?.name ? <p className="mt-2 text-sm text-black/50">{product.brand.name}</p> : null}
-          <p className="mt-4 text-black/70">{product.description ?? product.shortDescription}</p>
+          <ProductCopy description={product.description} shortDescription={product.shortDescription} />
+          <ProductFacts
+            category={product.category}
+            brand={product.brand?.name}
+            price={price}
+            inStock={inStock}
+            variants={variants.map((v) => ({ name: v.name }))}
+          />
           <div className="mt-5">
             <PayDeliveryBadges />
           </div>

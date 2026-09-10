@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/guard";
 import { getShopSettings } from "@/lib/settings";
 import { saveSettings } from "@/app/actions/admin";
+import { NERA_IDENTITY } from "@/lib/nera-identity";
 
 export default async function SettingsPage() {
   await requireStaff("settings.view");
@@ -11,19 +12,18 @@ export default async function SettingsPage() {
       <p className="mt-2 max-w-xl text-sm text-black/55">
         Ces informations apparaissent sur le ticket de caisse (impression thermique 80 mm et WhatsApp).
       </p>
+      <div className="mt-6 rounded-2xl border border-[#eee0e6] bg-blush/40 p-5 text-sm leading-relaxed text-black/65">
+        <p className="text-xs uppercase tracking-[0.2em] text-gold">Identité officielle (NAP)</p>
+        <p className="mt-2 font-medium text-wine">{NERA_IDENTITY.name}</p>
+        <p>{NERA_IDENTITY.slogan}</p>
+        <p className="mt-2">{NERA_IDENTITY.addressLine}</p>
+        <p>Tél. {NERA_IDENTITY.phoneDisplay}</p>
+        <p className="mt-3 text-xs text-black/50">
+          Nom, slogan, adresse et téléphone public sont figés pour rester identiques sur le site, les tickets POS et
+          Google. Ils ne se modifient pas ici.
+        </p>
+      </div>
       <form action={saveSettings} className="mt-6 grid gap-3 rounded-2xl border border-[#eee0e6] bg-white p-5 md:grid-cols-2">
-        <label className="text-sm text-black/50">
-          Nom de la boutique
-          <input name="name" defaultValue={s.name} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
-        </label>
-        <label className="text-sm text-black/50">
-          Slogan
-          <input name="slogan" defaultValue={s.slogan} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
-        </label>
-        <label className="text-sm text-black/50">
-          Téléphone WhatsApp
-          <input name="phone" defaultValue={s.phone} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
-        </label>
         <label className="text-sm text-black/50">
           Email
           <input name="email" defaultValue={s.email} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
@@ -39,18 +39,6 @@ export default async function SettingsPage() {
         <label className="text-sm text-black/50">
           NUI
           <input name="nui" defaultValue={s.nui} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
-        </label>
-        <label className="text-sm text-black/50">
-          Adresse
-          <input name="address" defaultValue={s.address} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
-        </label>
-        <label className="text-sm text-black/50">
-          Ville
-          <input name="city" defaultValue={s.city} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
-        </label>
-        <label className="text-sm text-black/50 md:col-span-2">
-          Pays
-          <input name="country" defaultValue={s.country} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
         </label>
         <label className="text-sm text-black/50 md:col-span-2">
           Pied de ticket (imprimé et WhatsApp)

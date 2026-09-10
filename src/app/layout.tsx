@@ -23,7 +23,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   applicationName: NERA_IDENTITY.name,
   openGraph: {
-    type: "website",
     locale: "fr_FR",
     siteName: NERA_IDENTITY.name,
     title: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
@@ -53,9 +52,25 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  let mediaOrigin = "";
+  try {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      mediaOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin;
+    }
+  } catch {
+    mediaOrigin = "";
+  }
   return (
     <html lang="fr" className={`${outfit.variable} ${cormorant.variable} h-full`}>
-      <body className="min-h-full bg-background text-foreground antialiased">{children}</body>
+      <body className="min-h-full bg-background text-foreground antialiased">
+        {mediaOrigin ? (
+          <>
+            <link rel="preconnect" href={mediaOrigin} />
+            <link rel="dns-prefetch" href={mediaOrigin} />
+          </>
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }
