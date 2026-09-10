@@ -47,6 +47,8 @@ describe("identité et données structurées", () => {
     expect(NERA_IDENTITY.phoneDisplay).toBe("676 93 51 95");
     expect(NERA_IDENTITY.phoneE164).toBe("+237676935195");
     expect(NERA_IDENTITY.url).toBe("https://www.nerabeaute237.com");
+    expect(NERA_IDENTITY.hoursWeekdays).toMatch(/8h/);
+    expect(NERA_IDENTITY.hoursSunday).toMatch(/9h/);
   });
 
   it("relie Organization, Store et WebSite au même @id", () => {
@@ -60,7 +62,10 @@ describe("identité et données structurées", () => {
     );
     expect((org as { description?: string }).description).toBe(NERA_PITCH);
     expect(org.telephone).toBe("+237676935195");
-    expect(JSON.stringify(graph)).not.toMatch(/latitude|openingHours|aggregateRating/);
+    expect(JSON.stringify(graph)).not.toMatch(/latitude|aggregateRating/);
+    expect(JSON.stringify(graph)).toMatch(/OpeningHoursSpecification/);
+    expect(JSON.stringify(graph)).toMatch(/Mo-Sa 08:00-19:00/);
+    expect(JSON.stringify(graph)).toMatch(/Su 09:00-15:00/);
     expect(org).not.toHaveProperty("sameAs");
     expect(site.publisher["@id"]).toBe(NERA_IDENTITY.organizationId);
   });
@@ -164,13 +169,15 @@ describe("sitemap public", () => {
 });
 
 describe("indexation IA et listes", () => {
-  it("rédige un llms.txt factuel sans horaires inventés", () => {
+  it("rédige un llms.txt factuel avec les horaires NERA", () => {
     const text = buildLlmsTxt();
     expect(text).toMatch(/NERA Beauté & Shop/);
     expect(text).toMatch(/Marché Neptune Ahala/);
     expect(text).toMatch(/676 93 51 95/);
+    expect(text).toMatch(/8h – 19h/);
+    expect(text).toMatch(/9h – 15h/);
     expect(text).toMatch(/Ne pas inventer/);
-    expect(text).not.toMatch(/09h|ouvert du lundi|note de 5/);
+    expect(text).not.toMatch(/note de 5/);
   });
 
   it("absout les images relatives pour le schema Product", () => {

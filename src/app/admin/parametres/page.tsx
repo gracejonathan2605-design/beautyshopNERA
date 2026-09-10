@@ -27,8 +27,10 @@ export default async function SettingsPage({
         <p>{NERA_IDENTITY.slogan}</p>
         <p className="mt-2">{NERA_IDENTITY.addressLine}</p>
         <p>Tél. {NERA_IDENTITY.phoneDisplay}</p>
+        <p className="mt-2">{NERA_IDENTITY.hoursWeekdays}</p>
+        <p>{NERA_IDENTITY.hoursSunday}</p>
         <p className="mt-3 text-xs text-black/50">
-          Nom, slogan, adresse et téléphone public sont figés pour rester identiques sur le site, les tickets POS et
+          Nom, slogan, adresse, téléphone public et horaires sont figés pour rester identiques sur le site, les tickets POS et
           Google. Ils ne se modifient pas ici.
         </p>
       </div>

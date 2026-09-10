@@ -125,6 +125,8 @@ export async function ShopFooter() {
                   {NERA_IDENTITY.phoneDisplay}
                 </a>
               </p>
+              <p className="mt-2">{NERA_IDENTITY.hoursWeekdays}</p>
+              <p>{NERA_IDENTITY.hoursSunday}</p>
             </address>
             <p>{settings.email}</p>
             {settings.mtnPhone ? <p>MoMo / MTN : {settings.mtnPhone}</p> : null}

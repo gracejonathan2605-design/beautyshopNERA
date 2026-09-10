@@ -190,6 +190,14 @@ export default async function HomePage() {
             </dd>
           </div>
           <div>
+            <dt className="font-medium text-wine">Horaires</dt>
+            <dd className="mt-1">
+              {NERA_IDENTITY.hoursWeekdays}
+              <br />
+              {NERA_IDENTITY.hoursSunday}
+            </dd>
+          </div>
+          <div>
             <dt className="font-medium text-wine">Livraison</dt>
             <dd className="mt-1">Oui, livraison disponible à Yaoundé, avec retrait en magasin.</dd>
           </div>
