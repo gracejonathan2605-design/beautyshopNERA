@@ -18,6 +18,8 @@ import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
 import { assignFlashOnPublish, isPublishedOnline, normalizeFlashDurationDays } from "@/lib/flash";
+import { cleanProductTitle, publishOnlineBlocker } from "@/lib/catalog-hygiene";
+import { applyCatalogHygiene } from "@/services/catalog-hygiene.service";
 import { normalizePendingOrderHours } from "@/lib/pending-orders";
 import { sendStaffOrderWhatsApp } from "@/lib/order-alert";
 import { assertUniqueBarcode, firstDuplicateBarcode } from "@/lib/barcode";
@@ -257,7 +259,7 @@ export async function saveProduct(
 ): Promise<ProductFormState> {
   try {
     const session = await requireStaff("products.create");
-    const name = String(formData.get("name") ?? "").trim();
+    const name = cleanProductTitle(String(formData.get("name") ?? "").trim()).name;
     if (!name) return { ok: false, error: "Indiquez le nom du produit." };
 
     const categoryId = String(formData.get("categoryId") ?? "").trim();
@@ -310,6 +312,18 @@ export async function saveProduct(
     const isPromo = formData.get("isPromo") === "on" || variantInputs.some((v) => v.promoPrice != null);
     const isNew = formData.get("isNew") === "on";
     const onlineVisible = formData.get("onlineVisible") === "on";
+    const shortDescription = String(formData.get("shortDescription") ?? "").trim() || null;
+    const description = String(formData.get("description") ?? "").trim() || null;
+    const incomingPhotos = formData
+      .getAll("photos")
+      .filter((item): item is File => item instanceof File && item.size > 0);
+    const emptyPublish = publishOnlineBlocker({
+      onlineVisible,
+      photoCount: incomingPhotos.length,
+      shortDescription,
+      description,
+    });
+    if (emptyPublish) return { ok: false, error: emptyPublish };
     const brandId = String(formData.get("brandId") ?? "").trim() || null;
     const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
     const status = "ACTIVE";
@@ -339,8 +353,8 @@ export async function saveProduct(
       data: {
         name,
         slug: `${slugify(name) || "produit"}-${Date.now().toString().slice(-6)}`,
-        shortDescription: String(formData.get("shortDescription") ?? "") || null,
-        description: String(formData.get("description") ?? "") || null,
+        shortDescription,
+        description,
         sku,
         status,
         categoryId,
@@ -468,7 +482,7 @@ export async function updateProduct(
   try {
     const session = await requireStaff("products.update");
     const productId = String(formData.get("productId") ?? "");
-    const name = String(formData.get("name") ?? "").trim();
+    const name = cleanProductTitle(String(formData.get("name") ?? "").trim()).name;
     const categoryId = String(formData.get("categoryId") ?? "").trim();
     const salePrice = parseMoney(formData.get("salePrice"));
     const promoPrice = parsePromoPrice(formData.get("promoPrice"), salePrice);
@@ -477,6 +491,7 @@ export async function updateProduct(
     const onlineVisible = formData.get("onlineVisible") === "on";
     const brandId = String(formData.get("brandId") ?? "").trim() || null;
     const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
+    const shortDescription = String(formData.get("shortDescription") ?? "").trim() || null;
     if (!productId || !name) return { ok: false, error: "Nom requis" };
     if (!categoryId) return { ok: false, error: "Catégorie obligatoire" };
     if (salePrice <= 0) return { ok: false, error: "Prix invalide" };
@@ -502,6 +517,13 @@ export async function updateProduct(
     if (hasVideo && incomingVideo instanceof File && incomingVideo.size > 0) {
       return { ok: false, error: "Ce produit a déjà une vidéo. Supprimez-la avant d’en ajouter une autre." };
     }
+    const emptyPublish = publishOnlineBlocker({
+      onlineVisible,
+      photoCount: photoCount + incomingPhotos.length,
+      shortDescription,
+      description: current.description,
+    });
+    if (emptyPublish) return { ok: false, error: emptyPublish };
 
     const nextStatus = current.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE";
     const settings = await getShopSettings();
@@ -518,7 +540,7 @@ export async function updateProduct(
       data: {
         name,
         categoryId,
-        shortDescription: String(formData.get("shortDescription") ?? "") || null,
+        shortDescription,
         isFeatured: formData.get("isFeatured") === "on",
         isPromo,
         isNew: formData.get("isNew") === "on",
@@ -741,4 +763,29 @@ export async function sendTestOrderWhatsApp() {
     );
   }
   bounceSettings("ok", "Message test envoyé. Ouvrez WhatsApp sur le numéro boutique 676 93 51 95.");
+}
+
+function bounceProducts(kind: "ok" | "erreur", message: string): never {
+  const q = new URLSearchParams();
+  q.set(kind, message);
+  redirect(`/admin/produits?${q.toString()}`);
+}
+
+export async function cleanupLiveCatalog() {
+  const session = await requireStaff("products.update");
+  try {
+    const result = await applyCatalogHygiene(session.userId);
+    updateTag("catalog");
+    revalidatePath("/admin/produits");
+    revalidatePath("/boutique");
+    revalidatePath("/");
+    revalidatePath("/flash");
+    bounceProducts(
+      "ok",
+      `Catalogue nettoyé : ${result.renamed} nom(s), ${result.unpublished} doublon(s) ou fiche(s) vide(s) retirés de la boutique, ${result.sheets} fiches phares.`,
+    );
+  } catch (err) {
+    unstable_rethrow(err);
+    bounceProducts("erreur", "Le nettoyage n’a pas abouti. Réessayez dans un instant.");
+  }
 }

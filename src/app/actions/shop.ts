@@ -12,7 +12,7 @@ import { quoteCoupon } from "@/lib/coupon";
 import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
-import { attachGuestOrdersByPhone } from "@/services/customer.service";
+import { shopPublicError } from "@/lib/shop-public-error";
 
 async function availableForVariant(variantId: string) {
   const variant = await prisma.productVariant.findFirst({
@@ -139,7 +139,7 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     }
   } catch (err) {
     unstable_rethrow(err);
-    return { ok: false, error: err instanceof Error ? err.message : "Commande impossible pour le moment." };
+    return { ok: false, error: shopPublicError(err) };
   }
 }
 
@@ -194,7 +194,7 @@ export async function updateCustomerProfile(
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return { ok: false, error: "Cet email est déjà utilisé." };
     }
-    return { ok: false, error: err instanceof Error ? err.message : "Enregistrement impossible." };
+    return { ok: false, error: shopPublicError(err) };
   }
 }
 

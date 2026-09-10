@@ -28,6 +28,11 @@ export function HomeIdentity({ categories }: { categories: { name: string; slug:
                 {NERA_IDENTITY.phoneDisplay}
               </a>
             </p>
+            <p className="mt-2 text-black/60">
+              {NERA_IDENTITY.hoursWeekdays}
+              <br />
+              {NERA_IDENTITY.hoursSunday}
+            </p>
           </div>
           <div>
             <h3 className="font-serif text-2xl text-wine">Pour qui, et quels services ?</h3>

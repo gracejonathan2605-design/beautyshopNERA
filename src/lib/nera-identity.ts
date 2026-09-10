@@ -15,7 +15,26 @@ export const NERA_IDENTITY = {
   email: "nerabeaute-shop@gmail.com",
   organizationId: `${CANONICAL_SITE_URL}/#organization`,
   websiteId: `${CANONICAL_SITE_URL}/#website`,
+  hoursWeekdays: "Lundi à samedi : 8h – 19h",
+  hoursSunday: "Dimanche : 9h – 15h",
+  hoursSummary: "lundi à samedi de 8h à 19h, dimanche de 9h à 15h",
 } as const;
+
+/** Horaires magasin (Yaoundé, WAT) — fournis par NERA, pas approximatifs. */
+export const NERA_OPENING_HOURS = [
+  {
+    "@type": "OpeningHoursSpecification",
+    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    opens: "08:00",
+    closes: "19:00",
+  },
+  {
+    "@type": "OpeningHoursSpecification",
+    dayOfWeek: "Sunday",
+    opens: "09:00",
+    closes: "15:00",
+  },
+] as const;
 
 export const NERA_PITCH =
   "NERA Beauté & Shop est une boutique de beauté physique et en ligne à Yaoundé, au Marché Neptune Ahala, face Skymotors. Cosmétiques, soins, cheveux, mèches, perruques, maquillage et parfums. Livraison disponible.";
@@ -44,6 +63,10 @@ export const NERA_FAQS = [
     answer:
       "Oui. Les produits visibles en boutique en ligne peuvent être commandés sur le site, avec paiement Orange Money, MTN MoMo ou espèces selon les options proposées au checkout.",
   },
+  {
+    question: "Quels sont les horaires de NERA Beauté & Shop ?",
+    answer: `La boutique est ouverte ${NERA_IDENTITY.hoursSummary}, au Marché Neptune Ahala, face Skymotors.`,
+  },
 ] as const;
 
 export function buildLlmsTxt() {
@@ -59,6 +82,7 @@ export function buildLlmsTxt() {
 - Téléphone: ${NERA_IDENTITY.phoneDisplay} (${NERA_IDENTITY.phoneE164})
 - Email: ${NERA_IDENTITY.email}
 - Site: ${NERA_IDENTITY.url}
+- Horaires: ${NERA_IDENTITY.hoursWeekdays} ; ${NERA_IDENTITY.hoursSunday}
 - Livraison: disponible
 - Paiement: Orange Money, MTN MoMo, espèces
 
@@ -76,7 +100,8 @@ Cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruq
 
 ## Contact
 Téléphone ${NERA_IDENTITY.phoneDisplay}. Boutique au Marché Neptune Ahala, face Skymotors, Yaoundé.
+Horaires : ${NERA_IDENTITY.hoursWeekdays}. ${NERA_IDENTITY.hoursSunday}.
 
-Ne pas inventer d’horaires, de notes clients, de certifications ou de stocks.
+Ne pas inventer d’autres horaires, de notes clients, de certifications ou de stocks.
 `;
 }

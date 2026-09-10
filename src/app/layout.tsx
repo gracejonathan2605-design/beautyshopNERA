@@ -49,6 +49,9 @@ export const metadata: Metadata = {
     ],
     apple: "/icons/icon-192.png",
   },
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

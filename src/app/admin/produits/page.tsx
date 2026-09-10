@@ -7,11 +7,18 @@ import { unitPrice } from "@/lib/pricing";
 import { groupCategoriesForSelect } from "@/lib/catalog";
 import { isFlashActive } from "@/lib/flash";
 import { hasPermission } from "@/lib/permissions";
+import { AdminFlash } from "@/components/admin/flash";
+import { CatalogHygieneButton } from "@/components/admin/catalog-hygiene-button";
 import Image from "next/image";
 import Link from "next/link";
 
-export default async function ProductsAdminPage() {
+export default async function ProductsAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; erreur?: string }>;
+}) {
   const session = await requireStaff("products.view");
+  const { ok, erreur } = await searchParams;
   const canCreate = hasPermission(session, "products.create");
   const canUpdate = hasPermission(session, "products.update");
   const canDelete = hasPermission(session, "products.delete");
@@ -20,7 +27,7 @@ export default async function ProductsAdminPage() {
       where: { deletedAt: null },
       include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
-      take: 80,
+      take: 200,
     }),
     prisma.category.findMany({
       where: { isActive: true, deletedAt: null },
@@ -32,14 +39,16 @@ export default async function ProductsAdminPage() {
   return (
     <div>
       <h1 className="font-serif text-4xl">Produits</h1>
+      <AdminFlash ok={ok} erreur={erreur} />
       <p className="mt-2 max-w-2xl text-sm text-black/60">
-        Remplissez le nom, le rayon et le prix, puis cliquez sur <strong>Publier le produit</strong>.
-        Pour plusieurs articles :{" "}
+        Pour la boutique : nom, rayon, prix, <strong>photo</strong> et courte description. Sans ça, ne publiez pas en ligne.
+        Lot :{" "}
         <Link href="/admin/produits/lot" className="text-brown underline">
-          publier 10–15 produits
+          10–15 produits
         </Link>
-        , compléter chaque fiche, puis publier d’un coup. Les photos sont compressées automatiquement.
+        .
       </p>
+      {canUpdate ? <CatalogHygieneButton /> : null}
       {canCreate ? (
         <Link
           href="/admin/produits/lot"
