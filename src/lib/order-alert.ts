@@ -82,9 +82,19 @@ export function formatStaffOrderWhatsApp(order: StaffOrderAlert) {
 }
 
 export function normalizeGreenApiUrl(raw?: string | null) {
-  const value = (raw ?? "").trim().replace(/\/$/, "");
+  let value = (raw ?? "").trim().replace(/^apiUrl\s*[:=]\s*/i, "");
+  value = value.replace(/^["']|["']$/g, "").replace(/\/$/, "");
   if (!value) return "";
-  return value.replace(/\/waInstance.*$/i, "");
+  if (value.startsWith("http://")) value = `https://${value.slice(7)}`;
+  else if (!/^https:\/\//i.test(value) && /green-?api/i.test(value)) value = `https://${value.replace(/^\/+/, "")}`;
+  value = value.replace(/\/waInstance.*$/i, "").replace(/\/$/, "");
+  return value;
+}
+
+export function greenApiSendUrl(apiUrl: string, id: string, token: string, method = "sendMessage") {
+  const base = normalizeGreenApiUrl(apiUrl);
+  if (!base) return "";
+  return `${base}/waInstance${id.trim()}/${method}/${token.trim()}`;
 }
 
 /** Green API refuse +, espaces et @c.us. Numéro boutique : 237 + 9 chiffres. */
@@ -100,10 +110,6 @@ export function greenApiChatId(phone: string) {
   const digits = greenApiPhoneNumber(phone);
   if (!digits) return "";
   return `${digits}@c.us`;
-}
-
-export function greenApiSendUrl(apiUrl: string, id: string, token: string) {
-  return `${normalizeGreenApiUrl(apiUrl) || "https://api.green-api.com"}/waInstance${id.trim()}/sendMessage/${token.trim()}`;
 }
 
 function firstText(...values: Array<string | null | undefined>) {
@@ -144,12 +150,13 @@ export async function sendStaffOrderWhatsApp(text: string, stored?: Partial<Orde
   }
 
   if (channels.greenApiId && channels.greenApiToken && phone) {
-    const chatId = greenApiChatId(phone);
     tasks.push(
-      postJson(greenApiSendUrl(channels.greenApiUrl ?? "", channels.greenApiId, channels.greenApiToken), {
-        chatId,
-        message: text,
-        linkPreview: false,
+      sendViaGreenApi({
+        apiUrl: channels.greenApiUrl ?? "",
+        id: channels.greenApiId,
+        token: channels.greenApiToken,
+        chatId: greenApiChatId(phone),
+        text,
       }),
     );
   }
@@ -188,7 +195,57 @@ async function getOk(url: string) {
   return res;
 }
 
+function frenchGreenApiState(state: string) {
+  if (state === "notAuthorized") {
+    return "Le QR n’est pas encore scanné. Dans Green API cliquez Get QR, puis sur le téléphone : WhatsApp → Appareils liés → Lier un appareil.";
+  }
+  if (state === "blocked") return "L’instance WhatsApp est bloquée dans Green API.";
+  if (state === "sleepMode") return "Le téléphone WhatsApp boutique est éteint ou hors ligne. Allumez-le et réessayez.";
+  if (state === "starting") return "Green API démarre encore. Attendez 1 minute et renvoyez le test.";
+  if (state === "suspended" || state === "yellowCard") {
+    return "L’instance Green API est suspendue. Ouvrez la console Green API pour voir la restriction.";
+  }
+  return "";
+}
+
+async function sendViaGreenApi(input: {
+  apiUrl: string;
+  id: string;
+  token: string;
+  chatId: string;
+  text: string;
+}) {
+  if (!normalizeGreenApiUrl(input.apiUrl)) {
+    throw new Error(
+      "Collez l’URL API (apiUrl) depuis Green API → Instances. Pas mediaUrl. Elle commence par https:// et ressemble à https://1103.api.green-api.com",
+    );
+  }
+  if (/media\.green/i.test(input.apiUrl)) {
+    throw new Error("Vous avez collé mediaUrl. Recopiez apiUrl (pas mediaUrl) depuis la fiche de l’instance Green API.");
+  }
+  const stateUrl = greenApiSendUrl(input.apiUrl, input.id, input.token, "getStateInstance");
+  const stateRes = await fetch(stateUrl, { signal: AbortSignal.timeout(8000) });
+  if (stateRes.status === 401) {
+    throw new Error(
+      "Green API refuse l’accès (401). Recopiez apiUrl depuis la console (pas mediaUrl, pas l’URL générique api.green-api.com) et vérifiez le token.",
+    );
+  }
+  if (stateRes.ok) {
+    const payload = (await stateRes.json().catch(() => null)) as { stateInstance?: string } | null;
+    const hint = frenchGreenApiState(payload?.stateInstance ?? "");
+    if (hint) throw new Error(hint);
+  }
+  await postJson(greenApiSendUrl(input.apiUrl, input.id, input.token, "sendMessage"), {
+    chatId: input.chatId,
+    message: input.text,
+    linkPreview: false,
+  });
+}
+
 function summarizeGreenApiError(body: string, status: number) {
+  if (status === 401) {
+    return "Green API refuse l’accès (401). Recopiez apiUrl depuis la console (pas mediaUrl) et vérifiez le token.";
+  }
   try {
     const json = JSON.parse(body) as { message?: string; error?: string };
     const message = String(json.message ?? json.error ?? "");
