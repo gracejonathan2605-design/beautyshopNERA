@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatStaffOrderWhatsApp,
   greenApiChatId,
+  greenApiPhoneNumber,
   greenApiSendUrl,
   paymentNetworkLabel,
   resolveOrderAlertChannels,
@@ -83,9 +84,34 @@ describe("alerte WhatsApp commande site", () => {
 
   it("construit le chat Green API et l’URL d’envoi", () => {
     expect(greenApiChatId("+237 676 93 51 95")).toBe("237676935195@c.us");
+    expect(greenApiChatId("237676935195@c.us")).toBe("237676935195@c.us");
     expect(greenApiSendUrl("https://1103.api.green-api.com/", "1103123", "tok")).toBe(
       "https://1103.api.green-api.com/waInstance1103123/sendMessage/tok",
     );
+    expect(greenApiSendUrl("", "1103123", "tok")).toBe("");
+  });
+
+  it("refuse d’envoyer sans apiUrl Green API", async () => {
+    const keys = ["GREEN_API_ID", "GREEN_API_TOKEN", "GREEN_API_URL"] as const;
+    const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    process.env.GREEN_API_ID = "710722733764";
+    process.env.GREEN_API_TOKEN = "tok";
+    delete process.env.GREEN_API_URL;
+    try {
+      const result = await sendStaffOrderWhatsApp("bonjour NERA");
+      expect(result.sent).toBe(false);
+      expect(result.detail).toMatch(/URL API \(apiUrl\)/);
+    } finally {
+      for (const key of keys) {
+        if (previous[key] === undefined) delete process.env[key];
+        else process.env[key] = previous[key];
+      }
+    }
+  });
+
+  it("n’utilise pas l’idInstance comme numéro WhatsApp", () => {
+    expect(greenApiPhoneNumber("710722733764")).toBe("237676935195");
+    expect(greenApiPhoneNumber("676 93 51 95")).toBe("237676935195");
   });
 
   it("envoie via Green API vers le WhatsApp boutique", async () => {
@@ -98,16 +124,20 @@ describe("alerte WhatsApp commande site", () => {
     const orig = globalThis.fetch;
     const calls: { url: string; body: string }[] = [];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      calls.push({ url: String(input), body: String(init?.body ?? "") });
+      const url = String(input);
+      calls.push({ url, body: String(init?.body ?? "") });
+      if (url.includes("getStateInstance")) {
+        return new Response(JSON.stringify({ stateInstance: "authorized" }), { status: 200 });
+      }
       return new Response(JSON.stringify({ idMessage: "ok" }), { status: 200 });
     }) as typeof fetch;
     try {
       const result = await sendStaffOrderWhatsApp("bonjour NERA");
       expect(result.sent).toBe(true);
-      expect(calls).toHaveLength(1);
-      expect(calls[0].url).toContain("/waInstance1103123/sendMessage/tok");
-      expect(calls[0].body).toContain("237676935195@c.us");
-      expect(calls[0].body).toContain("bonjour NERA");
+      expect(calls.some((call) => call.url.includes("/sendMessage/tok"))).toBe(true);
+      const sent = calls.find((call) => call.url.includes("/sendMessage/"));
+      expect(sent?.body).toContain("237676935195@c.us");
+      expect(sent?.body).toContain("bonjour NERA");
     } finally {
       globalThis.fetch = orig;
       for (const key of keys) {

@@ -127,6 +127,22 @@ export default async function SettingsPage({
           Le numéro qui reçoit les commandes est déjà {NERA_IDENTITY.phoneDisplay} (237676935195). Ne touchez pas à
           mediaUrl. L’instance doit être autorisée : bouton Get QR, puis WhatsApp → Appareils liés → Lier un appareil.
         </p>
+        <p className="mt-2 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          L’URL API est obligatoire. Dans Green API → Instances → votre instance, copiez la ligne <strong>apiUrl</strong>{" "}
+          (pas <strong>mediaUrl</strong>). Elle commence par <code>https://</code>. Sans cette URL, le site affiche un
+          échec. Pour tester, utilisez le bouton ci-dessous après avoir scanné le QR.
+        </p>
+        <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-black/65">
+          <li>
+            Créez un compte gratuit sur{" "}
+            <a className="underline" href="https://console.green-api.com" target="_blank" rel="noreferrer">
+              console.green-api.com
+            </a>
+          </li>
+          <li>Créez une instance, puis scannez le QR avec le WhatsApp boutique {NERA_IDENTITY.phoneDisplay}.</li>
+          <li>Copiez idInstance, apiTokenInstance et apiUrl, collez-les ci-dessous, enregistrez, puis envoyez un test.</li>
+        </ol>
+
         {canUpdate ? (
           <>
             <form action={saveSettings} className="mt-5 grid gap-3 md:grid-cols-2">
@@ -136,6 +152,7 @@ export default async function SettingsPage({
                   name="orderWhatsAppTo"
                   defaultValue={s.orderWhatsAppTo}
                   placeholder="237676935195"
+                  inputMode="numeric"
                   className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
                 />
               </label>
@@ -149,7 +166,7 @@ export default async function SettingsPage({
                 />
               </label>
               <label className="text-sm text-black/50 md:col-span-2">
-                URL API (apiUrl)
+                URL API (apiUrl) — obligatoire, pas mediaUrl
                 <input
                   name="greenApiUrl"
                   defaultValue={s.greenApiUrl}

@@ -759,7 +759,8 @@ export async function sendTestOrderWhatsApp() {
   if (!result.sent) {
     bounceSettings(
       "erreur",
-      "L’envoi WhatsApp a échoué. Scannez le QR Green API avec le WhatsApp boutique, puis vérifiez l’URL API copiée depuis la console.",
+      result.detail ||
+        "L’envoi WhatsApp a échoué. Collez apiUrl depuis Green API (pas mediaUrl), scannez le QR, puis renvoyez le test.",
     );
   }
   bounceSettings("ok", "Message test envoyé. Ouvrez WhatsApp sur le numéro boutique 676 93 51 95.");
