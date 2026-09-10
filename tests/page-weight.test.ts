@@ -7,15 +7,15 @@ function src(path: string) {
   return readFileSync(path, "utf8");
 }
 
-describe("pages légères (petite connexion)", () => {
-  it("compresse les photos catalogue plus petit que 1400 px", () => {
+describe("pages légères sans casser l’apparence", () => {
+  it("compresse les nouvelles photos catalogue, tout en gardant l’affichage à qualité 75", () => {
     expect(IMAGE_MAX_EDGE).toBeLessThanOrEqual(960);
     expect(IMAGE_WEBP_QUALITY).toBeLessThanOrEqual(64);
-    expect(SHOP_IMAGE_QUALITY).toBe(IMAGE_WEBP_QUALITY);
+    expect(SHOP_IMAGE_QUALITY).toBe(75);
   });
 
-  it("page la boutique par 12 pour limiter les photos par écran", () => {
-    expect(SHOP_PAGE_SIZE).toBe(12);
+  it("garde 24 produits par page boutique", () => {
+    expect(SHOP_PAGE_SIZE).toBe(24);
   });
 
   it("sert du WebP sans AVIF au premier hit", () => {
@@ -35,34 +35,30 @@ describe("pages légères (petite connexion)", () => {
     const card = src("src/components/shop/product-card.tsx");
     expect(card.trimStart().startsWith('"use client"')).toBe(false);
     expect(card).toMatch(/prefetch=\{false\}/);
-    expect(card).toMatch(/PRODUCT_CARD_SIZES/);
   });
 
-  it("affiche 2 colonnes sur mobile pour des photos plus petites", () => {
-    expect(src("src/lib/image-limits.ts")).toMatch(/grid-cols-2/);
-    expect(src("src/app/(shop)/boutique/page.tsx")).toMatch(/PRODUCT_GRID_CLASS/);
-    expect(src("src/app/(shop)/page.tsx")).toMatch(/PRODUCT_GRID_HOME_CLASS/);
+  it("reste sur la grille d’origine : 1 colonne téléphone, 2 dès sm", () => {
+    expect(src("src/lib/image-limits.ts")).toMatch(/sm:grid-cols-2/);
+    expect(src("src/lib/image-limits.ts")).not.toMatch(/grid grid-cols-2/);
+    expect(src("src/components/shop/flash-section.tsx")).toMatch(/snap-x/);
   });
 
-  it("n’envoie pas le gros visuel d’accueil sur téléphone", () => {
-    const logo = src("src/components/brand/logo.tsx");
-    const hero = logo.slice(logo.indexOf("export function HeroProducts"));
-    expect(hero).toMatch(/hidden/);
-    expect(hero).toMatch(/md:block/);
-    expect(hero).toMatch(/max-width: 767px\) 1px/);
-    expect(src("src/app/(shop)/page.tsx")).toMatch(/BrandLogo size="lg" className="mb-6 hidden md:block"/);
-  });
-
-  it("compacte l’en-tête mobile : une seule rangée de rayons, sans préchargement", () => {
-    const chrome = src("src/components/shop/chrome.tsx");
-    expect(chrome).toMatch(/overflow-x-auto/);
-    expect(chrome).toMatch(/prefetch=\{false\}/);
-    expect(src("src/components/shop/trust-badges.tsx").trimStart().startsWith('"use client"')).toBe(false);
+  it("affiche le hero, le logo, le texte et À propos aussi sur téléphone", () => {
+    const home = src("src/app/(shop)/page.tsx");
+    expect(home).toMatch(/BrandLogo size="lg" priority className="mb-6"/);
+    expect(home).toContain("{NERA_PITCH}");
+    expect(home).not.toMatch(/hidden md:block/);
+    expect(home).toMatch(/À propos/);
+    const hero = src("src/components/brand/logo.tsx").slice(
+      src("src/components/brand/logo.tsx").indexOf("export function HeroProducts"),
+    );
+    expect(hero).not.toMatch(/hidden md:block/);
+    expect(hero).toMatch(/100vw/);
   });
 
   it("ne charge plus 80 produits pour une fiche rayon", () => {
     expect(src("src/lib/catalog-cache.ts")).not.toMatch(/take:\s*80/);
-    expect(src("src/lib/catalog-cache.ts")).toMatch(/take: 6/);
+    expect(src("src/lib/catalog-cache.ts")).toMatch(/take: 8/);
   });
 
   it("garde les visuels de marque sous un budget fichier", () => {

@@ -29,8 +29,15 @@ export function ShopHeaderFallback() {
       </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <BrandLockup size="sm" priority />
-        <span className="rounded-full bg-brown px-3 py-2 text-sm text-cream sm:px-4">Panier (…)</span>
+        <span className="rounded-full bg-brown px-3 py-2 text-sm text-cream sm:px-4">Panier (0)</span>
       </div>
+      <form action="/boutique" className="px-4 pb-3 md:hidden" role="search" aria-label="Rechercher dans la boutique">
+        <input
+          name="q"
+          placeholder="Rechercher…"
+          className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
+        />
+      </form>
     </header>
   );
 }
@@ -94,13 +101,13 @@ export async function ShopHeader() {
         />
       </form>
       {categories.length ? (
-        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-4 pb-3 no-scrollbar md:flex-wrap md:justify-center">
+        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
           {categories.map((c) => (
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
               prefetch={false}
-              className="max-w-full shrink-0 rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
+              className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
             >
               {c.name}
             </Link>
@@ -117,10 +124,10 @@ export async function ShopFooter() {
   return (
     <>
       <JsonLd data={neraOrganizationGraph()} />
-      <footer className="defer-paint mt-12 border-t border-[#eee0e6] bg-white/75 md:mt-20">
+      <footer className="mt-20 border-t border-[#eee0e6] bg-white/75">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
-            <BrandLogo size="md" />
+            <BrandLogo size="lg" />
             <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{NERA_IDENTITY.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{NERA_IDENTITY.slogan}</p>

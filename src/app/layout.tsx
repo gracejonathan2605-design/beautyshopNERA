@@ -7,10 +7,9 @@ import { getSiteUrl } from "@/lib/site-url";
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["600"],
+  weight: ["500", "600", "700"],
   variable: "--font-cormorant",
   display: "swap",
-  preload: false,
 });
 
 export const viewport: Viewport = {

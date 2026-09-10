@@ -43,7 +43,7 @@ export const getHomeCatalog = unstable_cache(
         prisma.product.findMany({
           where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
           select,
-          take: 6,
+          take: 8,
         }),
         prisma.product.findMany({
           where: {
@@ -54,13 +54,13 @@ export const getHomeCatalog = unstable_cache(
             createdAt: { gte: since },
           },
           select,
-          take: 6,
+          take: 8,
           orderBy: { createdAt: "desc" },
         }),
         prisma.product.findMany({
           where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
           select,
-          take: 6,
+          take: 8,
         }),
         prisma.category.findMany({
           where: { isActive: true, parentId: null, deletedAt: null },

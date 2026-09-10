@@ -26,20 +26,8 @@
 }
 
 html {
+  scroll-behavior: smooth;
   overflow-x: clip;
-}
-
-@media (prefers-reduced-motion: no-preference) and (min-width: 768px) {
-  html {
-    scroll-behavior: smooth;
-  }
-}
-
-@media (max-width: 767px) {
-  .defer-paint {
-    content-visibility: auto;
-    contain-intrinsic-size: 1px 640px;
-  }
 }
 
 html,

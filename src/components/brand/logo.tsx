@@ -84,15 +84,15 @@ export function ReceiptLogo() {
 export function HeroProducts({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`relative hidden overflow-hidden rounded-[2rem] border border-[#eee0e6] shadow-[0_28px_60px_-32px_rgba(58,36,48,0.45)] md:block ${className}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-[#eee0e6] shadow-[0_28px_60px_-32px_rgba(58,36,48,0.45)] ${className}`}
     >
       <Image
         src={BRAND_HERO_SRC}
         alt="Parfums, mèches, maquillage et mode NERA Beauté"
-        width={1200}
-        height={900}
+        width={1600}
+        height={1200}
         className="h-full w-full object-cover"
-        sizes="(max-width: 767px) 1px, 540px"
+        sizes="(max-width: 768px) 100vw, 50vw"
         quality={SHOP_IMAGE_QUALITY}
       />
     </div>

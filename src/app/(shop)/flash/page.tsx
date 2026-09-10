@@ -14,12 +14,12 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function FlashPage() {
-  const products = await getActiveFlashProducts(12);
+  const products = await getActiveFlashProducts(48);
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:py-12">
+    <div className="mx-auto max-w-6xl px-4 py-12">
       <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "FLASH NERA" }]} />
       <p className="mt-3 text-xs uppercase tracking-[0.32em] text-gold">Nouveautés du moment</p>
-      <h1 className="mt-3 font-serif text-3xl text-wine md:text-6xl">FLASH NERA</h1>
+      <h1 className="mt-3 font-serif text-5xl text-wine md:text-6xl">FLASH NERA</h1>
       <p className="mt-4 max-w-2xl text-lg text-black/55">Les nouveautés du moment — une sélection qui ne reste pas longtemps en avant.</p>
       {products.length ? (
         <div className={`mt-10 ${PRODUCT_GRID_HOME_CLASS}`}>
