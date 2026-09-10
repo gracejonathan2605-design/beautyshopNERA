@@ -19,6 +19,7 @@ import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
 import { assignFlashOnPublish, isPublishedOnline, normalizeFlashDurationDays } from "@/lib/flash";
 import { normalizePendingOrderHours } from "@/lib/pending-orders";
+import { sendStaffOrderWhatsApp } from "@/lib/order-alert";
 import { assertUniqueBarcode, firstDuplicateBarcode } from "@/lib/barcode";
 import {
   defaultStockMoveComment,
@@ -701,6 +702,10 @@ export async function saveSettings(formData: FormData) {
     ticketFooter: String(formData.get("ticketFooter") ?? current.ticketFooter),
     flashDurationDays: normalizeFlashDurationDays(formData.get("flashDurationDays") ?? current.flashDurationDays),
     pendingOrderHours: normalizePendingOrderHours(formData.get("pendingOrderHours") ?? current.pendingOrderHours),
+    orderWhatsAppTo: String(formData.get("orderWhatsAppTo") ?? current.orderWhatsAppTo),
+    greenApiId: String(formData.get("greenApiId") ?? current.greenApiId),
+    greenApiUrl: String(formData.get("greenApiUrl") ?? current.greenApiUrl),
+    greenApiToken: String(formData.get("greenApiToken") ?? "").trim() || current.greenApiToken,
   };
   await saveShopSettings(next);
   updateTag("catalog");
@@ -708,4 +713,32 @@ export async function saveSettings(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/boutique");
   revalidatePath("/pos");
+}
+
+function bounceSettings(kind: "ok" | "erreur", message: string): never {
+  const q = new URLSearchParams();
+  q.set(kind, message);
+  redirect(`/admin/parametres?${q.toString()}`);
+}
+
+export async function sendTestOrderWhatsApp() {
+  await requireStaff("settings.update");
+  const settings = await getShopSettings();
+  const result = await sendStaffOrderWhatsApp(
+    "🧪 TEST NERA Beauté & Shop\n\nAlerte commandes WhatsApp OK.\nLes prochaines commandes du site afficheront ici le nom, le téléphone et les articles.",
+    settings,
+  );
+  if (result.reason === "not-configured") {
+    bounceSettings(
+      "erreur",
+      "Green API n’est pas encore configuré. Collez l’ID instance, le token et l’URL API, enregistrez, puis renvoyez le test.",
+    );
+  }
+  if (!result.sent) {
+    bounceSettings(
+      "erreur",
+      "L’envoi WhatsApp a échoué. Scannez le QR Green API avec le WhatsApp boutique, puis vérifiez l’URL API copiée depuis la console.",
+    );
+  }
+  bounceSettings("ok", "Message test envoyé. Ouvrez WhatsApp sur le numéro boutique 676 93 51 95.");
 }

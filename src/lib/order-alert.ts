@@ -1,6 +1,7 @@
 import { formatCfa } from "./money";
 import { NERA_IDENTITY } from "./nera-identity";
 import { normalizeWhatsAppPhone } from "./receipt";
+import { getShopSettings, type ShopSettings } from "./settings";
 
 export type StaffOrderAlert = {
   number: string;
@@ -13,6 +14,22 @@ export type StaffOrderAlert = {
   notes?: string | null;
   total: number;
   items: { productName: string; variantName?: string | null; quantity: number; total: number }[];
+};
+
+export type OrderAlertStored = Pick<
+  ShopSettings,
+  "orderWhatsAppTo" | "greenApiId" | "greenApiToken" | "greenApiUrl"
+>;
+
+export type OrderAlertChannels = {
+  phone: string;
+  webhook?: string;
+  callmebot?: string;
+  whatsappToken?: string;
+  whatsappPhoneNumberId?: string;
+  greenApiId?: string;
+  greenApiToken?: string;
+  greenApiUrl?: string;
 };
 
 export function paymentNetworkLabel(raw?: string | null) {
@@ -64,35 +81,87 @@ export function formatStaffOrderWhatsApp(order: StaffOrderAlert) {
   return lines.join("\n");
 }
 
-export function staffWhatsAppDestination() {
-  return normalizeWhatsAppPhone(process.env.ORDER_WHATSAPP_TO || NERA_IDENTITY.phoneE164);
+export function normalizeGreenApiUrl(raw?: string | null) {
+  const value = (raw ?? "").trim().replace(/\/$/, "");
+  if (!value) return "";
+  return value.replace(/\/waInstance.*$/i, "");
 }
 
-export async function sendStaffOrderWhatsApp(text: string) {
-  const phone = staffWhatsAppDestination();
-  const webhook = process.env.ORDER_NOTIFY_WEBHOOK?.trim();
-  const callmebot = process.env.CALLMEBOT_APIKEY?.trim();
-  const token = process.env.WHATSAPP_TOKEN?.trim();
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+export function greenApiChatId(phone: string) {
+  const digits = normalizeWhatsAppPhone(phone);
+  if (!digits) return "";
+  return `${digits}@c.us`;
+}
+
+export function greenApiSendUrl(apiUrl: string, id: string, token: string) {
+  return `${normalizeGreenApiUrl(apiUrl) || "https://api.green-api.com"}/waInstance${id.trim()}/sendMessage/${token.trim()}`;
+}
+
+function firstText(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
+}
+
+export function resolveOrderAlertChannels(stored?: Partial<OrderAlertStored> | null): OrderAlertChannels {
+  const phone = normalizeWhatsAppPhone(
+    firstText(process.env.ORDER_WHATSAPP_TO, stored?.orderWhatsAppTo, NERA_IDENTITY.phoneE164),
+  );
+  return {
+    phone,
+    webhook: process.env.ORDER_NOTIFY_WEBHOOK?.trim() || undefined,
+    callmebot: process.env.CALLMEBOT_APIKEY?.trim() || undefined,
+    whatsappToken: process.env.WHATSAPP_TOKEN?.trim() || undefined,
+    whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() || undefined,
+    greenApiId: firstText(process.env.GREEN_API_ID, stored?.greenApiId) || undefined,
+    greenApiToken: firstText(process.env.GREEN_API_TOKEN, stored?.greenApiToken) || undefined,
+    greenApiUrl: normalizeGreenApiUrl(firstText(process.env.GREEN_API_URL, stored?.greenApiUrl)) || undefined,
+  };
+}
+
+export function staffWhatsAppDestination(stored?: Partial<OrderAlertStored> | null) {
+  return resolveOrderAlertChannels(stored).phone;
+}
+
+export async function sendStaffOrderWhatsApp(text: string, stored?: Partial<OrderAlertStored> | null) {
+  const channels = resolveOrderAlertChannels(stored);
+  const { phone } = channels;
   const tasks: Promise<unknown>[] = [];
 
-  if (webhook) {
-    tasks.push(postJson(webhook, { text, phone, source: "nera-online-order" }));
+  if (channels.webhook) {
+    tasks.push(postJson(channels.webhook, { text, phone, source: "nera-online-order" }));
   }
 
-  if (callmebot && phone) {
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(callmebot)}`;
+  if (channels.greenApiId && channels.greenApiToken && phone) {
+    const chatId = greenApiChatId(phone);
+    tasks.push(
+      postJson(greenApiSendUrl(channels.greenApiUrl ?? "", channels.greenApiId, channels.greenApiToken), {
+        chatId,
+        message: text,
+        linkPreview: false,
+      }),
+    );
+  }
+
+  if (channels.callmebot && phone) {
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(channels.callmebot)}`;
     tasks.push(getOk(url));
   }
 
-  if (token && phoneNumberId && phone) {
+  if (channels.whatsappToken && channels.whatsappPhoneNumberId && phone) {
     tasks.push(
-      postJson(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
-        messaging_product: "whatsapp",
-        to: phone,
-        type: "text",
-        text: { body: text, preview_url: false },
-      }, { Authorization: `Bearer ${token}` }),
+      postJson(
+        `https://graph.facebook.com/v21.0/${channels.whatsappPhoneNumberId}/messages`,
+        {
+          messaging_product: "whatsapp",
+          to: phone,
+          type: "text",
+          text: { body: text, preview_url: false },
+        },
+        { Authorization: `Bearer ${channels.whatsappToken}` },
+      ),
     );
   }
 
@@ -122,7 +191,8 @@ async function postJson(url: string, body: unknown, extraHeaders: Record<string,
 export async function notifyStaffNewOnlineOrder(order: StaffOrderAlert) {
   const text = formatStaffOrderWhatsApp(order);
   try {
-    await sendStaffOrderWhatsApp(text);
+    const settings = await getShopSettings().catch(() => null);
+    await sendStaffOrderWhatsApp(text, settings);
   } catch {
     /* la commande client ne doit pas échouer si WhatsApp est indisponible */
   }

@@ -21,6 +21,19 @@ describe("paramètres boutique", () => {
     expect(merged.pendingOrderHours).toBe(24);
   });
 
+  it("conserve les identifiants Green API des alertes commande", () => {
+    const merged = mergeShopSettings({
+      greenApiId: "1103123",
+      greenApiToken: "secret-token",
+      greenApiUrl: "https://1103.api.green-api.com/",
+      orderWhatsAppTo: "676 93 51 95",
+    });
+    expect(merged.greenApiId).toBe("1103123");
+    expect(merged.greenApiToken).toBe("secret-token");
+    expect(merged.greenApiUrl).toBe("https://1103.api.green-api.com");
+    expect(merged.orderWhatsAppTo).toBe("676935195");
+  });
+
   it("aligne les tickets POS sur le NAP officiel même si la base a l’ancien numéro", () => {
     const shop = toReceiptShop(
       mergeShopSettings({
