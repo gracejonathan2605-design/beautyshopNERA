@@ -119,6 +119,7 @@ describe("motifs de stock", () => {
 describe("droits caisse", () => {
   it("autorise le caissier à rembourser depuis la caisse", () => {
     expect(ROLE_PRESETS.cashier).toContain("sales.refund");
+    expect(ROLE_PRESETS.cashier).toContain("sales.create");
     expect(ROLE_PRESETS.manager).toContain("sales.refund");
   });
 });

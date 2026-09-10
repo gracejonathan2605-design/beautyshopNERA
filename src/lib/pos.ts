@@ -27,6 +27,10 @@ export type HeldTicketPayload = {
   method: PaymentMethod;
 };
 
+export function isValidSaleQuantity(quantity: number) {
+  return Number.isInteger(quantity) && quantity > 0 && quantity <= 99_999;
+}
+
 export function clampDiscount(amount: number, max: number) {
   if (!Number.isFinite(amount) || amount <= 0) return 0;
   return Math.min(Math.round(amount), Math.max(0, Math.round(max)));

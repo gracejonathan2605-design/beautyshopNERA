@@ -8,6 +8,16 @@ export function isMissingFlashColumn(err: unknown) {
   );
 }
 
+/** La boutique réserve uniquement au magasin par défaut — n’afficher que ce stock. */
+export const shopInventoryWhere = {
+  location: { isDefault: true },
+} satisfies Prisma.InventoryWhereInput;
+
+export const shopInventorySelect = {
+  where: shopInventoryWhere,
+  select: { onHand: true, reserved: true },
+} as const;
+
 export async function withFlashProductSelect<T>(
   run: (select: typeof productCardSelect) => Promise<T>,
 ): Promise<T> {
@@ -36,7 +46,7 @@ export const productCardSelectWithoutFlash = {
       id: true,
       salePrice: true,
       promoPrice: true,
-      inventories: { select: { onHand: true, reserved: true } },
+      inventories: shopInventorySelect,
     },
   },
   images: {

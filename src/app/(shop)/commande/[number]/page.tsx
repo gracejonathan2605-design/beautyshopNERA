@@ -8,6 +8,7 @@ import { isPaymentNetwork, PAYMENT_INSTRUCTIONS } from "@/lib/checkout";
 import { BrandLogo } from "@/components/brand/logo";
 import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
 import { getCustomerSession, getStaffSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { isValidOrderAccessToken } from "@/lib/order-access";
 
 export default async function OrderPage({
@@ -30,7 +31,7 @@ export default async function OrderPage({
   if (!order) notFound();
   const allowed =
     isValidOrderAccessToken(number, t) ||
-    Boolean(staff) ||
+    Boolean(staff && hasPermission(staff, "orders.view")) ||
     Boolean(customer && order.customerId === customer.customerId);
   if (!allowed) notFound();
   const paid = order.payments.some((p) => p.status === "COMPLETED");

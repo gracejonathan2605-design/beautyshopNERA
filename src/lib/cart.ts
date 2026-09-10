@@ -49,3 +49,21 @@ export async function clearCart() {
 export function upsertCartItem(items: CartItem[], variantId: string, quantity: number) {
   return normalizeCartItems([...items.filter((i) => i.variantId !== variantId), { variantId, quantity }]);
 }
+
+export function cartCanCheckout(rows: { available: number; quantity: number }[]) {
+  return rows.length > 0 && rows.every((row) => row.available >= row.quantity && row.quantity > 0);
+}
+
+export function checkoutLinesFromCart(
+  cart: CartItem[],
+  availableByVariant: Map<string, number>,
+): { ok: true; lines: CartItem[] } | { ok: false; reason: "empty" | "stale" | "unavailable" } {
+  const lines = normalizeCartItems(cart);
+  if (!lines.length) return { ok: false, reason: "empty" };
+  for (const item of lines) {
+    if (!availableByVariant.has(item.variantId)) return { ok: false, reason: "stale" };
+    const available = availableByVariant.get(item.variantId) ?? 0;
+    if (available < item.quantity) return { ok: false, reason: "unavailable" };
+  }
+  return { ok: true, lines };
+}

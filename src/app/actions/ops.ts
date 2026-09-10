@@ -33,17 +33,23 @@ async function uniqueVariantSku(name: string) {
 }
 
 export async function markNotificationRead(formData: FormData) {
-  await requireStaff();
+  const session = await requireStaff();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
-  await prisma.notification.update({ where: { id }, data: { isRead: true } });
+  await prisma.notification.updateMany({
+    where: { id, OR: [{ userId: null }, { userId: session.userId }] },
+    data: { isRead: true },
+  });
   revalidatePath("/admin");
   revalidatePath("/admin/alertes");
 }
 
 export async function markAllNotificationsRead() {
-  await requireStaff();
-  await prisma.notification.updateMany({ where: { isRead: false }, data: { isRead: true } });
+  const session = await requireStaff();
+  await prisma.notification.updateMany({
+    where: { isRead: false, OR: [{ userId: null }, { userId: session.userId }] },
+    data: { isRead: true },
+  });
   revalidatePath("/admin");
   revalidatePath("/admin/alertes");
 }
@@ -186,10 +192,11 @@ export async function saveProductVariant(formData: FormData) {
     await assertUniqueBarcode(barcode, variantId || null);
     const promo = promoPrice > 0 && promoPrice < salePrice ? promoPrice : null;
     if (variantId) {
-      await prisma.productVariant.update({
-        where: { id: variantId },
+      const updated = await prisma.productVariant.updateMany({
+        where: { id: variantId, productId },
         data: { name, salePrice, costPrice: costPrice || undefined, barcode, promoPrice: promo },
       });
+      if (updated.count !== 1) throw new Error("Variante introuvable pour ce produit.");
     } else {
       const sku = await uniqueVariantSku(`${product.name} ${name}`);
       const created = await prisma.productVariant.create({

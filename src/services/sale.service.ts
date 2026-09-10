@@ -5,7 +5,7 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
-import { clampDiscount, settlePosPayments, ticketTotals } from "@/lib/pos";
+import { clampDiscount, isValidSaleQuantity, settlePosPayments, ticketTotals } from "@/lib/pos";
 
 export type SaleLineInput = {
   variantId: string;
@@ -41,7 +41,7 @@ export async function createPosSale(input: {
     for (const line of input.lines) {
       const variant = byId.get(line.variantId);
       if (!variant) throw new Error("Variante introuvable ou inactive");
-      if (line.quantity <= 0) throw new Error("Quantité invalide");
+      if (!isValidSaleQuantity(line.quantity)) throw new Error("Quantité invalide");
       const unitPrice = priced(variant);
       const gross = unitPrice * line.quantity;
       const discount = clampDiscount(line.discount ?? 0, gross);
@@ -75,6 +75,15 @@ export async function createPosSale(input: {
     const cartDiscount = totals.cartDiscount;
     const total = totals.total;
     const payments = settlePosPayments(input.payments, total);
+
+    if (input.cashSessionId) {
+      const locked = await tx.$queryRaw<{ id: string; status: string }[]>`
+        SELECT id, status FROM "CashSession" WHERE id = ${input.cashSessionId} FOR UPDATE
+      `;
+      if (!locked[0] || locked[0].status !== "OPEN") {
+        throw new Error("La caisse n’est plus ouverte. Rouvrez-la avant d’encaisser.");
+      }
+    }
 
     const sale = await tx.sale.create({
       data: {
@@ -143,12 +152,12 @@ export async function cancelSale(input: { saleId: string; userId: string; restoc
       include: { items: true, payments: true },
     });
     if (!sale) throw new Error("Vente introuvable");
-    if (sale.status !== "COMPLETED") throw new Error("Cette vente ne peut plus être annulée");
 
-    await tx.sale.update({
-      where: { id: sale.id },
+    const claimed = await tx.sale.updateMany({
+      where: { id: sale.id, status: "COMPLETED" },
       data: { status: "CANCELLED" },
     });
+    if (claimed.count !== 1) throw new Error("Cette vente ne peut plus être annulée");
     await tx.payment.updateMany({
       where: { saleId: sale.id },
       data: { status: "REFUNDED" },
@@ -198,12 +207,12 @@ export async function refundSale(input: { saleId: string; userId: string; restoc
       include: { items: true, payments: true },
     });
     if (!sale) throw new Error("Vente introuvable");
-    if (sale.status !== "COMPLETED") throw new Error("Cette vente ne peut plus être remboursée");
 
-    await tx.sale.update({
-      where: { id: sale.id },
+    const claimed = await tx.sale.updateMany({
+      where: { id: sale.id, status: "COMPLETED" },
       data: { status: "REFUNDED" },
     });
+    if (claimed.count !== 1) throw new Error("Cette vente ne peut plus être remboursée");
     await tx.payment.updateMany({
       where: { saleId: sale.id },
       data: { status: "REFUNDED" },

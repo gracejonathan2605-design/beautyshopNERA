@@ -3,21 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
-import { clearCart, getCart, saveCart, upsertCartItem } from "@/lib/cart";
+import { checkoutLinesFromCart, clearCart, getCart, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession, hashPassword } from "@/lib/auth";
 import { createOnlineOrder } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { orderConfirmationPath } from "@/lib/order-access";
 import { quoteCoupon } from "@/lib/coupon";
 import { prisma } from "@/lib/prisma";
-import { sellableOnlineWhere } from "@/lib/product-query";
+import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import { attachGuestOrdersByPhone } from "@/services/customer.service";
 
 async function availableForVariant(variantId: string) {
   const variant = await prisma.productVariant.findFirst({
     where: { id: variantId, ...sellableOnlineWhere },
-    select: { inventories: { select: { onHand: true, reserved: true } } },
+    select: { inventories: shopInventorySelect },
   });
   if (!variant) return 0;
   return variantAvailable(variant.inventories);
@@ -65,6 +65,22 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     const cart = await getCart();
     if (!cart.length) return { ok: false, error: "Votre panier est vide." };
 
+    const variants = await prisma.productVariant.findMany({
+      where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
+      select: { id: true, inventories: shopInventorySelect },
+    });
+    const availableByVariant = new Map(
+      variants.map((variant) => [variant.id, variantAvailable(variant.inventories)]),
+    );
+    const ready = checkoutLinesFromCart(cart, availableByVariant);
+    if (!ready.ok) {
+      if (ready.reason === "empty") return { ok: false, error: "Votre panier est vide." };
+      if (ready.reason === "stale") {
+        return { ok: false, error: "Un article n’est plus en vente. Revenez au panier pour le retirer." };
+      }
+      return { ok: false, error: "Stock insuffisant. Revenez au panier pour ajuster les quantités." };
+    }
+
     const name = String(formData.get("shippingName") ?? "").trim();
     const phone = String(formData.get("shippingPhone") ?? "").trim();
     if (!name || !phone) return { ok: false, error: "Indiquez votre nom et votre téléphone." };
@@ -94,7 +110,7 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
         shippingCity,
         couponCode: String(formData.get("couponCode") ?? ""),
         notes: String(formData.get("notes") ?? "") || undefined,
-        lines: cart,
+        lines: ready.lines,
         payment: {
           method: "MOBILE_MONEY",
           amount: 0,
