@@ -1,20 +1,42 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Outfit } from "next/font/google";
 import "./globals.css";
+import { NERA_IDENTITY } from "@/lib/nera-identity";
+import { getSiteUrl } from "@/lib/site-url";
 
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-cormorant",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL ?? "https://nerabeaute.cm"),
-  title: "NERA Beauté & Shop",
-  description: "Boutique en ligne — beauté, cheveux et mode à Yaoundé. Paiement OM & MoMo. Livraison rapide sous 24h.",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
+    template: "%s | NERA Beauté & Shop",
+  },
+  description:
+    "NERA Beauté & Shop est une boutique de beauté à Yaoundé, au Marché Neptune Ahala, face Skymotors. Cosmétiques, soins, cheveux, mèches, perruques, maquillage et parfums — en magasin et en ligne.",
   manifest: "/manifest.webmanifest",
-  applicationName: "NERA",
+  applicationName: NERA_IDENTITY.name,
+  openGraph: {
+    locale: "fr_FR",
+    siteName: NERA_IDENTITY.name,
+    title: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
+    description:
+      "Boutique de beauté physique et en ligne à Yaoundé. Marché Neptune Ahala, face Skymotors. Livraison disponible.",
+    url: "/",
+    images: [{ url: "/brand/nera-hero-products.jpg", alt: "Sélection beauté NERA Beauté & Shop à Yaoundé" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
+    description: "Boutique de beauté à Yaoundé — magasin et e-commerce. Livraison disponible.",
+    images: ["/brand/nera-hero-products.jpg"],
+  },
   appleWebApp: {
     capable: true,
     title: "NERA",
@@ -30,9 +52,25 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  let mediaOrigin = "";
+  try {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      mediaOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin;
+    }
+  } catch {
+    mediaOrigin = "";
+  }
   return (
     <html lang="fr" className={`${outfit.variable} ${cormorant.variable} h-full`}>
-      <body className="min-h-full bg-background text-foreground antialiased">{children}</body>
+      <body className="min-h-full bg-background text-foreground antialiased">
+        {mediaOrigin ? (
+          <>
+            <link rel="preconnect" href={mediaOrigin} />
+            <link rel="dns-prefetch" href={mediaOrigin} />
+          </>
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }

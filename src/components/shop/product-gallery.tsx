@@ -13,7 +13,7 @@ export function ProductGallery({ name, media }: { name: string; media: Media[] }
 
   return (
     <div>
-      <div className="relative min-h-80 overflow-hidden rounded-[2rem] bg-linear-to-br from-blush to-champagne">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-linear-to-br from-blush to-champagne">
         {current ? (
           <Image
             src={current.url}
@@ -37,7 +37,7 @@ export function ProductGallery({ name, media }: { name: string; media: Media[] }
               onClick={() => setActive(index)}
               className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ${index === active ? "ring-2 ring-brown" : ""}`}
             >
-              <Image src={photo.url} alt="" fill className="object-cover" sizes="64px" loading="lazy" />
+              <Image src={photo.url} alt={`${name} — vue ${index + 1}`} fill className="object-cover" sizes="64px" loading="lazy" />
             </button>
           ))}
         </div>

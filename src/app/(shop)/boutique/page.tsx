@@ -1,7 +1,27 @@
+import type { Metadata } from "next";
 import { ProductCard } from "@/components/shop/product-card";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-toolbar";
+import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, parseBrowseQuery, shopRayons } from "@/lib/shop-browse";
+import { breadcrumbJsonLd, collectionJsonLd, pageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; rayon?: string; vue?: string; tri?: string; page?: string }>;
+}): Promise<Metadata> {
+  const query = parseBrowseQuery(await searchParams);
+  const indexable = !query.q && !query.rayon && query.vue === "all" && query.page <= 1;
+  return pageMetadata({
+    title: "Boutique",
+    description:
+      "Parcourez le catalogue NERA Beauté & Shop à Yaoundé : soins, cheveux, mèches, perruques, maquillage, parfums et accessoires. Commande en ligne, retrait en magasin.",
+    path: "/boutique",
+    index: indexable,
+  });
+}
 
 export default async function BoutiquePage({
   searchParams,
@@ -14,7 +34,23 @@ export default async function BoutiquePage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <p className="text-xs uppercase tracking-[0.28em] text-gold">Maison NERA</p>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Accueil", path: "/" },
+          { name: "Boutique", path: "/boutique" },
+        ])}
+      />
+      <JsonLd
+        data={collectionJsonLd({
+          path: "/boutique",
+          name: "Boutique NERA Beauté & Shop",
+          description:
+            "Catalogue NERA Beauté & Shop à Yaoundé : soins, cheveux, mèches, perruques, maquillage, parfums et accessoires.",
+          items: result.items.map((p) => ({ name: p.name, path: `/produit/${p.slug}` })),
+        })}
+      />
+      <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "Boutique" }]} />
+      <p className="mt-3 text-xs uppercase tracking-[0.28em] text-gold">Maison NERA</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Boutique</h1>
       <p className="mt-3 max-w-xl text-black/55">
         Soins, mèches, parfums et mode — filtrez par rayon, nouveauté ou promo. Les ruptures restent visibles.

@@ -96,6 +96,7 @@ const productPageSelectWithoutFlash = {
   id: true,
   name: true,
   slug: true,
+  sku: true,
   description: true,
   shortDescription: true,
   status: true,
@@ -103,12 +104,14 @@ const productPageSelectWithoutFlash = {
   deletedAt: true,
   isNew: true,
   isPromo: true,
-  category: { select: { name: true } },
+  category: { select: { id: true, name: true, slug: true } },
+  brand: { select: { name: true } },
   variants: {
     where: { isActive: true, deletedAt: null },
     select: {
       id: true,
       name: true,
+      sku: true,
       salePrice: true,
       promoPrice: true,
       inventories: shopInventorySelect,
@@ -171,5 +174,28 @@ export function getCachedCategoryPage(slug: string) {
     },
     ["category-page", slug],
     { revalidate: 45, tags: ["catalog"] },
+  )();
+}
+
+export function getRelatedProducts(productId: string, categoryId: string | null, take = 4) {
+  if (!categoryId) return Promise.resolve([]);
+  return unstable_cache(
+    async () =>
+      withFlashProductSelect((select) =>
+        prisma.product.findMany({
+          where: {
+            id: { not: productId },
+            categoryId,
+            status: "ACTIVE",
+            onlineVisible: true,
+            deletedAt: null,
+          },
+          select,
+          orderBy: { updatedAt: "desc" },
+          take,
+        }),
+      ),
+    ["related-products", productId, categoryId, String(take)],
+    { revalidate: 60, tags: ["catalog"] },
   )();
 }

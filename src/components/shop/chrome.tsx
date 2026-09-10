@@ -6,6 +6,9 @@ import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { BrandLockup, BrandLogo } from "@/components/brand/logo";
 import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
+import { JsonLd } from "@/components/seo/json-ld";
+import { neraOrganizationGraph } from "@/lib/seo";
+import { NERA_IDENTITY } from "@/lib/nera-identity";
 
 function WhatsAppIcon() {
   return (
@@ -43,7 +46,7 @@ export async function ShopHeader() {
         <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
           <BrandLockup size="sm" priority />
         </Link>
-        <form action="/boutique" className="hidden min-w-0 flex-1 md:block">
+        <form action="/boutique" className="hidden min-w-0 flex-1 md:block" role="search" aria-label="Rechercher dans la boutique">
           <input
             name="q"
             placeholder="Rechercher un produit, une mèche, un parfum…"
@@ -53,6 +56,9 @@ export async function ShopHeader() {
         <div className="flex shrink-0 items-center gap-3 text-sm">
           <Link href="/flash" className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Flash NERA
+          </Link>
+          <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
+            À propos
           </Link>
           <Link href="/boutique" className="hidden text-wine/80 hover:text-wine sm:inline">
             Boutique
@@ -65,7 +71,7 @@ export async function ShopHeader() {
           </Link>
         </div>
       </div>
-      <form action="/boutique" className="px-4 pb-3 md:hidden">
+      <form action="/boutique" className="px-4 pb-3 md:hidden" role="search" aria-label="Rechercher dans la boutique">
         <input
           name="q"
           placeholder="Rechercher…"
@@ -73,7 +79,7 @@ export async function ShopHeader() {
         />
       </form>
       {categories.length ? (
-        <nav className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
+        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
           {categories.map((c) => (
             <Link
               key={c.id}
@@ -91,27 +97,34 @@ export async function ShopHeader() {
 
 export async function ShopFooter() {
   const settings = (await getShopSettings().catch(() => null)) ?? DEFAULT_SETTINGS;
-  const wa = settings.phone ? whatsappChatUrl(settings.phone, "Bonjour NERA Beauté, j’aimerais un conseil.") : "";
+  const wa = whatsappChatUrl(NERA_IDENTITY.phoneE164, "Bonjour NERA Beauté, j’aimerais un conseil.");
   return (
     <>
+      <JsonLd data={neraOrganizationGraph()} />
       <footer className="mt-20 border-t border-[#eee0e6] bg-white/75">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
             <BrandLogo size="lg" />
-            <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{settings.name}</p>
+            <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{NERA_IDENTITY.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{settings.slogan}</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{NERA_IDENTITY.slogan}</p>
             <div className="mt-5">
               <PayDeliveryBadges />
             </div>
           </div>
           <div className="text-sm leading-7 text-black/60">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Boutique</p>
-            <p className="mt-2">{settings.address}</p>
-            <p>
-              {settings.city}, {settings.country}
-            </p>
-            <p>{settings.phone}</p>
+            <address className="mt-2 not-italic">
+              <p>{NERA_IDENTITY.streetAddress}</p>
+              <p>
+                {NERA_IDENTITY.addressLocality}, {NERA_IDENTITY.addressCountryName}
+              </p>
+              <p>
+                <a className="hover:underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
+                  {NERA_IDENTITY.phoneDisplay}
+                </a>
+              </p>
+            </address>
             <p>{settings.email}</p>
             {settings.mtnPhone ? <p>MoMo / MTN : {settings.mtnPhone}</p> : null}
             {wa ? (
@@ -123,6 +136,21 @@ export async function ShopFooter() {
           <div className="text-sm leading-7 text-black/55">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Service</p>
             <p className="mt-2">
+              <Link href="/" className="text-wine underline-offset-2 hover:underline">
+                Accueil
+              </Link>
+            </p>
+            <p>
+              <Link href="/a-propos" className="text-wine underline-offset-2 hover:underline">
+                À propos
+              </Link>
+            </p>
+            <p>
+              <Link href="/boutique" className="text-wine underline-offset-2 hover:underline">
+                Boutique
+              </Link>
+            </p>
+            <p>
               <Link href="/flash" className="text-wine underline-offset-2 hover:underline">
                 FLASH NERA
               </Link>
