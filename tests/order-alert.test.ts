@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatStaffOrderWhatsApp,
   greenApiChatId,
+  greenApiPhoneNumber,
   greenApiSendUrl,
   paymentNetworkLabel,
   resolveOrderAlertChannels,
@@ -83,9 +84,15 @@ describe("alerte WhatsApp commande site", () => {
 
   it("construit le chat Green API et l’URL d’envoi", () => {
     expect(greenApiChatId("+237 676 93 51 95")).toBe("237676935195@c.us");
+    expect(greenApiChatId("237676935195@c.us")).toBe("237676935195@c.us");
     expect(greenApiSendUrl("https://1103.api.green-api.com/", "1103123", "tok")).toBe(
       "https://1103.api.green-api.com/waInstance1103123/sendMessage/tok",
     );
+  });
+
+  it("n’utilise pas l’idInstance comme numéro WhatsApp", () => {
+    expect(greenApiPhoneNumber("710722733764")).toBe("237676935195");
+    expect(greenApiPhoneNumber("676 93 51 95")).toBe("237676935195");
   });
 
   it("envoie via Green API vers le WhatsApp boutique", async () => {

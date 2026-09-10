@@ -90,6 +90,11 @@ export default async function SettingsPage({
           CallMeBot n’envoie souvent <strong>aucune clé</strong> au Cameroun. On utilise Green API : les identifiants
           s’affichent sur le site, pas dans WhatsApp.
         </p>
+        <p className="mt-2 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Si Green API affiche une erreur <code>phoneNumber</code> : dans CheckWhatsapp, tapez seulement{" "}
+          <strong>237676935195</strong> (chiffres, sans +, sans espace, sans @c.us). Ne mettez pas l’idInstance. Pour
+          tester l’alerte, utilisez le bouton ci-dessous, pas CheckWhatsapp.
+        </p>
         <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-black/65">
           <li>
             Créez un compte gratuit sur{" "}
@@ -109,6 +114,7 @@ export default async function SettingsPage({
                   name="orderWhatsAppTo"
                   defaultValue={s.orderWhatsAppTo}
                   placeholder="237676935195"
+                  inputMode="numeric"
                   className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
                 />
               </label>
