@@ -1,5 +1,6 @@
 import { loginCustomer } from "@/app/actions/auth";
 import { BrandLogo } from "@/components/brand/logo";
+import { PasswordField } from "@/components/shop/password-field";
 import { safeNextPath } from "@/lib/safe-path";
 import Link from "next/link";
 
@@ -21,7 +22,7 @@ export default async function CustomerLoginPage({
       <form action={loginCustomer} className="mt-8 space-y-3 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
         <input type="hidden" name="next" value={dest} />
         <input name="email" type="email" required placeholder="Email" className="w-full rounded-xl border px-4 py-3" />
-        <input name="password" type="password" required placeholder="Mot de passe" className="w-full rounded-xl border px-4 py-3" />
+        <PasswordField required autoComplete="current-password" placeholder="Mot de passe" />
         <button className="w-full rounded-full bg-brown py-3 text-cream">Se connecter</button>
       </form>
       <p className="mt-6 text-sm text-black/60">

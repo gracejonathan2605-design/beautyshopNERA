@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { updateCustomerProfile, type ProfileState } from "@/app/actions/shop";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
+import { PasswordField } from "@/components/shop/password-field";
 
 const INITIAL: ProfileState = { ok: false };
 
@@ -34,7 +35,7 @@ export function AccountProfileForm({
       <input name="phone" defaultValue={customer.phone ?? ""} placeholder="Téléphone / WhatsApp" className="w-full rounded-xl border px-4 py-3" />
       <input name="address" defaultValue={customer.address ?? ""} placeholder="Adresse de livraison" className="w-full rounded-xl border px-4 py-3" />
       <input name="city" defaultValue={customer.city ?? ""} placeholder="Ville / quartier" className="w-full rounded-xl border px-4 py-3" />
-      <input name="password" type="password" minLength={8} placeholder="Nouveau mot de passe (optionnel)" className="w-full rounded-xl border px-4 py-3" />
+      <PasswordField minLength={8} autoComplete="new-password" placeholder="Nouveau mot de passe (optionnel)" />
       <PendingSubmitButton
         idle="Enregistrer mon profil"
         pendingLabel="Enregistrement…"
