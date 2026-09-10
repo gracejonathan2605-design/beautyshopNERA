@@ -4,6 +4,7 @@ import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
+import { notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
 import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
 import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
@@ -142,10 +143,36 @@ export async function createOnlineOrder(input: {
     return created;
   });
 
-  await notify({
-    type: "NEW_ORDER",
-    title: "Nouvelle commande",
-    message: `Commande ${order.number} — ${order.total} FCFA`,
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const articleWord = itemCount > 1 ? "articles" : "article";
+  const who = [order.shippingName, order.shippingPhone].filter(Boolean).join(" · ");
+  try {
+    await notify({
+      type: "NEW_ORDER",
+      title: "Nouvelle commande",
+      message: `Commande ${order.number} validée${who ? ` par ${who}` : ""} — ${itemCount} ${articleWord} — ${order.total} FCFA`,
+    });
+  } catch {
+    /* la commande client est déjà créée */
+  }
+
+  const paymentHint = order.payments[0]?.reference || order.payments[0]?.provider;
+  await notifyStaffNewOnlineOrder({
+    number: order.number,
+    customerName: order.shippingName ?? "",
+    customerPhone: order.shippingPhone ?? "",
+    fulfillment: order.fulfillment,
+    shippingAddress: order.shippingAddress,
+    shippingCity: order.shippingCity,
+    paymentLabel: paymentNetworkLabel(paymentHint),
+    notes: order.notes,
+    total: Number(order.total),
+    items: order.items.map((item) => ({
+      productName: item.productName,
+      variantName: item.variantName,
+      quantity: item.quantity,
+      total: Number(item.total),
+    })),
   });
 
   return order;
