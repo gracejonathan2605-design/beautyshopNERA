@@ -86,20 +86,45 @@ export default async function SettingsPage({
 
       <section className="mt-8 rounded-2xl border border-[#eee0e6] bg-white p-5">
         <h2 className="font-serif text-2xl text-wine">Alerte WhatsApp des commandes site</h2>
-        <p className="mt-2 max-w-2xl text-sm text-black/60">
-          CallMeBot n’envoie souvent <strong>aucune clé</strong> au Cameroun. On utilise Green API : les identifiants
-          s’affichent sur le site, pas dans WhatsApp.
+        <p className="mt-2 max-w-2xl text-sm text-black/70">
+          Vous collez les 3 valeurs <strong>ici</strong>, dans l’admin NERA — pas dans Green API, pas dans Vercel.
         </p>
-        <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-black/65">
-          <li>
-            Créez un compte gratuit sur{" "}
-            <a className="underline" href="https://console.green-api.com" target="_blank" rel="noreferrer">
-              console.green-api.com
-            </a>
-          </li>
-          <li>Créez une instance, puis scannez le QR avec le WhatsApp boutique {NERA_IDENTITY.phoneDisplay}.</li>
-          <li>Copiez idInstance, apiTokenInstance et apiUrl, collez-les ci-dessous, enregistrez, puis envoyez un test.</li>
-        </ol>
+        <p className="mt-2 max-w-2xl text-sm text-black/60">
+          Sur Green API : ouvrez <strong>Instances</strong>, cliquez sur votre instance. Copiez uniquement les 3 lignes
+          ci-dessous (ignorez <code>mediaUrl</code>).
+        </p>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-[#eee0e6]">
+          <table className="w-full min-w-[32rem] text-left text-sm">
+            <thead className="bg-blush/50 text-wine">
+              <tr>
+                <th className="px-3 py-2 font-medium">Sur Green API, copiez</th>
+                <th className="px-3 py-2 font-medium">Collez dans le champ NERA</th>
+                <th className="px-3 py-2 font-medium">Exemple</th>
+              </tr>
+            </thead>
+            <tbody className="text-black/70">
+              <tr className="border-t border-[#eee0e6]">
+                <td className="px-3 py-2 font-mono text-xs">idInstance</td>
+                <td className="px-3 py-2">ID instance (idInstance)</td>
+                <td className="px-3 py-2 font-mono text-xs">1103123456</td>
+              </tr>
+              <tr className="border-t border-[#eee0e6] bg-blush/20">
+                <td className="px-3 py-2 font-mono text-xs">apiUrl</td>
+                <td className="px-3 py-2">URL API (apiUrl)</td>
+                <td className="px-3 py-2 font-mono text-xs">https://1103.api.green-api.com</td>
+              </tr>
+              <tr className="border-t border-[#eee0e6]">
+                <td className="px-3 py-2 font-mono text-xs">apiTokenInstance</td>
+                <td className="px-3 py-2">Token API (apiTokenInstance)</td>
+                <td className="px-3 py-2 text-xs">la longue clé secrète</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-black/50">
+          Le numéro qui reçoit les commandes est déjà {NERA_IDENTITY.phoneDisplay} (237676935195). Ne touchez pas à
+          mediaUrl. L’instance doit être autorisée : bouton Get QR, puis WhatsApp → Appareils liés → Lier un appareil.
+        </p>
         {canUpdate ? (
           <>
             <form action={saveSettings} className="mt-5 grid gap-3 md:grid-cols-2">
