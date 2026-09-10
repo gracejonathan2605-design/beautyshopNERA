@@ -24,6 +24,12 @@ export type ShopSettings = {
   flashDurationDays: number;
   /** 0 = pas d’annulation auto. Sinon libère le stock des commandes PENDING impayées. */
   pendingOrderHours: number;
+  /** Destinataire des alertes commande site (chiffres, ex. 237676935195). */
+  orderWhatsAppTo: string;
+  greenApiId: string;
+  greenApiToken: string;
+  /** Ex. https://1103.api.green-api.com — copié depuis la console Green API. */
+  greenApiUrl: string;
   prefixes: {
     order: string;
     sale: string;
@@ -50,6 +56,10 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   terms: "Les articles d'hygiène et les mèches ouvertes ne sont ni repris ni échangés.",
   flashDurationDays: 10,
   pendingOrderHours: DEFAULT_PENDING_ORDER_HOURS,
+  orderWhatsAppTo: "237676935195",
+  greenApiId: "",
+  greenApiToken: "",
+  greenApiUrl: "",
   prefixes: {
     order: "NERA",
     sale: "POS",
@@ -86,6 +96,10 @@ export function mergeShopSettings(stored?: Partial<ShopSettings> | null): ShopSe
   }
   merged.flashDurationDays = normalizeFlashDurationDays(merged.flashDurationDays);
   merged.pendingOrderHours = normalizePendingOrderHours(merged.pendingOrderHours);
+  merged.orderWhatsAppTo = String(merged.orderWhatsAppTo ?? "").replace(/\D/g, "") || DEFAULT_SETTINGS.orderWhatsAppTo;
+  merged.greenApiId = String(merged.greenApiId ?? "").trim();
+  merged.greenApiToken = String(merged.greenApiToken ?? "").trim();
+  merged.greenApiUrl = String(merged.greenApiUrl ?? "").trim().replace(/\/$/, "");
   return merged;
 }
 

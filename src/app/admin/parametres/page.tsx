@@ -1,17 +1,26 @@
 import { requireStaff } from "@/lib/guard";
 import { getShopSettings } from "@/lib/settings";
-import { saveSettings } from "@/app/actions/admin";
+import { saveSettings, sendTestOrderWhatsApp } from "@/app/actions/admin";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
+import { AdminFlash } from "@/components/admin/flash";
+import { hasPermission } from "@/lib/permissions";
 
-export default async function SettingsPage() {
-  await requireStaff("settings.view");
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; erreur?: string }>;
+}) {
+  const session = await requireStaff("settings.view");
   const s = await getShopSettings();
+  const { ok, erreur } = await searchParams;
+  const canUpdate = hasPermission(session, "settings.update");
   return (
     <div>
       <h1 className="font-serif text-4xl">Paramètres</h1>
       <p className="mt-2 max-w-xl text-sm text-black/55">
         Ces informations apparaissent sur le ticket de caisse (impression thermique 80 mm et WhatsApp).
       </p>
+      <AdminFlash ok={ok} erreur={erreur} />
       <div className="mt-6 rounded-2xl border border-[#eee0e6] bg-blush/40 p-5 text-sm leading-relaxed text-black/65">
         <p className="text-xs uppercase tracking-[0.2em] text-gold">Identité officielle (NAP)</p>
         <p className="mt-2 font-medium text-wine">{NERA_IDENTITY.name}</p>
@@ -74,6 +83,80 @@ export default async function SettingsPage() {
         </p>
         <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
       </form>
+
+      <section className="mt-8 rounded-2xl border border-[#eee0e6] bg-white p-5">
+        <h2 className="font-serif text-2xl text-wine">Alerte WhatsApp des commandes site</h2>
+        <p className="mt-2 max-w-2xl text-sm text-black/60">
+          CallMeBot n’envoie souvent <strong>aucune clé</strong> au Cameroun. On utilise Green API : les identifiants
+          s’affichent sur le site, pas dans WhatsApp.
+        </p>
+        <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-black/65">
+          <li>
+            Créez un compte gratuit sur{" "}
+            <a className="underline" href="https://console.green-api.com" target="_blank" rel="noreferrer">
+              console.green-api.com
+            </a>
+          </li>
+          <li>Créez une instance, puis scannez le QR avec le WhatsApp boutique {NERA_IDENTITY.phoneDisplay}.</li>
+          <li>Copiez idInstance, apiTokenInstance et apiUrl, collez-les ci-dessous, enregistrez, puis envoyez un test.</li>
+        </ol>
+        {canUpdate ? (
+          <>
+            <form action={saveSettings} className="mt-5 grid gap-3 md:grid-cols-2">
+              <label className="text-sm text-black/50">
+                Numéro qui reçoit les commandes
+                <input
+                  name="orderWhatsAppTo"
+                  defaultValue={s.orderWhatsAppTo}
+                  placeholder="237676935195"
+                  className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
+                />
+              </label>
+              <label className="text-sm text-black/50">
+                ID instance (idInstance)
+                <input
+                  name="greenApiId"
+                  defaultValue={s.greenApiId}
+                  placeholder="1103…"
+                  className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
+                />
+              </label>
+              <label className="text-sm text-black/50 md:col-span-2">
+                URL API (apiUrl)
+                <input
+                  name="greenApiUrl"
+                  defaultValue={s.greenApiUrl}
+                  placeholder="https://1103.api.green-api.com"
+                  className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
+                />
+              </label>
+              <label className="text-sm text-black/50 md:col-span-2">
+                Token API (apiTokenInstance)
+                <input
+                  name="greenApiToken"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={s.greenApiToken ? "Laisser vide pour ne pas changer" : "Collez le token ici"}
+                  className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine"
+                />
+              </label>
+              <p className="text-xs text-black/45 md:col-span-2">
+                {s.greenApiId && s.greenApiToken
+                  ? "Green API est enregistré. Envoyez un test pour vérifier."
+                  : "Sans ces trois champs, la commande se crée quand même, mais aucun WhatsApp n’est envoyé."}
+              </p>
+              <button className="rounded-full bg-brown py-2 text-cream md:col-span-2">Enregistrer l’alerte WhatsApp</button>
+            </form>
+            <form action={sendTestOrderWhatsApp} className="mt-3">
+              <button className="rounded-full border border-wine px-4 py-2 text-sm text-wine">
+                Envoyer un message test
+              </button>
+            </form>
+          </>
+        ) : (
+          <p className="mt-4 text-sm text-black/50">Vous pouvez voir les paramètres, mais pas les modifier.</p>
+        )}
+      </section>
     </div>
   );
 }
