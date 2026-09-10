@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
 
 export const BRAND_LOGO_SRC = "/brand/nera-logo.jpg";
 export const BRAND_RECEIPT_SRC = "/brand/nera-receipt.png";
@@ -88,11 +89,11 @@ export function HeroProducts({ className = "" }: { className?: string }) {
       <Image
         src={BRAND_HERO_SRC}
         alt="Parfums, mèches, maquillage et mode NERA Beauté"
-        width={1600}
-        height={1200}
-        priority
+        width={1200}
+        height={900}
         className="h-full w-full object-cover"
-        sizes="(max-width: 768px) 100vw, 50vw"
+        sizes="(max-width: 768px) 92vw, 540px"
+        quality={SHOP_IMAGE_QUALITY}
       />
     </div>
   );

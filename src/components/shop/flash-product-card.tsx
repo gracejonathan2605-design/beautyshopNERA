@@ -12,6 +12,7 @@ import { promoPercent, unitPrice } from "@/lib/pricing";
 import { catalogPhotoFor } from "@/lib/product-photos";
 import { displayVariant, productInStock } from "@/lib/stock-display";
 import { isFlashActive } from "@/lib/flash";
+import { PRODUCT_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
 
 export type FlashCardProduct = {
   name: string;
@@ -49,20 +50,22 @@ export function FlashProductCard({ product }: { product: FlashCardProduct }) {
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)]">
-      <Link href={`/produit/${product.slug}`} className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
+      <Link href={`/produit/${product.slug}`} prefetch={false} className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
         <Image
           src={photo}
           alt={photoAlt}
           fill
           className={`object-cover ${inStock ? "" : "grayscale-[0.35]"}`}
-          sizes="(max-width: 768px) 80vw, 25vw"
+          sizes={PRODUCT_CARD_SIZES}
+          quality={SHOP_IMAGE_QUALITY}
+          loading="lazy"
         />
         <div className="absolute left-3 top-3">
           <ProductBadges flash promoPercent={percent} isPromo={product.isPromo} isNew={product.isNew} />
         </div>
       </Link>
       <div className="flex flex-1 flex-col p-4">
-        <Link href={`/produit/${product.slug}`}>
+        <Link href={`/produit/${product.slug}`} prefetch={false}>
           <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
         </Link>
         <p className="mt-3 text-sm font-medium text-wine">
@@ -84,6 +87,7 @@ export function FlashProductCard({ product }: { product: FlashCardProduct }) {
           )}
           <Link
             href={`/produit/${product.slug}`}
+            prefetch={false}
             className="rounded-full border border-[#eee0e6] py-2.5 text-center text-sm text-wine"
           >
             Voir le produit

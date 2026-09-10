@@ -19,6 +19,7 @@ import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, productPlainText, truncateMeta } from "@/lib/seo";
 import { productInStock } from "@/lib/stock-display";
 import { ProductCopy, ProductFacts } from "@/components/shop/product-copy";
+import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -141,7 +142,7 @@ export default async function ProductPage({ params }: Props) {
       {related.length ? (
         <section className="mt-16">
           <h2 className="font-serif text-3xl text-wine">Dans le même rayon</h2>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+          <div className={`mt-6 ${PRODUCT_GRID_HOME_CLASS}`}>
             {related.map((item) => (
               <ProductCard key={item.id} product={item} />
             ))}

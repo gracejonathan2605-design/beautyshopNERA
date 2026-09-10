@@ -6,6 +6,7 @@ import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, parseBrowseQuery, shopRayons } from "@/lib/shop-browse";
 import { breadcrumbJsonLd, collectionJsonLd, pageMetadata } from "@/lib/seo";
+import { PRODUCT_GRID_CLASS } from "@/lib/image-limits";
 
 export async function generateMetadata({
   searchParams,
@@ -66,7 +67,7 @@ export default async function BoutiquePage({
         </p>
       ) : null}
       {result.items.length ? (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+        <div className={`mt-8 ${PRODUCT_GRID_CLASS}`}>
           {result.items.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}

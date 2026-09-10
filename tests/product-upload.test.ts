@@ -38,7 +38,7 @@ describe("envoi photos / vidéos produit", () => {
   });
 
   it("redimensionne les photos pour rester légères en boutique", () => {
-    expect(IMAGE_MAX_EDGE).toBeLessThanOrEqual(1400);
+    expect(IMAGE_MAX_EDGE).toBeLessThanOrEqual(960);
   });
 
   it("ne publie pas d’identifiants de démo dans le README ni le seed", () => {

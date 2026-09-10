@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getShopSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/shop/product-card";
 import { getHomeCatalog, getActiveFlashProducts } from "@/lib/catalog-cache";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
@@ -10,8 +9,8 @@ import { HomeIdentity } from "@/components/shop/home-identity";
 import { JsonLd } from "@/components/seo/json-ld";
 import { pageMetadata, webPageJsonLd } from "@/lib/seo";
 import { NERA_IDENTITY, NERA_PITCH } from "@/lib/nera-identity";
+import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
 
-export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata: Metadata = pageMetadata({
@@ -30,30 +29,24 @@ const TRUST = [
 ];
 
 export default async function HomePage() {
-  let settings;
   let catalog: Awaited<ReturnType<typeof getHomeCatalog>> | null = null;
   let flash: Awaited<ReturnType<typeof getActiveFlashProducts>> = [];
-  try {
-    settings = await getShopSettings();
-  } catch {
-    settings = null;
-  }
   try {
     catalog = await getHomeCatalog();
   } catch {
     catalog = null;
   }
   try {
-    flash = await getActiveFlashProducts(8);
+    flash = await getActiveFlashProducts(4);
   } catch {
     flash = [];
   }
-  if (!settings && !catalog) {
+  if (!catalog) {
     return (
       <section className="hero-light px-4 py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <div>
-            <BrandLogo size="hero" priority className="mb-6" />
+            <BrandLogo size="hero" className="mb-6" />
             <p className="text-sm uppercase tracking-[0.32em] text-gold">Yaoundé · Cameroun</p>
             <h1 className="mt-4 font-serif text-6xl text-wine">NERA Beauté & Shop</h1>
             <p className="mt-4 max-w-xl text-lg text-black/65">
@@ -62,15 +55,6 @@ export default async function HomePage() {
             </p>
           </div>
           <HeroProducts />
-        </div>
-      </section>
-    );
-  }
-  if (!settings || !catalog) {
-    return (
-      <section className="hero-light px-4 py-24">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <h1 className="font-serif text-5xl text-wine">NERA Beauté & Shop</h1>
         </div>
       </section>
     );
@@ -92,7 +76,7 @@ export default async function HomePage() {
       <section className="hero-light px-4 py-16 md:py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <div>
-            <BrandLogo size="lg" priority className="mb-6" />
+            <BrandLogo size="lg" className="mb-6" />
             <p className="text-sm uppercase tracking-[0.35em] text-gold">Maison de beauté · Yaoundé</p>
             <h1 className="mt-5 font-serif text-5xl leading-[1.05] text-wine md:text-6xl">
               {NERA_IDENTITY.name}
@@ -147,6 +131,7 @@ export default async function HomePage() {
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
+              prefetch={false}
               className="group rounded-[1.6rem] border border-[#eee0e6] bg-white/85 p-6 transition hover:-translate-y-0.5 hover:border-gold hover:shadow-lg"
             >
               <p className="font-serif text-2xl text-wine group-hover:text-brown">{c.name}</p>
@@ -164,7 +149,7 @@ export default async function HomePage() {
         (items as typeof featured).length ? (
           <section key={title as string} className="mx-auto max-w-6xl px-4 py-8">
             <h2 className="font-serif text-4xl text-wine">{title as string}</h2>
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+            <div className={`${PRODUCT_GRID_HOME_CLASS} mt-6`}>
               {(items as typeof featured).map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

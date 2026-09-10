@@ -21,6 +21,20 @@ function WhatsAppIcon() {
   );
 }
 
+export function ShopHeaderFallback() {
+  return (
+    <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
+      <p className="bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-wine">
+        Yaoundé · OM & MoMo · Livraison rapide sous 24h
+      </p>
+      <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
+        <BrandLockup size="sm" priority />
+        <span className="rounded-full bg-brown px-3 py-2 text-sm text-cream sm:px-4">Panier (…)</span>
+      </div>
+    </header>
+  );
+}
+
 export async function ShopHeader() {
   let settings = (await getShopSettings().catch(() => null)) ?? {
     name: "NERA Beauté & Shop",
@@ -85,6 +99,7 @@ export async function ShopHeader() {
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
+              prefetch={false}
               className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
             >
               {c.name}
