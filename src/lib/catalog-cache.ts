@@ -39,35 +39,33 @@ export const getHomeCatalog = unstable_cache(
   async () => {
     const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 90);
     return withFlashProductSelect(async (select) => {
-      const [featured, news, promos, categories] = await Promise.all([
-        prisma.product.findMany({
-          where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
-          select,
-          take: 8,
-        }),
-        prisma.product.findMany({
-          where: {
-            status: "ACTIVE",
-            onlineVisible: true,
-            deletedAt: null,
-            isNew: true,
-            createdAt: { gte: since },
-          },
-          select,
-          take: 8,
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.product.findMany({
-          where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
-          select,
-          take: 8,
-        }),
-        prisma.category.findMany({
-          where: { isActive: true, parentId: null, deletedAt: null },
-          orderBy: { sortOrder: "asc" },
-          select: { id: true, name: true, slug: true },
-        }),
-      ]);
+      const featured = await prisma.product.findMany({
+        where: { status: "ACTIVE", onlineVisible: true, isFeatured: true, deletedAt: null },
+        select,
+        take: 8,
+      });
+      const news = await prisma.product.findMany({
+        where: {
+          status: "ACTIVE",
+          onlineVisible: true,
+          deletedAt: null,
+          isNew: true,
+          createdAt: { gte: since },
+        },
+        select,
+        take: 8,
+        orderBy: { createdAt: "desc" },
+      });
+      const promos = await prisma.product.findMany({
+        where: { status: "ACTIVE", onlineVisible: true, isPromo: true, deletedAt: null },
+        select,
+        take: 8,
+      });
+      const categories = await prisma.category.findMany({
+        where: { isActive: true, parentId: null, deletedAt: null },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, name: true, slug: true },
+      });
       return { featured, news, promos, categories };
     });
   },

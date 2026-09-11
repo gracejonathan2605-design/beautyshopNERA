@@ -2,11 +2,23 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const datasourceUrl = process.env.DATABASE_URL
-  ? process.env.DATABASE_URL.includes("connection_limit=")
-    ? process.env.DATABASE_URL
-    : `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes("?") ? "&" : "?"}connection_limit=1`
-  : undefined;
+/** Fluid Compute gère plusieurs requêtes à la fois : une seule connexion = timeouts P2024. */
+export const PRISMA_DEFAULT_CONNECTION_LIMIT = 5;
+export const PRISMA_DEFAULT_POOL_TIMEOUT = 20;
+
+export function prismaDatasourceUrl(databaseUrl?: string | null) {
+  if (!databaseUrl) return undefined;
+  let url = databaseUrl;
+  if (!url.includes("connection_limit=")) {
+    url += `${url.includes("?") ? "&" : "?"}connection_limit=${PRISMA_DEFAULT_CONNECTION_LIMIT}`;
+  }
+  if (!url.includes("pool_timeout=")) {
+    url += `${url.includes("?") ? "&" : "?"}pool_timeout=${PRISMA_DEFAULT_POOL_TIMEOUT}`;
+  }
+  return url;
+}
+
+const datasourceUrl = prismaDatasourceUrl(process.env.DATABASE_URL);
 
 export const prisma =
   globalForPrisma.prisma ??
