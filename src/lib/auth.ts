@@ -175,12 +175,12 @@ export const getCustomerSession = cache(readCustomerSession);
 
 export async function clearStaffSession() {
   const jar = await cookies();
-  jar.delete(STAFF_COOKIE);
+  jar.delete({ name: STAFF_COOKIE, path: "/" });
 }
 
 export async function clearCustomerSession() {
   const jar = await cookies();
-  jar.delete(CUSTOMER_COOKIE);
+  jar.delete({ name: CUSTOMER_COOKIE, path: "/" });
 }
 
 export const COOKIES = { STAFF_COOKIE, CUSTOMER_COOKIE };

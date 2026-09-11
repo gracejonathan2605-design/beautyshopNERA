@@ -57,4 +57,15 @@ describe("paramètres boutique", () => {
     expect(mergeShopSettings({ pendingOrderHours: 36 }).pendingOrderHours).toBe(36);
     expect(mergeShopSettings({ pendingOrderHours: -4 }).pendingOrderHours).toBe(24);
   });
+
+  it("nettoie un collage Green API avec libellés", () => {
+    const merged = mergeShopSettings({
+      greenApiId: "idInstance: 1103999",
+      greenApiToken: "apiTokenInstance: secret-token",
+      greenApiUrl: "apiUrl: https://1103.api.green-api.com/",
+    });
+    expect(merged.greenApiId).toBe("1103999");
+    expect(merged.greenApiToken).toBe("secret-token");
+    expect(merged.greenApiUrl).toBe("https://1103.api.green-api.com");
+  });
 });

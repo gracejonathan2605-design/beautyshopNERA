@@ -4,6 +4,9 @@ import {
   greenApiChatId,
   greenApiPhoneNumber,
   greenApiSendUrl,
+  normalizeGreenApiId,
+  normalizeGreenApiToken,
+  normalizeGreenApiUrl,
   paymentNetworkLabel,
   resolveOrderAlertChannels,
   sendStaffOrderWhatsApp,
@@ -166,5 +169,16 @@ describe("alerte WhatsApp commande site", () => {
         else process.env[key] = previous[key];
       }
     }
+  });
+});
+
+
+describe("collage Green API", () => {
+  it("retire les libellés idInstance / apiTokenInstance / apiUrl", () => {
+    expect(normalizeGreenApiId("idInstance: 1103123456")).toBe("1103123456");
+    expect(normalizeGreenApiToken("apiTokenInstance: abcDEF123")).toBe("abcDEF123");
+    expect(normalizeGreenApiUrl("apiUrl: https://1103.api.green-api.com/")).toBe(
+      "https://1103.api.green-api.com",
+    );
   });
 });

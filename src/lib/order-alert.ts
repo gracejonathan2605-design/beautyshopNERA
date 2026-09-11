@@ -91,6 +91,20 @@ export function normalizeGreenApiUrl(raw?: string | null) {
   return value;
 }
 
+/** Colle depuis Green API : « idInstance: 1103… » ou la valeur seule. */
+export function normalizeGreenApiId(raw?: string | null) {
+  let value = (raw ?? "").trim().replace(/^(?:idInstance|id)\s*[:=]\s*/i, "");
+  value = value.replace(/^["']|["']$/g, "").trim();
+  const digits = value.replace(/\D/g, "");
+  return digits || value;
+}
+
+/** Colle depuis Green API : « apiTokenInstance: … » ou le token seul. */
+export function normalizeGreenApiToken(raw?: string | null) {
+  let value = (raw ?? "").trim().replace(/^apiTokenInstance\s*[:=]\s*/i, "");
+  return value.replace(/^["']|["']$/g, "").trim();
+}
+
 export function greenApiSendUrl(apiUrl: string, id: string, token: string, method = "sendMessage") {
   const base = normalizeGreenApiUrl(apiUrl);
   if (!base) return "";
@@ -130,8 +144,8 @@ export function resolveOrderAlertChannels(stored?: Partial<OrderAlertStored> | n
     callmebot: process.env.CALLMEBOT_APIKEY?.trim() || undefined,
     whatsappToken: process.env.WHATSAPP_TOKEN?.trim() || undefined,
     whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() || undefined,
-    greenApiId: firstText(process.env.GREEN_API_ID, stored?.greenApiId) || undefined,
-    greenApiToken: firstText(process.env.GREEN_API_TOKEN, stored?.greenApiToken) || undefined,
+    greenApiId: normalizeGreenApiId(firstText(process.env.GREEN_API_ID, stored?.greenApiId)) || undefined,
+    greenApiToken: normalizeGreenApiToken(firstText(process.env.GREEN_API_TOKEN, stored?.greenApiToken)) || undefined,
     greenApiUrl: normalizeGreenApiUrl(firstText(process.env.GREEN_API_URL, stored?.greenApiUrl)) || undefined,
   };
 }

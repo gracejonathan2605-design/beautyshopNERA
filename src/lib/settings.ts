@@ -97,9 +97,24 @@ export function mergeShopSettings(stored?: Partial<ShopSettings> | null): ShopSe
   merged.flashDurationDays = normalizeFlashDurationDays(merged.flashDurationDays);
   merged.pendingOrderHours = normalizePendingOrderHours(merged.pendingOrderHours);
   merged.orderWhatsAppTo = String(merged.orderWhatsAppTo ?? "").replace(/\D/g, "") || DEFAULT_SETTINGS.orderWhatsAppTo;
-  merged.greenApiId = String(merged.greenApiId ?? "").trim();
-  merged.greenApiToken = String(merged.greenApiToken ?? "").trim();
-  merged.greenApiUrl = String(merged.greenApiUrl ?? "").trim().replace(/\/$/, "");
+  // Strip labels if the team pastes "idInstance: …" / "apiTokenInstance: …" / "apiUrl: …".
+  let greenId = String(merged.greenApiId ?? "").trim().replace(/^(?:idInstance|id)\s*[:=]\s*/i, "");
+  greenId = greenId.replace(/^["']|["']$/g, "").trim();
+  merged.greenApiId = greenId.replace(/\D/g, "") || greenId;
+  merged.greenApiToken = (
+    String(merged.greenApiToken ?? "")
+      .trim()
+      .replace(/^apiTokenInstance\s*[:=]\s*/i, "")
+      .replace(/^["']|["']$/g, "")
+      .trim()
+  );
+  merged.greenApiUrl = (
+    String(merged.greenApiUrl ?? "")
+      .trim()
+      .replace(/^apiUrl\s*[:=]\s*/i, "")
+      .replace(/^["']|["']$/g, "")
+      .replace(/\/$/, "")
+  );
   return merged;
 }
 

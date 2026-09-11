@@ -199,6 +199,35 @@ function refreshCatalog(slug?: string) {
   if (slug) revalidatePath(`/produit/${slug}`);
 }
 
+
+async function enforceOnlinePublishRules(
+  productId: string,
+  opts: {
+    onlineVisible: boolean;
+    shortDescription?: string | null;
+    description?: string | null;
+    slug?: string;
+  },
+) {
+  if (!opts.onlineVisible) return null;
+  const photoCount = await prisma.productImage.count({
+    where: { productId, kind: "IMAGE" },
+  });
+  const blocked = publishOnlineBlocker({
+    onlineVisible: true,
+    photoCount,
+    shortDescription: opts.shortDescription,
+    description: opts.description,
+  });
+  if (!blocked) return null;
+  await prisma.product.update({
+    where: { id: productId },
+    data: { onlineVisible: false, flashStartAt: null, flashEndAt: null },
+  });
+  if (opts.slug) refreshCatalog(opts.slug);
+  return `${blocked} Le produit reste hors ligne.`;
+}
+
 async function attachMedia(productId: string, name: string, formData: FormData, existingPhotoCount = 0) {
   const remaining = Math.max(0, MAX_PRODUCT_PHOTOS - existingPhotoCount);
   const photos = formData
@@ -388,7 +417,18 @@ export async function saveProduct(
       include: { variants: true, category: true },
     });
 
-    const warning = await attachMedia(product.id, name, formData);
+    let warning = await attachMedia(product.id, name, formData);
+    const publishGuard = await enforceOnlinePublishRules(product.id, {
+      onlineVisible,
+      shortDescription,
+      description,
+      slug: product.slug,
+    });
+    let effectivelyOnline = onlineVisible;
+    if (publishGuard) {
+      effectivelyOnline = false;
+      warning = warning ? `${warning} ${publishGuard}` : publishGuard;
+    }
     const createdVariants = [...product.variants].sort(
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
@@ -417,8 +457,8 @@ export async function saveProduct(
       ok: true,
       name,
       warning: warning
-        ? `${name} est ${onlineVisible ? "en boutique et à la caisse" : "enregistré (pas encore en FLASH NERA ni en boutique)"} (SKU ${sku}). ${warning}`
-        : `${name} est ${onlineVisible ? "en boutique et à la caisse" : "enregistré (pas encore en FLASH NERA ni en boutique)"}. SKU : ${sku}`,
+        ? `${name} est ${effectivelyOnline ? "en boutique et à la caisse" : "enregistré (pas encore en FLASH NERA ni en boutique)"} (SKU ${sku}). ${warning}`
+        : `${name} est ${effectivelyOnline ? "en boutique et à la caisse" : "enregistré (pas encore en FLASH NERA ni en boutique)"}. SKU : ${sku}`,
     };
   } catch (err) {
     unstable_rethrow(err);
@@ -565,7 +605,18 @@ export async function updateProduct(
       });
     }
 
-    const warning = await attachMedia(productId, name, formData, photoCount);
+    let warning = await attachMedia(productId, name, formData, photoCount);
+    const publishGuard = await enforceOnlinePublishRules(productId, {
+      onlineVisible,
+      shortDescription,
+      description: current.description,
+      slug: current.slug,
+    });
+    let effectivelyOnline = onlineVisible;
+    if (publishGuard) {
+      effectivelyOnline = false;
+      warning = warning ? `${warning} ${publishGuard}` : publishGuard;
+    }
     await writeAudit({
       userId: session.userId,
       action: "PRODUCT_UPDATE",
@@ -579,7 +630,9 @@ export async function updateProduct(
       name,
       warning: warning
         ? `Produit mis à jour. ${warning}`
-        : "Produit mis à jour. Visible en boutique et à la caisse.",
+        : effectivelyOnline
+          ? "Produit mis à jour. Visible en boutique et à la caisse."
+          : "Produit mis à jour (hors ligne boutique).",
     };
   } catch (err) {
     unstable_rethrow(err);
@@ -593,17 +646,38 @@ export async function deleteProductMedia(formData: FormData) {
   if (!ids.length) return;
   const rows = await prisma.productImage.findMany({
     where: { id: { in: ids } },
-    include: { product: { select: { id: true, slug: true } } },
+    include: {
+      product: {
+        select: {
+          id: true,
+          slug: true,
+          onlineVisible: true,
+          shortDescription: true,
+          description: true,
+        },
+      },
+    },
   });
   if (!rows.length) return;
   const productId = rows[0].productId;
+  const product = rows[0].product;
   await prisma.productImage.deleteMany({
     where: { id: { in: rows.map((row) => row.id) }, productId },
   });
-  refreshCatalog(rows[0].product.slug);
+  const unpublished = await enforceOnlinePublishRules(productId, {
+    onlineVisible: product.onlineVisible,
+    shortDescription: product.shortDescription,
+    description: product.description,
+    slug: product.slug,
+  });
+  refreshCatalog(product.slug);
   revalidatePath(`/admin/produits/${productId}`);
   const q = new URLSearchParams();
-  q.set("ok", rows.length > 1 ? `${rows.length} fichiers retirés.` : "Fichier retiré.");
+  if (unpublished) {
+    q.set("ok", "Fichier retiré. Le produit a été retiré de la boutique (photo ou description manquante).");
+  } else {
+    q.set("ok", rows.length > 1 ? `${rows.length} fichiers retirés.` : "Fichier retiré.");
+  }
   redirect(`/admin/produits/${productId}?${q.toString()}`);
 }
 
