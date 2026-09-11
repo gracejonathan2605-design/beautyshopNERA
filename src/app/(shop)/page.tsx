@@ -37,7 +37,7 @@ export default async function HomePage() {
     catalog = null;
   }
   try {
-    flash = await getActiveFlashProducts(4);
+    flash = await getActiveFlashProducts(8);
   } catch {
     flash = [];
   }
@@ -46,7 +46,7 @@ export default async function HomePage() {
       <section className="hero-light px-4 py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <div>
-            <BrandLogo size="hero" className="mb-6 hidden md:block" />
+            <BrandLogo size="hero" priority className="mb-6" />
             <p className="text-sm uppercase tracking-[0.32em] text-gold">Yaoundé · Cameroun</p>
             <h1 className="mt-4 font-serif text-6xl text-wine">NERA Beauté & Shop</h1>
             <p className="mt-4 max-w-xl text-lg text-black/65">
@@ -73,30 +73,30 @@ export default async function HomePage() {
             "Boutique de beauté physique et e-commerce à Yaoundé, Marché Neptune Ahala, face Skymotors.",
         })}
       />
-      <section className="hero-light px-4 py-8 md:py-24">
-        <div className="mx-auto grid max-w-6xl items-center gap-6 md:grid-cols-2 md:gap-10">
+      <section className="hero-light px-4 py-16 md:py-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <div>
-            <BrandLogo size="lg" className="mb-6 hidden md:block" />
+            <BrandLogo size="lg" priority className="mb-6" />
             <p className="text-sm uppercase tracking-[0.35em] text-gold">Maison de beauté · Yaoundé</p>
-            <h1 className="mt-3 font-serif text-4xl leading-[1.05] text-wine sm:text-5xl md:mt-5 md:text-6xl">
+            <h1 className="mt-5 font-serif text-5xl leading-[1.05] text-wine md:text-6xl">
               {NERA_IDENTITY.name}
             </h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-black/60 md:mt-6 md:text-lg">{NERA_IDENTITY.slogan}</p>
-            <p className="mt-4 hidden max-w-xl text-base leading-relaxed text-black/65 md:block">{NERA_PITCH}</p>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-black/60">{NERA_IDENTITY.slogan}</p>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-black/65">{NERA_PITCH}</p>
             <p className="mt-3 text-sm text-black/55">
               {NERA_IDENTITY.addressLine} ·{" "}
               <a className="text-brown underline" href={`tel:${NERA_IDENTITY.phoneE164}`}>
                 {NERA_IDENTITY.phoneDisplay}
               </a>
             </p>
-            <div className="mt-5 md:mt-6">
-              <PayDeliveryBadges compact />
+            <div className="mt-6">
+              <PayDeliveryBadges />
             </div>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap md:mt-10">
-              <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-center text-cream">
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-cream">
                 Entrer dans la boutique
               </Link>
-              <Link href="/a-propos" className="hidden rounded-full border border-[#eee0e6] bg-white/85 px-8 py-3 text-wine sm:inline-flex sm:justify-center">
+              <Link href="/a-propos" className="rounded-full border border-[#eee0e6] bg-white/85 px-8 py-3 text-wine">
                 À propos
               </Link>
             </div>
@@ -105,14 +105,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="defer-paint">
       <FlashSection products={flash} />
 
-      <section className="mx-auto grid max-w-6xl grid-cols-2 gap-3 px-4 py-8 lg:grid-cols-4 lg:gap-4 lg:py-10">
+      <section className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {TRUST.map((item) => (
-          <div key={item.title} className="rounded-2xl border border-[#eee0e6] bg-white/80 p-3 sm:p-5">
-            <p className="font-serif text-base text-wine sm:text-xl">{item.title}</p>
-            <p className="mt-2 text-xs leading-relaxed text-black/55 sm:text-sm">{item.text}</p>
+          <div key={item.title} className="rounded-3xl border border-[#eee0e6] bg-white/80 p-5">
+            <p className="font-serif text-xl text-wine">{item.title}</p>
+            <p className="mt-2 text-sm leading-relaxed text-black/55">{item.text}</p>
           </div>
         ))}
       </section>
@@ -121,21 +120,21 @@ export default async function HomePage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-gold">Rayons</p>
-            <h2 className="mt-2 font-serif text-3xl text-wine md:text-4xl">Univers NERA</h2>
+            <h2 className="mt-2 font-serif text-4xl text-wine">Univers NERA</h2>
           </div>
           <Link href="/boutique" className="text-sm text-brown underline">
             Tout voir
           </Link>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-4 md:gap-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           {categories.map((c) => (
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
               prefetch={false}
-              className="group rounded-2xl border border-[#eee0e6] bg-white/85 p-4 transition md:rounded-[1.6rem] md:p-6 md:hover:-translate-y-0.5 md:hover:border-gold md:hover:shadow-lg"
+              className="group rounded-[1.6rem] border border-[#eee0e6] bg-white/85 p-6 transition hover:-translate-y-0.5 hover:border-gold hover:shadow-lg"
             >
-              <p className="font-serif text-lg leading-snug text-wine group-hover:text-brown md:text-2xl">{c.name}</p>
+              <p className="font-serif text-2xl text-wine group-hover:text-brown">{c.name}</p>
               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-black/35">Découvrir</p>
             </Link>
           ))}
@@ -148,8 +147,8 @@ export default async function HomePage() {
         ["Promotions", promos],
       ].map(([title, items]) =>
         (items as typeof featured).length ? (
-          <section key={title as string} className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-            <h2 className="font-serif text-3xl text-wine md:text-4xl">{title as string}</h2>
+          <section key={title as string} className="mx-auto max-w-6xl px-4 py-8">
+            <h2 className="font-serif text-4xl text-wine">{title as string}</h2>
             <div className={`${PRODUCT_GRID_HOME_CLASS} mt-6`}>
               {(items as typeof featured).map((p) => (
                 <ProductCard key={p.id} product={p} />
@@ -189,7 +188,6 @@ export default async function HomePage() {
           </div>
         </dl>
       </section>
-      </div>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { promoPercent, unitPrice } from "@/lib/pricing";
 import { catalogPhotoFor } from "@/lib/product-photos";
 import { displayVariant, productInStock } from "@/lib/stock-display";
 import { isFlashActive } from "@/lib/flash";
-import { PRODUCT_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
+import { FLASH_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
 
 export type FlashCardProduct = {
   name: string;
@@ -56,7 +56,7 @@ export function FlashProductCard({ product }: { product: FlashCardProduct }) {
           alt={photoAlt}
           fill
           className={`object-cover ${inStock ? "" : "grayscale-[0.35]"}`}
-          sizes={PRODUCT_CARD_SIZES}
+          sizes={FLASH_CARD_SIZES}
           quality={SHOP_IMAGE_QUALITY}
           loading="lazy"
         />

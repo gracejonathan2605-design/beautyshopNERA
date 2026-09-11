@@ -56,7 +56,7 @@ export function ProductCard({
           src={photo}
           alt={photoAlt}
           fill
-          className={`object-cover md:transition md:duration-500 md:group-hover:scale-105 ${inStock ? "" : "grayscale-[0.35]"}`}
+          className={`object-cover transition duration-500 group-hover:scale-105 ${inStock ? "" : "grayscale-[0.35]"}`}
           sizes={PRODUCT_CARD_SIZES}
           quality={SHOP_IMAGE_QUALITY}
           loading="lazy"
@@ -70,8 +70,8 @@ export function ProductCard({
           </span>
         ) : null}
       </div>
-      <div className="p-3 sm:p-4">
-        <h3 className="font-serif text-lg leading-snug text-wine sm:text-xl">{product.name}</h3>
+      <div className="p-4">
+        <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
         <p className="mt-1 line-clamp-2 text-sm text-black/50">{product.shortDescription}</p>
         <p className="mt-3 text-sm font-medium text-wine">
           {onPromo && variant ? (
