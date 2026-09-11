@@ -63,9 +63,11 @@ describe("commandes impayées", () => {
 describe("photos HEIC", () => {
   it("accepte HEIC iPhone en plus de jpeg/png/webp/gif", () => {
     expect(PRODUCT_IMAGE_ACCEPT).toMatch(/heic/i);
+    expect(PRODUCT_IMAGE_ACCEPT.startsWith("image/*")).toBe(true);
     expect(isHeicFile({ type: "image/heic", name: "IMG_001.HEIC" })).toBe(true);
     expect(isHeicFile({ type: "", name: "photo.heif" })).toBe(true);
     expect(isAllowedProductImage({ type: "image/heic", name: "a.heic", size: 10 })).toBe(true);
+    expect(isAllowedProductImage({ type: "image/jpg", name: "IMG_002.jpg", size: 10 })).toBe(true);
     expect(isAllowedBulkImage({ type: "image/heic", name: "a.heic", size: 10 })).toBe(true);
     expect(isAllowedBulkImage({ type: "video/mp4", name: "a.mp4", size: 10 })).toBe(false);
   });

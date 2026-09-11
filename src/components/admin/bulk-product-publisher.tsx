@@ -263,14 +263,20 @@ export function BulkProductPublisher({
       >
         <p className="font-serif text-2xl text-wine">Choisir 10 à {MAX_BULK_PRODUCTS} photos</p>
         <p className="mt-1 text-sm text-black/55">
-          Une photo = un produit. Jpeg, png, webp, gif ou HEIC iPhone — 20 Mo max, compression automatique. Glissez-déposez ou sélectionnez.
+          Une photo = un produit. Jpeg, png, webp, gif ou HEIC iPhone — 20 Mo max, compression automatique.
+        </p>
+        <p className="mt-1 text-sm text-black/55 md:hidden">
+          Appuyez ci-dessous, puis Galerie — sélectionnez plusieurs photos. Pas besoin de les envoyer une par une.
+        </p>
+        <p className="mt-1 hidden text-sm text-black/55 md:block">
+          Glissez-déposez les fichiers, ou cliquez pour les sélectionner.
         </p>
         <input
           ref={fileInputRef}
           type="file"
           accept={BULK_IMAGE_ACCEPT}
           multiple
-          className="mt-4 w-full max-w-md rounded-xl border px-3 py-2 text-sm"
+          className="mt-4 min-h-12 w-full max-w-md rounded-xl border px-3 py-3 text-sm"
           onChange={(event) => {
             if (event.target.files) addFiles(event.target.files);
             event.target.value = "";
