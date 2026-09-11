@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && prisma generate && next build",
+    "build": "prisma migrate deploy && prisma generate && tsx scripts/write-sitemap.ts && next build",
+    "sitemap": "tsx scripts/write-sitemap.ts",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

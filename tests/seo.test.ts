@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { NERA_FAQS, NERA_IDENTITY, NERA_PITCH, buildLlmsTxt } from "../src/lib/nera-identity";
 import {
   absolutizeMediaUrl,
@@ -14,7 +14,7 @@ import {
   truncateMeta,
 } from "../src/lib/seo";
 import { getSiteUrl } from "../src/lib/site-url";
-import { shopSitemapEntries } from "../src/lib/sitemap-shop";
+import { renderSitemapXml, shopSitemapEntries } from "../src/lib/sitemap-shop";
 
 const envKeys = ["VERCEL_ENV", "APP_URL"] as const;
 const snapshot = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
@@ -176,6 +176,23 @@ describe("sitemap public", () => {
     });
     const row = entries.find((item) => item.url.endsWith("/categorie/parfums"));
     expect(row?.lastModified).toBe("2026-08-24T18:53:08Z");
+    const xml = renderSitemapXml(entries);
+    expect(xml).toMatch(/^<\?xml version="1.0" encoding="UTF-8"\?>/);
+    expect(xml).toContain("<lastmod>2026-08-24T18:53:08Z</lastmod>");
+    expect(xml).not.toContain(".249Z");
+    expect(xml).toContain("<priority>1.0</priority>");
+  });
+
+  it("est un fichier public statique, pas une fonction Next", () => {
+    expect(existsSync("src/app/sitemap.ts")).toBe(false);
+    expect(existsSync("public/sitemap.xml")).toBe(true);
+    expect(existsSync("scripts/write-sitemap.ts")).toBe(true);
+    const xml = readFileSync("public/sitemap.xml", "utf8");
+    expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
+    expect(xml).toContain("<loc>https://www.nerabeaute237.com/</loc>");
+    expect(readFileSync("package.json", "utf8")).toContain("tsx scripts/write-sitemap.ts");
+    expect(readFileSync("vercel.json", "utf8")).toContain("tsx scripts/write-sitemap.ts");
+    expect(readFileSync("next.config.ts", "utf8")).toContain("application/xml; charset=utf-8");
   });
 });
 
