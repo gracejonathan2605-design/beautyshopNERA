@@ -247,3 +247,14 @@ describe("Google Search Console", () => {
     expect(body).toBe("google-site-verification: google34941cdf4c4a8f61.html");
   });
 });
+
+describe("Google Tag Manager", () => {
+  it("injecte GTM-T973VWFC dans le head de toutes les pages", () => {
+    const layout = readFileSync("src/app/layout.tsx", "utf8");
+    expect(layout).toContain('GTM_ID = "GTM-T973VWFC"');
+    expect(layout).toContain("googletagmanager.com/gtm.js");
+    expect(layout).toContain("googletagmanager.com/ns.html");
+    expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("googletagmanager.com/gtm.js"));
+    expect(layout.indexOf("<body")).toBeLessThan(layout.indexOf("googletagmanager.com/ns.html"));
+  });
+});
