@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { FulfillmentType, OrderStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { applyStockChange } from "@/services/inventory.service";
@@ -5,7 +6,7 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
 import { notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
-import { canTransitionOrder, stockEffectForTransition } from "@/lib/order-flow";
+import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
 import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
 import { normalizeCartItems } from "@/lib/cart";
@@ -157,7 +158,7 @@ export async function createOnlineOrder(input: {
   }
 
   const paymentHint = order.payments[0]?.reference || order.payments[0]?.provider;
-  await notifyStaffNewOnlineOrder({
+  const alert = {
     number: order.number,
     customerName: order.shippingName ?? "",
     customerPhone: order.shippingPhone ?? "",
@@ -173,7 +174,12 @@ export async function createOnlineOrder(input: {
       quantity: item.quantity,
       total: Number(item.total),
     })),
-  });
+  };
+  try {
+    after(() => notifyStaffNewOnlineOrder(alert));
+  } catch {
+    void notifyStaffNewOnlineOrder(alert);
+  }
 
   return order;
 }
@@ -288,7 +294,7 @@ async function applyLockedOrderStatus(
       where: { orderId: order.id, status: "COMPLETED" },
       data: { status: "REFUNDED" },
     });
-    if (to === "CANCELLED" && order.couponCode) {
+    if (releasesCouponOnStatus(to) && order.couponCode) {
       await tx.coupon.updateMany({
         where: { code: order.couponCode, usedCount: { gt: 0 } },
         data: { usedCount: { decrement: 1 } },

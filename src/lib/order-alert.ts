@@ -2,6 +2,9 @@ import { formatCfa } from "./money";
 import { NERA_IDENTITY } from "./nera-identity";
 import { normalizeWhatsAppPhone } from "./receipt";
 import { getShopSettings, type ShopSettings } from "./settings";
+import { normalizeGreenApiId, normalizeGreenApiToken, normalizeGreenApiUrl } from "./green-api";
+
+export { normalizeGreenApiId, normalizeGreenApiToken, normalizeGreenApiUrl };
 
 export type StaffOrderAlert = {
   number: string;
@@ -79,30 +82,6 @@ export function formatStaffOrderWhatsApp(order: StaffOrderAlert) {
   lines.push("");
   lines.push("Merci de confirmer le paiement puis de préparer la commande.");
   return lines.join("\n");
-}
-
-export function normalizeGreenApiUrl(raw?: string | null) {
-  let value = (raw ?? "").trim().replace(/^apiUrl\s*[:=]\s*/i, "");
-  value = value.replace(/^["']|["']$/g, "").replace(/\/$/, "");
-  if (!value) return "";
-  if (value.startsWith("http://")) value = `https://${value.slice(7)}`;
-  else if (!/^https:\/\//i.test(value) && /green-?api/i.test(value)) value = `https://${value.replace(/^\/+/, "")}`;
-  value = value.replace(/\/waInstance.*$/i, "").replace(/\/$/, "");
-  return value;
-}
-
-/** Colle depuis Green API : « idInstance: 1103… » ou la valeur seule. */
-export function normalizeGreenApiId(raw?: string | null) {
-  let value = (raw ?? "").trim().replace(/^(?:idInstance|id)\s*[:=]\s*/i, "");
-  value = value.replace(/^["']|["']$/g, "").trim();
-  const digits = value.replace(/\D/g, "");
-  return digits || value;
-}
-
-/** Colle depuis Green API : « apiTokenInstance: … » ou le token seul. */
-export function normalizeGreenApiToken(raw?: string | null) {
-  let value = (raw ?? "").trim().replace(/^apiTokenInstance\s*[:=]\s*/i, "");
-  return value.replace(/^["']|["']$/g, "").trim();
 }
 
 export function greenApiSendUrl(apiUrl: string, id: string, token: string, method = "sendMessage") {

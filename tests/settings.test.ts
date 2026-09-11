@@ -62,7 +62,7 @@ describe("paramètres boutique", () => {
     const merged = mergeShopSettings({
       greenApiId: "idInstance: 1103999",
       greenApiToken: "apiTokenInstance: secret-token",
-      greenApiUrl: "apiUrl: https://1103.api.green-api.com/",
+      greenApiUrl: "apiUrl: http://1103.api.green-api.com/",
     });
     expect(merged.greenApiId).toBe("1103999");
     expect(merged.greenApiToken).toBe("secret-token");

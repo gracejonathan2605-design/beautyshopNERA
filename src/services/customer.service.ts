@@ -8,18 +8,27 @@ export function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
 }
 
-export async function findCustomerByPhone(phone: string) {
+export async function findCustomerByPhone(phone: string, excludeId?: string) {
   const raw = phone.trim();
   const lastNine = phoneLastNine(raw);
   if (!raw) return null;
   if (lastNine) {
-    const rows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM "Customer"
-      WHERE "deletedAt" IS NULL AND "isActive" = true
-        AND right(regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g'), 9) = ${lastNine}
-      ORDER BY "createdAt" DESC
-      LIMIT 1
-    `;
+    const rows = excludeId
+      ? await prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "Customer"
+          WHERE "deletedAt" IS NULL AND "isActive" = true
+            AND id <> ${excludeId}
+            AND right(regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g'), 9) = ${lastNine}
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        `
+      : await prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "Customer"
+          WHERE "deletedAt" IS NULL AND "isActive" = true
+            AND right(regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g'), 9) = ${lastNine}
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        `;
     if (rows[0]) {
       return prisma.customer.findUnique({ where: { id: rows[0].id } });
     }
@@ -29,6 +38,7 @@ export async function findCustomerByPhone(phone: string) {
     where: {
       deletedAt: null,
       isActive: true,
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
       OR: [{ phone: raw }, { phone: { contains: raw, mode: "insensitive" } }],
     },
     orderBy: { createdAt: "desc" },
