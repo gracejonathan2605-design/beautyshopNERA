@@ -57,3 +57,17 @@ export function summarizeTill(input: {
     expectedCash: input.openingFloat + cashSales - expensesTotal,
   };
 }
+
+/**
+ * Montant d’espèces à enregistrer comme sortie sur la caisse *courante*
+ * lorsqu’on rembourse/annule une vente dont la session d’origine n’est plus ouverte.
+ * Si la session d’origine est encore OPEN, summarizeTill retire déjà la vente du tiroir.
+ */
+export function cashReturnTillExpenseAmount(
+  cashPortion: number,
+  originalSessionStatus: string | null | undefined,
+) {
+  if (!Number.isFinite(cashPortion) || cashPortion <= 0) return 0;
+  if (originalSessionStatus === "OPEN") return 0;
+  return Math.round(cashPortion);
+}

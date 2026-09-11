@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeTill } from "../src/lib/till";
+import { cashReturnTillExpenseAmount, summarizeTill } from "../src/lib/till";
 
 describe("caisse du jour", () => {
   it("garde le fond d’ouverture et ajoute les ventes espèces", () => {
@@ -83,5 +83,18 @@ describe("caisse du jour", () => {
     expect(snap.salesTotal).toBe(0);
     expect(snap.cashSales).toBe(0);
     expect(snap.expectedCash).toBe(10000);
+  });
+});
+
+
+describe("remboursement hors session ouverte", () => {
+  it("n’ajoute pas de sortie si la session d’origine est encore ouverte", () => {
+    expect(cashReturnTillExpenseAmount(8000, "OPEN")).toBe(0);
+  });
+
+  it("demande une sortie d’espèces si la session d’origine est fermée", () => {
+    expect(cashReturnTillExpenseAmount(8000, "CLOSED")).toBe(8000);
+    expect(cashReturnTillExpenseAmount(5000, null)).toBe(5000);
+    expect(cashReturnTillExpenseAmount(0, "CLOSED")).toBe(0);
   });
 });

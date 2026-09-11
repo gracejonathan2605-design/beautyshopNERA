@@ -65,6 +65,20 @@ export function pickExactScanMatch<T extends { sku: string; barcode: string | nu
   );
 }
 
+/** Entrée recherche : exact, ou unique résultat seulement s’il correspond à la requête courante (évite un ajout stale). */
+export function pickSearchEnterMatch<T extends { sku: string; barcode: string | null }>(
+  results: T[],
+  query: string,
+  resultsForQuery: string,
+): T | null {
+  const exact = pickExactScanMatch(results, query);
+  if (exact) return exact;
+  if (results.length === 1 && resultsForQuery.trim() === query.trim() && query.trim()) {
+    return results[0];
+  }
+  return null;
+}
+
 export function scanMatchDecision<T extends { sku: string; barcode: string | null }>(
   matches: T[],
   code: string,

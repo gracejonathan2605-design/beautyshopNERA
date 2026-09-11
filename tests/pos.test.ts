@@ -3,6 +3,7 @@ import {
   buildCheckoutPayments,
   clampDiscount,
   pickExactScanMatch,
+  pickSearchEnterMatch,
   scanMatchDecision,
   settlePosPayments,
   ticketTotals,
@@ -128,5 +129,15 @@ describe("tickets en attente", () => {
   it("ne fait pas planter la caisse si le magasin de tickets manque", () => {
     expect(isMissingHeldTicketStore(new TypeError("heldTicket is undefined"))).toBe(true);
     expect(isMissingHeldTicketStore(new Error("Stock insuffisant"))).toBe(false);
+  });
+});
+
+
+describe("entrée recherche caisse", () => {
+  it("n’ajoute pas le seul résultat stale d’une recherche précédente", () => {
+    const gloss = { sku: "GLOSS-01", barcode: null as string | null };
+    expect(pickSearchEnterMatch([gloss], "611000000099", "gloss")).toBeNull();
+    expect(pickSearchEnterMatch([gloss], "gloss", "gloss")?.sku).toBe("GLOSS-01");
+    expect(pickSearchEnterMatch([gloss], "GLOSS-01", "autre")?.sku).toBe("GLOSS-01");
   });
 });
