@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { NERA_FAQS, NERA_IDENTITY, NERA_PITCH, buildLlmsTxt } from "../src/lib/nera-identity";
 import {
   absolutizeMediaUrl,
@@ -208,5 +209,12 @@ describe("indexation IA et listes", () => {
       position: 1,
       url: "https://www.nerabeaute237.com/produit/body-wave",
     });
+  });
+});
+
+describe("Google Search Console", () => {
+  it("expose le fichier HTML de vérification à la racine du site", () => {
+    const body = readFileSync("public/google34941cdf4c4a8f61.html", "utf8").trim();
+    expect(body).toBe("google-site-verification: google34941cdf4c4a8f61.html");
   });
 });
