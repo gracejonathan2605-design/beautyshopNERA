@@ -58,6 +58,19 @@ export function summarizeTill(input: {
   };
 }
 
+/** Ajoute une dépense au snapshot : recettes nettes et espèces attendues tout de suite. */
+export function applyTillExpense(snapshot: TillSnapshot, expense: TillExpense): TillSnapshot {
+  const expenses = [...snapshot.expenses, expense];
+  const expensesTotal = expenses.reduce((sum, row) => sum + row.amount, 0);
+  return {
+    ...snapshot,
+    expenses,
+    expensesTotal,
+    netRevenue: snapshot.salesTotal - expensesTotal,
+    expectedCash: snapshot.openingFloat + snapshot.cashSales - expensesTotal,
+  };
+}
+
 /**
  * Montant d’espèces à enregistrer comme sortie sur la caisse *courante*
  * lorsqu’on rembourse/annule une vente dont la session d’origine n’est plus ouverte.

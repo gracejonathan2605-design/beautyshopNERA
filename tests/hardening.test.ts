@@ -15,6 +15,8 @@ describe("saisie FCFA", () => {
     expect(parseCfaInput("10000")).toBe(10000);
     expect(parseCfaInput("0")).toBe(0);
     expect(parseCfaInput("")).toBe(0);
+    expect(parseCfaInput("2000 FCFA")).toBe(2000);
+    expect(parseCfaInput("2.000f")).toBe(2000);
   });
 });
 
