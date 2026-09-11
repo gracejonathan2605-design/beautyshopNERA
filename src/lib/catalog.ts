@@ -112,13 +112,28 @@ export const NERA_CATALOG: CatalogGroup[] = [
   ]),
   group("Parfumerie", [
     "Parfums femme",
-    "Parfums homme",
     "Parfums enfant",
     "Brumes parfumées",
     "Huiles parfumées",
     "Coffrets parfum",
     "Sacs parfum",
     "Parfums de poche",
+  ]),
+  group("Homme", [
+    "Parfums",
+    "Déodorants",
+    "Gel douche",
+    "Soins visage",
+    "Crème de rasage",
+    "Mousse et gel de rasage",
+    "Après-rasage",
+    "Rasoirs et lames",
+    "Huile pour barbe",
+    "Baume pour barbe",
+    "Shampoing barbe",
+    "Hygiène intime",
+    "Ceintures",
+    "Coffrets",
   ]),
   group("Accessoires & bijoux", [
     "Montres",
@@ -179,12 +194,56 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 export const LINGERIE_SLUG = "mode-lingerie";
 export const CLOSURES_SLUG = "meches-perruques-extensions-closures";
+export const HOMME_SLUG = "homme";
 
 /** Range une fiche déjà dans Mode / Mèches vers Lingerie ou Closures, sans toucher aux autres rayons. */
 export function catalogShelfHint(name: string): typeof LINGERIE_SLUG | typeof CLOSURES_SLUG | null {
   const hay = String(name ?? "").toLowerCase();
   if (/\blingerie\b/.test(hay) || /\bsous-v[eê]tements?\b/.test(hay)) return LINGERIE_SLUG;
   if (/\bclosures?\b/.test(hay)) return CLOSURES_SLUG;
+  return null;
+}
+
+export function catalogHommeShelfHint(name: string): string | null {
+  const hay = String(name ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/\blingerie\b/.test(hay) || /\bsous-vetements?\b/.test(hay)) return null;
+  if (/\bfemme\b/.test(hay) && !/\bhommes?\b/.test(hay)) return null;
+  if (/\bapres[-\s]?rasage\b/.test(hay) || /\bafter[\s-]?shave\b/.test(hay)) return "homme-apres-rasage";
+  if (/\brasoir|\blames?\b/.test(hay)) return "homme-rasoirs-et-lames";
+  if (/\b(mousse|gel)\s+(de\s+)?rasage\b/.test(hay)) return "homme-mousse-et-gel-de-rasage";
+  if (/\bcreme\s+(de\s+)?rasage\b/.test(hay) || /\brasage\b/.test(hay)) return "homme-creme-de-rasage";
+  if (/\bshampoing.{0,24}barbe\b/.test(hay)) return "homme-shampoing-barbe";
+  if (/\bbaume.{0,24}barbe\b/.test(hay)) return "homme-baume-pour-barbe";
+  if (/\bhuile.{0,24}barbe\b/.test(hay) || /\bbarbe\b/.test(hay)) return "homme-huile-pour-barbe";
+  if (!/\bhommes?\b/.test(hay)) return null;
+  if (/\bparfum/.test(hay)) return "homme-parfums";
+  if (/\bdeo(dorant)?s?\b/.test(hay)) return "homme-deodorants";
+  if (/\bgel douche\b/.test(hay)) return "homme-gel-douche";
+  if (/\bceintures?\b/.test(hay)) return "homme-ceintures";
+  if (/\b(intime|toilette)\b/.test(hay)) return "homme-hygiene-intime";
+  if (/\bcoffrets?\b/.test(hay)) return "homme-coffrets";
+  if (/\b(visage|creme|soin)\b/.test(hay)) return "homme-soins-visage";
+  return null;
+}
+
+export function hommeTargetFromOldCategory(name: string, slug: string): string | null {
+  const hay = `${name} ${slug}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!hay.includes("homme")) return null;
+  if (/femme/.test(hay) && !/homme/.test(hay)) return null;
+  if (/parfum/.test(hay)) return "homme-parfums";
+  if (/ceinture/.test(hay)) return "homme-ceintures";
+  if (/intime|toilette/.test(hay)) return "homme-hygiene-intime";
+  if (/deodorant|deodorants/.test(hay)) return "homme-deodorants";
+  if (/apres-rasage|aftershave/.test(hay)) return "homme-apres-rasage";
+  if (/rasage/.test(hay)) return "homme-creme-de-rasage";
+  if (/barbe/.test(hay)) return "homme-huile-pour-barbe";
+  if (/coffret/.test(hay)) return "homme-coffrets";
   return null;
 }
 
@@ -223,6 +282,61 @@ async function fileLingerieAndClosures(db: Db, ids: Record<string, string>) {
     if (!target || product.categoryId === target) continue;
     const allowed = hint === LINGERIE_SLUG ? modeIds : mecheIds;
     if (product.categoryId && !allowed.has(product.categoryId)) continue;
+    await db.product.update({
+      where: { id: product.id },
+      data: { categoryId: target },
+    });
+  }
+}
+
+async function migrateHommeCategories(db: Db, ids: Record<string, string>) {
+  const hommeId = ids[HOMME_SLUG];
+  if (!hommeId) return;
+  const hommeChildIds = new Set(slugsInGroup(HOMME_SLUG).map((slug) => ids[slug]).filter(Boolean));
+
+  const rows = await db.category.findMany({
+    where: { deletedAt: null, isActive: true },
+    select: { id: true, name: true, slug: true, parentId: true },
+  });
+
+  for (const row of rows) {
+    if (row.id === hommeId || hommeChildIds.has(row.id)) continue;
+    const targetSlug = hommeTargetFromOldCategory(row.name, row.slug);
+    const target = targetSlug ? ids[targetSlug] : undefined;
+    if (!target) continue;
+    await db.product.updateMany({
+      where: { categoryId: row.id, deletedAt: null },
+      data: { categoryId: target },
+    });
+    const remaining = await db.product.count({ where: { categoryId: row.id, deletedAt: null } });
+    if (remaining === 0) {
+      await db.category.update({
+        where: { id: row.id },
+        data: { isActive: false },
+      });
+    }
+  }
+}
+
+async function fileHommeProducts(db: Db, ids: Record<string, string>) {
+  if (!ids[HOMME_SLUG]) return;
+  const products = await db.product.findMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        { name: { contains: "homme", mode: "insensitive" } },
+        { name: { contains: "rasage", mode: "insensitive" } },
+        { name: { contains: "barbe", mode: "insensitive" } },
+        { name: { contains: "aftershave", mode: "insensitive" } },
+        { name: { contains: "after shave", mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, categoryId: true },
+  });
+  for (const product of products) {
+    const hint = catalogHommeShelfHint(product.name);
+    const target = hint ? ids[hint] : undefined;
+    if (!target || product.categoryId === target) continue;
     await db.product.update({
       where: { id: product.id },
       data: { categoryId: target },
@@ -271,6 +385,9 @@ export async function syncNeraCatalog(db: Db) {
       ids[c.slug] = row.id;
     }
   }
+
+  await migrateHommeCategories(db, ids);
+  await fileHommeProducts(db, ids);
 
   const known = catalogSlugs();
   const unused = await db.category.findMany({

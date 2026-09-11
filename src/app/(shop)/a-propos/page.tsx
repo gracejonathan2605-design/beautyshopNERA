@@ -53,7 +53,7 @@ export default async function AboutPage() {
       <h2 className="mt-10 font-serif text-3xl text-wine">Ce que nous vendons</h2>
       <p className="mt-3 leading-relaxed text-black/65">
         Selon le catalogue du moment : cosmétiques, soins du visage et du corps, produits capillaires, mèches,
-        perruques, extensions, maquillage, parfums, accessoires beauté et bien-être.
+        perruques, extensions, maquillage, parfums, soins pour homme, accessoires beauté et bien-être.
       </p>
       {categories.length ? (
         <ul className="mt-5 flex flex-wrap gap-2">

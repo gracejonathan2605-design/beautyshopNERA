@@ -48,7 +48,7 @@ export const NERA_FAQS = [
   {
     question: "Quels produits trouve-t-on chez NERA ?",
     answer:
-      "NERA propose une sélection beauté : cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruques, extensions, maquillage, parfums, accessoires beauté et bien-être — selon le catalogue en boutique et en ligne.",
+      "NERA propose une sélection beauté : cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruques, extensions, maquillage, parfums, soins pour homme, accessoires beauté et bien-être — selon le catalogue en boutique et en ligne.",
   },
   {
     question: "NERA livre-t-elle à Yaoundé ?",
@@ -96,7 +96,7 @@ ${NERA_PITCH}
 - Nouveautés: ${NERA_IDENTITY.url}/flash
 
 ## Ce que NERA vend
-Cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruques, extensions, maquillage, parfums, accessoires beauté et bien-être — selon le catalogue publié sur le site.
+Cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruques, extensions, maquillage, parfums, soins pour homme, accessoires beauté et bien-être — selon le catalogue publié sur le site.
 
 ## Contact
 Téléphone ${NERA_IDENTITY.phoneDisplay}. Boutique au Marché Neptune Ahala, face Skymotors, Yaoundé.
