@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalogShelfHint, catalogSlugs, CLOSURES_SLUG, LINGERIE_SLUG, NERA_CATALOG } from "../src/lib/catalog";
+import { catalogHommeShelfHint, catalogShelfHint, catalogSlugs, CLOSURES_SLUG, hommeTargetFromOldCategory, LINGERIE_SLUG, NERA_CATALOG } from "../src/lib/catalog";
 
 describe("catalogue NERA", () => {
   it("a des slugs uniques", () => {
@@ -22,6 +22,7 @@ describe("catalogue NERA", () => {
         "Ongles",
         "Bien-être",
         "Mode",
+        "Homme",
       ]),
     );
     expect(NERA_CATALOG.every((g) => g.children.length > 0)).toBe(true);
@@ -46,5 +47,34 @@ describe("catalogue NERA", () => {
     expect(catalogShelfHint("Frontale 360 qualité supérieure")).toBeNull();
     expect(catalogShelfHint("Sac à main")).toBeNull();
     expect(catalogShelfHint("Colgate")).toBeNull();
+  });
+
+  it("range toute la panoplie homme dans un rayon dédié, sans doublon ailleurs", () => {
+    const homme = NERA_CATALOG.find((g) => g.slug === "homme");
+    const parfumerie = NERA_CATALOG.find((g) => g.slug === "parfumerie");
+    const accessoires = NERA_CATALOG.find((g) => g.slug === "accessoires-bijoux");
+    expect(homme?.children.map((c) => c.name)).toEqual(
+      expect.arrayContaining([
+        "Parfums",
+        "Déodorants",
+        "Crème de rasage",
+        "Après-rasage",
+        "Rasoirs et lames",
+        "Huile pour barbe",
+      ]),
+    );
+    expect(parfumerie?.children.map((c) => c.name)).not.toContain("Parfums homme");
+    expect(accessoires?.children.every((c) => !/homme/i.test(c.name))).toBe(true);
+    expect(NERA_CATALOG.filter((g) => g.slug === "homme")).toHaveLength(1);
+    expect(catalogHommeShelfHint("Parfum homme NERA")).toBe("homme-parfums");
+    expect(catalogHommeShelfHint("Crème de rasage")).toBe("homme-creme-de-rasage");
+    expect(catalogHommeShelfHint("Après-rasage mentholé")).toBe("homme-apres-rasage");
+    expect(catalogHommeShelfHint("Déodorant homme")).toBe("homme-deodorants");
+    expect(catalogHommeShelfHint("Ceintures Hommes")).toBe("homme-ceintures");
+    expect(catalogHommeShelfHint("Parfum femme")).toBeNull();
+    expect(catalogHommeShelfHint("Ceinture femme cuir")).toBeNull();
+    expect(hommeTargetFromOldCategory("Parfums homme", "parfumerie-parfums-homme")).toBe("homme-parfums");
+    expect(hommeTargetFromOldCategory("Ceintures Hommes", "ceintures-hommes-2834")).toBe("homme-ceintures");
+    expect(hommeTargetFromOldCategory("Ceintures femme", "accessoires-bijoux-ceintures-femme")).toBeNull();
   });
 });
