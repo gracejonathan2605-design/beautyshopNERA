@@ -7,6 +7,7 @@ import { unitPrice } from "@/lib/pricing";
 import {
   discardHeldTicket,
   openRegister,
+  closeRegister,
   parkPosTicket,
   resumeHeldTicket,
   scanPosBarcode,
@@ -19,6 +20,7 @@ import { PAYMENT_LABELS, saleToReceipt, type ReceiptData, type ReceiptShop } fro
 import { ReceiptTicket } from "@/components/pos/receipt-ticket";
 import { PosCustomerCard, type PosCustomerCardData } from "@/components/pos/pos-customer-card";
 import { PosRefundPanel } from "@/components/pos/pos-refund-panel";
+import { PendingSubmitButton } from "@/components/admin/form-pending";
 import {
   buildCheckoutPayments,
   pickExactScanMatch,
@@ -35,6 +37,9 @@ export function PosClient({
   initial,
   openSession,
   occupiedBy,
+  occupiedSessionId,
+  canForceClose,
+  suggestedOpeningFloat,
   shop,
   canRefund,
   initialHeld,
@@ -42,6 +47,9 @@ export function PosClient({
   initial: PosVariant[];
   openSession: { id: string; openingFloat: number; openedByName?: string } | null;
   occupiedBy?: string | null;
+  occupiedSessionId?: string | null;
+  canForceClose?: boolean;
+  suggestedOpeningFloat?: number;
   shop: ReceiptShop;
   canRefund: boolean;
   initialHeld: HeldTicketRow[];
@@ -207,7 +215,7 @@ export function PosClient({
   function checkout() {
     if (!cart.length || pending) return;
     if (!openSession) {
-      setError("Ouvrez d’abord la caisse avec le fond du matin.");
+      setError("Ouvrez d’abord la caisse (fond du tiroir).");
       return;
     }
     if (pay.remaining > 0) {
@@ -345,16 +353,26 @@ export function PosClient({
             <div className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-6 lg:col-span-2">
               <h2 className="font-serif text-2xl text-wine">Caisse déjà ouverte</h2>
               <p className="mt-2 text-sm text-black/60">
-                Caisse ouverte par <strong>{occupiedBy}</strong>. Une caisse = une vendeuse. Demandez-lui de la fermer
-                avant d’ouvrir la vôtre.
+                Caisse ouverte par <strong>{occupiedBy}</strong>. Une caisse = une vendeuse à la fois. Elle peut la
+                fermer à tout moment, puis vous pourrez ouvrir la vôtre.
               </p>
+              {canForceClose && occupiedSessionId ? (
+                <form action={closeRegister} className="mt-4">
+                  <input type="hidden" name="sessionId" value={occupiedSessionId} />
+                  <PendingSubmitButton
+                    idle="Fermer cette caisse (admin)"
+                    pendingLabel="Fermeture…"
+                    className="rounded-full bg-wine px-5 py-2 text-cream disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </form>
+              ) : null}
             </div>
           ) : !openSession ? (
             <form action={openRegister} className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-6 lg:col-span-2">
               <h2 className="font-serif text-2xl text-wine">Ouvrir la caisse</h2>
               <p className="mt-1 text-sm text-black/50">
-                Indiquez l’argent déjà dans le tiroir ce matin. Ce montant restera affiché toute la journée. Une caisse =
-                une vendeuse.
+                Indiquez l’argent déjà dans le tiroir. Vous pouvez ouvrir et fermer autant de fois que besoin dans la
+                journée (pause, relais, fin de service).
               </p>
               <label className="mt-4 block text-sm text-black/60" htmlFor="openingFloat">
                 Fond d’ouverture (FCFA)
@@ -363,11 +381,15 @@ export function PosClient({
                 id="openingFloat"
                 name="openingFloat"
                 inputMode="numeric"
-                defaultValue={0}
+                defaultValue={suggestedOpeningFloat ?? 0}
                 placeholder="ex. 10000 ou 10.000"
                 className="mt-1 rounded-xl border border-[#eee0e6] px-3 py-2"
               />
-              <button className="ml-3 rounded-full bg-brown px-5 py-2 text-cream">Ouvrir la caisse</button>
+              <PendingSubmitButton
+                idle="Ouvrir la caisse"
+                pendingLabel="Ouverture…"
+                className="ml-3 rounded-full bg-brown px-5 py-2 text-cream disabled:cursor-not-allowed disabled:opacity-60"
+              />
             </form>
           ) : null}
           <section>

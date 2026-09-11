@@ -1,15 +1,17 @@
 import { requireStaff } from "@/lib/guard";
 import { searchPosProducts } from "@/app/actions/pos";
-import { getOpenSessionForUser, getOccupiedCashSession, getTillSnapshot } from "@/services/cash.service";
+import { getOpenSessionForUser, getOccupiedCashSession, getTillSnapshot, getLastClosedSessionForUser } from "@/services/cash.service";
 import { listHeldTickets } from "@/services/held-ticket.service";
 import { PosClient } from "@/components/pos/pos-client";
 import { TillBoard } from "@/components/pos/till-board";
+import { TillCloseRecap } from "@/components/pos/till-close-recap";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { getShopSettings, toReceiptShop } from "@/lib/settings";
 import { BrandLockup } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { nextOpeningFloatFromClose } from "@/lib/till";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +27,13 @@ export default async function PosPage({
     : q.ok
       ? ({ kind: "ok" as const, text: q.ok })
       : null;
-  const [products, open, settings, expenseCategories, heldRows] = await Promise.all([
+  const [products, open, settings, expenseCategories, heldRows, lastClosed] = await Promise.all([
     searchPosProducts(""),
     getOpenSessionForUser(session.userId),
     getShopSettings(),
     prisma.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     listHeldTickets(session.userId),
+    getLastClosedSessionForUser(session.userId),
   ]);
   const snapshot = open ? await getTillSnapshot(open.id) : null;
   const occupied = open ? null : await getOccupiedCashSession(session.userId);
@@ -39,6 +42,9 @@ export default async function PosPage({
     : occupied
       ? `${occupied.openedBy.firstName} ${occupied.openedBy.lastName}`.trim()
       : "";
+  const suggestedOpeningFloat = lastClosed
+    ? nextOpeningFloatFromClose({ actualCash: lastClosed.actualCash, expectedCash: lastClosed.expectedCash })
+    : 0;
   return (
     <div className="min-h-screen bg-background">
       <StaffToolbar />
@@ -68,12 +74,22 @@ export default async function PosPage({
         ) : null}
         <div className="mt-6 space-y-6">
           {snapshot ? (
-            <TillBoard snapshot={snapshot} categories={expenseCategories} openedByName={openedByName} />
+            <TillBoard
+              snapshot={snapshot}
+              categories={expenseCategories}
+              openedByName={openedByName}
+              openedAt={open?.openedAt}
+            />
+          ) : lastClosed ? (
+            <TillCloseRecap session={lastClosed} />
           ) : null}
           <PosClient
             initial={products}
             openSession={open ? { id: open.id, openingFloat: open.openingFloat, openedByName } : null}
             occupiedBy={open ? null : openedByName || null}
+            occupiedSessionId={occupied?.id ?? null}
+            canForceClose={Boolean(session.isSuperAdmin && occupied)}
+            suggestedOpeningFloat={suggestedOpeningFloat}
             shop={toReceiptShop(settings)}
             canRefund={hasPermission(session, "sales.refund")}
             initialHeld={heldRows}

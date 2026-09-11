@@ -95,7 +95,6 @@ export async function closeCashSession(input: {
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "CashSession" WHERE id = ${input.sessionId} FOR UPDATE`;
     const session = await tx.cashSession.findUnique({
       where: { id: input.sessionId },
       select: {
@@ -127,11 +126,11 @@ export async function closeCashSession(input: {
     if (counted != null && (!Number.isFinite(counted) || counted < 0)) {
       throw new Error("Le cash réel ne peut pas être négatif.");
     }
-    const actualCash = counted == null || !Number.isFinite(counted) ? Math.max(0, expectedCash) : counted;
+    const actualCash = counted == null || !Number.isFinite(counted) ? Math.max(0, expectedCash) : Math.round(counted);
     const difference = actualCash - expectedCash;
 
-    const closed = await tx.cashSession.update({
-      where: { id: session.id },
+    const closed = await tx.cashSession.updateMany({
+      where: { id: session.id, status: "OPEN" },
       data: {
         status: "CLOSED",
         closedById: input.userId,
@@ -142,6 +141,9 @@ export async function closeCashSession(input: {
         notes: input.notes,
       },
     });
+    if (closed.count !== 1) {
+      throw new Error("Session introuvable ou déjà close");
+    }
 
     await tx.auditLog.create({
       data: {
@@ -159,7 +161,15 @@ export async function closeCashSession(input: {
       },
     });
 
-    return closed;
+    return {
+      id: session.id,
+      expectedCash,
+      actualCash,
+      difference,
+      salesTotal: snap.salesTotal,
+      expensesTotal: snap.expensesTotal,
+      openingFloat: session.openingFloat,
+    };
   });
 }
 
@@ -181,6 +191,34 @@ export async function getOccupiedCashSession(exceptUserId: string) {
     where: { status: "OPEN", openedById: { not: exceptUserId } },
     include: sessionInclude,
     orderBy: { openedAt: "desc" },
+  });
+}
+
+export async function getOpenCashSessionById(sessionId: string) {
+  if (!sessionId) return null;
+  return prisma.cashSession.findFirst({
+    where: { id: sessionId, status: "OPEN" },
+    include: sessionInclude,
+  });
+}
+
+export async function getLastClosedSessionForUser(userId: string) {
+  return prisma.cashSession.findFirst({
+    where: {
+      status: "CLOSED",
+      OR: [{ openedById: userId }, { closedById: userId }],
+    },
+    orderBy: { closedAt: "desc" },
+    select: {
+      id: true,
+      openingFloat: true,
+      expectedCash: true,
+      actualCash: true,
+      difference: true,
+      closedAt: true,
+      openedAt: true,
+      openedBy: { select: { firstName: true, lastName: true } },
+    },
   });
 }
 

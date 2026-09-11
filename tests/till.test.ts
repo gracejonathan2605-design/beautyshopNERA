@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cashReturnTillExpenseAmount, summarizeTill } from "../src/lib/till";
+import { readFileSync } from "node:fs";
+import { canCloseCashSession, cashReturnTillExpenseAmount, nextOpeningFloatFromClose, summarizeTill } from "../src/lib/till";
 
 describe("caisse du jour", () => {
   it("garde le fond d’ouverture et ajoute les ventes espèces", () => {
@@ -96,5 +97,30 @@ describe("remboursement hors session ouverte", () => {
     expect(cashReturnTillExpenseAmount(8000, "CLOSED")).toBe(8000);
     expect(cashReturnTillExpenseAmount(5000, null)).toBe(5000);
     expect(cashReturnTillExpenseAmount(0, "CLOSED")).toBe(0);
+  });
+});
+
+describe("ouvrir et fermer à tout moment", () => {
+  it("autorise la fermeture par la vendeuse ou l’admin", () => {
+    expect(canCloseCashSession({ openedById: "a", userId: "a" })).toBe(true);
+    expect(canCloseCashSession({ openedById: "a", userId: "b" })).toBe(false);
+    expect(canCloseCashSession({ openedById: "a", userId: "b", isSuperAdmin: true })).toBe(true);
+  });
+
+  it("reprend l’argent du tiroir comme fond de la prochaine ouverture", () => {
+    expect(nextOpeningFloatFromClose({ actualCash: 42000, expectedCash: 40000 })).toBe(42000);
+    expect(nextOpeningFloatFromClose({ actualCash: null, expectedCash: 40000 })).toBe(40000);
+    expect(nextOpeningFloatFromClose({})).toBe(0);
+  });
+
+  it("ferme sans attendre la fin de journée et affiche le résultat", () => {
+    const board = readFileSync("src/components/pos/till-board.tsx", "utf8");
+    const pos = readFileSync("src/components/pos/pos-client.tsx", "utf8");
+    expect(board).toContain('name="sessionId"');
+    expect(board).toMatch(/n’importe quelle heure|n'importe quelle heure/);
+    expect(board).toContain("Fermer la caisse maintenant");
+    expect(pos).toContain("autant de fois que besoin dans la");
+    expect(pos).not.toMatch(/ce matin/);
+    expect(readFileSync("src/components/pos/till-close-recap.tsx", "utf8")).toContain("Dernière fermeture");
   });
 });

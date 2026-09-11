@@ -5,11 +5,19 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { PaymentMethod, Prisma } from "@prisma/client";
 import { requireStaff } from "@/lib/guard";
 import { cancelSale, createPosSale, refundSale } from "@/services/sale.service";
-import { closeCashSession, ensureOpenCashSession, getOpenSessionForUser, recordTillExpense } from "@/services/cash.service";
+import {
+  closeCashSession,
+  ensureOpenCashSession,
+  getOpenCashSessionById,
+  getOpenSessionForUser,
+  getOccupiedCashSession,
+  recordTillExpense,
+} from "@/services/cash.service";
 import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } from "@/services/customer.service";
-import { parseCfaInput } from "@/lib/money";
+import { formatCfa, parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
+import { canCloseCashSession } from "@/lib/till";
 import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@/services/held-ticket.service";
 
 export { listHeldTickets, type HeldTicketRow };
@@ -103,7 +111,7 @@ export async function openRegister(formData: FormData) {
     const openingFloat = parseCfaInput(String(formData.get("openingFloat") ?? "0"));
     await ensureOpenCashSession(session.userId, openingFloat);
     revalidatePath("/pos");
-    bouncePos("ok", "Caisse ouverte.");
+    bouncePos("ok", "Caisse ouverte. Vous pouvez la fermer à tout moment, puis la rouvrir.");
   } catch (err) {
     unstable_rethrow(err);
     bouncePos("erreur", err instanceof Error ? err.message : "Ouverture de caisse impossible.");
@@ -113,15 +121,24 @@ export async function openRegister(formData: FormData) {
 export async function closeRegister(formData: FormData) {
   try {
     const session = await requireStaff("pos.access");
-    const open = await getOpenSessionForUser(session.userId);
-    if (!open) bouncePos("erreur", "Aucune session ouverte.");
-    if (open.openedById !== session.userId && !session.isSuperAdmin) {
+    const requestedId = String(formData.get("sessionId") ?? "").trim();
+    const mine = await getOpenSessionForUser(session.userId);
+    const occupied = session.isSuperAdmin ? await getOccupiedCashSession(session.userId) : null;
+    const target = requestedId ? await getOpenCashSessionById(requestedId) : mine ?? occupied;
+    if (!target) bouncePos("erreur", "Aucune caisse ouverte à fermer.");
+    if (
+      !canCloseCashSession({
+        openedById: target.openedById,
+        userId: session.userId,
+        isSuperAdmin: session.isSuperAdmin,
+      })
+    ) {
       bouncePos("erreur", "Seul celui qui a ouvert la caisse (ou l’admin) peut la fermer.");
     }
     const raw = String(formData.get("actualCash") ?? "").trim();
     const actualCash = raw === "" ? null : parseCfaInput(raw);
-    await closeCashSession({
-      sessionId: open.id,
+    const closed = await closeCashSession({
+      sessionId: target.id,
       userId: session.userId,
       actualCash,
       notes: String(formData.get("notes") ?? "") || undefined,
@@ -129,7 +146,14 @@ export async function closeRegister(formData: FormData) {
     revalidatePath("/pos");
     revalidatePath("/admin/ventes");
     revalidatePath("/admin/depenses");
-    bouncePos("ok", "Caisse fermée.");
+    const gap =
+      closed.difference === 0
+        ? formatCfa(0)
+        : `${closed.difference > 0 ? "+" : "−"}${formatCfa(Math.abs(closed.difference))}`;
+    bouncePos(
+      "ok",
+      `Caisse fermée. Espèces attendues ${formatCfa(closed.expectedCash)} · comptées ${formatCfa(closed.actualCash)} · écart ${gap}. Vous pouvez la rouvrir tout de suite.`,
+    );
   } catch (err) {
     unstable_rethrow(err);
     bouncePos("erreur", err instanceof Error ? err.message : "Fermeture impossible.");
@@ -178,7 +202,7 @@ export async function submitPosSale(input: {
     const session = await requireStaff("pos.access", "sales.create");
     if (!input.lines.length) return { ok: false, error: "Ajoutez au moins un produit au ticket." };
     const open = await getOpenSessionForUser(session.userId);
-    if (!open) return { ok: false, error: "Ouvrez d’abord la caisse avec le fond du matin." };
+    if (!open) return { ok: false, error: "Ouvrez d’abord la caisse (fond du tiroir)." };
     const locationId = open.register.locationId;
     let customerId = input.customerId;
     if (!customerId && (input.customerPhone?.trim() || input.customerName?.trim())) {
