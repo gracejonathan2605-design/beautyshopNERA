@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { cartCanCheckout, checkoutLinesFromCart } from "../src/lib/cart";
 import { couponClaimFilter } from "../src/lib/coupon";
 import { cronAuthorized } from "../src/lib/cron-auth";
@@ -6,6 +7,7 @@ import { parseCfaInput } from "../src/lib/money";
 import { stockEffectForTransition } from "../src/lib/order-flow";
 import { isValidSaleQuantity } from "../src/lib/pos";
 import { phoneLastNine, phonesLikelyMatch } from "../src/lib/phone-match";
+import { prismaDatasourceUrl } from "../src/lib/prisma";
 
 describe("saisie FCFA", () => {
   it("lit les milliers à la française (10.000 = dix mille)", () => {
@@ -90,5 +92,21 @@ describe("téléphone suffixe", () => {
     expect(phonesLikelyMatch("690000000", "237690000000")).toBe(true);
     expect(phonesLikelyMatch("690000000", "0690000000")).toBe(true);
     expect(phonesLikelyMatch("690000000", "691000000")).toBe(false);
+  });
+});
+
+describe("pool Prisma", () => {
+  it("n’impose plus une seule connexion (timeouts P2024 en prod)", () => {
+    const url = prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?schema=public");
+    expect(url).toContain("connection_limit=5");
+    expect(url).toContain("pool_timeout=20");
+    expect(url).not.toMatch(/connection_limit=1(?!\d)/);
+    expect(
+      prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?connection_limit=8"),
+    ).toContain("connection_limit=8");
+    expect(readFileSync("src/lib/prisma.ts", "utf8")).not.toMatch(/connection_limit=1"/);
+    expect(readFileSync("src/lib/catalog-cache.ts", "utf8")).not.toMatch(
+      /Promise\.all\(\[\s*prisma\.product\.findMany/,
+    );
   });
 });

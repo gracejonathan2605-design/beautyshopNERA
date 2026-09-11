@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
 import { clampDiscount, isValidSaleQuantity, settlePosPayments, ticketTotals } from "@/lib/pos";
 import { cashReturnTillExpenseAmount } from "@/lib/till";
+import { lockCashSessionRow, lockOpenCashSession, resolveTillExpenseCategoryId } from "@/services/cash.service";
 
 export type SaleLineInput = {
   variantId: string;
@@ -21,6 +22,7 @@ export async function createPosSale(input: {
   customerId?: string | null;
   discount?: number;
   notes?: string;
+  heldTicketId?: string | null;
   lines: SaleLineInput[];
   payments: { method: PaymentMethod; amount: number; reference?: string }[];
 }) {
@@ -78,11 +80,19 @@ export async function createPosSale(input: {
     const payments = settlePosPayments(input.payments, total);
 
     if (input.cashSessionId) {
-      const locked = await tx.$queryRaw<{ id: string; status: string }[]>`
-        SELECT id, status FROM "CashSession" WHERE id = ${input.cashSessionId} FOR UPDATE
-      `;
-      if (!locked[0] || locked[0].status !== "OPEN") {
-        throw new Error("La caisse n’est plus ouverte. Rouvrez-la avant d’encaisser.");
+      await lockOpenCashSession(
+        tx,
+        input.cashSessionId,
+        "La caisse n’est plus ouverte. Rouvrez-la avant d’encaisser.",
+      );
+    }
+
+    if (input.heldTicketId) {
+      const consumed = await tx.heldTicket.deleteMany({
+        where: { id: input.heldTicketId, cashierId: input.cashierId },
+      });
+      if (consumed.count !== 1) {
+        throw new Error("Ce ticket en attente a déjà été encaissé ou retiré.");
       }
     }
 
@@ -173,31 +183,29 @@ async function recordCashReturnTillExpense(
   const expenseAmount = cashReturnTillExpenseAmount(cashPortion, originalStatus);
   if (expenseAmount <= 0) return;
 
-  const open = await tx.cashSession.findFirst({
+  const found = await tx.cashSession.findFirst({
     where: { status: "OPEN", openedById: input.userId },
     select: { id: true },
   });
-  if (!open) {
+  if (!found) {
     throw new Error(
       input.kind === "refund"
         ? `Ouvrez la caisse pour rembourser ${expenseAmount} FCFA en espèces.`
         : `Ouvrez la caisse pour annuler une vente de ${expenseAmount} FCFA en espèces.`,
     );
   }
+  const open = await lockOpenCashSession(
+    tx,
+    found.id,
+    input.kind === "refund"
+      ? `Ouvrez la caisse pour rembourser ${expenseAmount} FCFA en espèces.`
+      : `Ouvrez la caisse pour annuler une vente de ${expenseAmount} FCFA en espèces.`,
+  );
 
-  let category = await tx.expenseCategory.findFirst({
-    where: { isActive: true, OR: [{ slug: "autre" }, { name: "Autre" }] },
-  });
-  if (!category) {
-    category = await tx.expenseCategory.findFirst({ where: { isActive: true } });
-  }
-  if (!category) {
-    throw new Error("Aucune catégorie de dépense. Créez-en une dans Admin → Dépenses.");
-  }
-
+  const categoryId = await resolveTillExpenseCategoryId(tx);
   await tx.expense.create({
     data: {
-      categoryId: category.id,
+      categoryId,
       amount: expenseAmount,
       date: new Date(),
       description:
@@ -217,6 +225,9 @@ export async function cancelSale(input: { saleId: string; userId: string; restoc
       include: { items: true, payments: true },
     });
     if (!sale) throw new Error("Vente introuvable");
+    if (sale.cashSessionId) {
+      await lockCashSessionRow(tx, sale.cashSessionId);
+    }
 
     const claimed = await tx.sale.updateMany({
       where: { id: sale.id, status: "COMPLETED" },
@@ -280,6 +291,9 @@ export async function refundSale(input: { saleId: string; userId: string; restoc
       include: { items: true, payments: true },
     });
     if (!sale) throw new Error("Vente introuvable");
+    if (sale.cashSessionId) {
+      await lockCashSessionRow(tx, sale.cashSessionId);
+    }
 
     const claimed = await tx.sale.updateMany({
       where: { id: sale.id, status: "COMPLETED" },

@@ -1,13 +1,35 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
-import { canCloseCashSession, summarizeTill, type TillSnapshot } from "@/lib/till";
+import { canCloseCashSession, countedCashFromClose, summarizeTill, type TillSnapshot } from "@/lib/till";
 
 const tillSaleSelect = {
   status: true,
   total: true,
   payments: { select: { method: true, status: true, amount: true } },
 } as const;
+
+export async function lockCashSessionRow(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+) {
+  const rows = await tx.$queryRaw<{ id: string; status: string; openedById: string }[]>`
+    SELECT id, status, "openedById" FROM "CashSession" WHERE id = ${sessionId} FOR UPDATE
+  `;
+  return rows[0] ?? null;
+}
+
+export async function lockOpenCashSession(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  closedMessage = "La caisse n’est plus ouverte.",
+) {
+  const row = await lockCashSessionRow(tx, sessionId);
+  if (!row || row.status !== "OPEN") {
+    throw new Error(closedMessage);
+  }
+  return row;
+}
 
 export async function openCashSession(input: {
   registerId: string;
@@ -95,6 +117,7 @@ export async function closeCashSession(input: {
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
+    await lockOpenCashSession(tx, input.sessionId, "Session introuvable ou déjà close");
     const session = await tx.cashSession.findUnique({
       where: { id: input.sessionId },
       select: {
@@ -126,7 +149,7 @@ export async function closeCashSession(input: {
     if (counted != null && (!Number.isFinite(counted) || counted < 0)) {
       throw new Error("Le cash réel ne peut pas être négatif.");
     }
-    const actualCash = counted == null || !Number.isFinite(counted) ? Math.max(0, expectedCash) : Math.round(counted);
+    const actualCash = countedCashFromClose({ counted, expectedCash });
     const difference = actualCash - expectedCash;
 
     const closed = await tx.cashSession.updateMany({
@@ -241,7 +264,7 @@ export async function ensureOpenCashSession(userId: string, openingFloat = 0) {
   });
 }
 
-async function resolveTillExpenseCategoryId(
+export async function resolveTillExpenseCategoryId(
   tx: Prisma.TransactionClient,
   requestedId?: string | null,
 ) {
@@ -268,6 +291,7 @@ export async function recordTillExpense(input: {
   categoryId?: string | null;
   sessionId?: string | null;
   isSuperAdmin?: boolean;
+  canForce?: boolean;
 }) {
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     throw new Error("Indiquez le montant de la dépense.");
@@ -277,7 +301,7 @@ export async function recordTillExpense(input: {
 
   const amount = Math.round(input.amount);
   const expense = await prisma.$transaction(async (tx) => {
-    const open = input.sessionId
+    const found = input.sessionId
       ? await tx.cashSession.findFirst({
           where: { id: input.sessionId, status: "OPEN" },
           select: { id: true, openedById: true },
@@ -287,12 +311,14 @@ export async function recordTillExpense(input: {
           select: { id: true, openedById: true },
           orderBy: { openedAt: "desc" },
         });
-    if (!open) throw new Error("Ouvrez d’abord la caisse.");
+    if (!found) throw new Error("Ouvrez d’abord la caisse.");
+    const open = await lockOpenCashSession(tx, found.id, "La caisse n’est plus ouverte. Rouvrez-la puis enregistrez la dépense.");
     if (
       !canCloseCashSession({
         openedById: open.openedById,
         userId: input.userId,
         isSuperAdmin: input.isSuperAdmin,
+        canForce: input.canForce,
       })
     ) {
       throw new Error("Cette dépense doit être saisie sur la caisse ouverte.");

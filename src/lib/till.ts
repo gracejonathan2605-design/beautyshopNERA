@@ -89,8 +89,17 @@ export function canCloseCashSession(input: {
   openedById: string;
   userId: string;
   isSuperAdmin?: boolean;
+  canForce?: boolean;
 }) {
-  return input.openedById === input.userId || Boolean(input.isSuperAdmin);
+  return input.openedById === input.userId || Boolean(input.isSuperAdmin) || Boolean(input.canForce);
+}
+
+/** Si on ne compte pas les billets, on prend le montant attendu tel quel (même négatif). */
+export function countedCashFromClose(input: { counted?: number | null; expectedCash: number }) {
+  if (input.counted != null && Number.isFinite(input.counted)) {
+    return Math.round(input.counted);
+  }
+  return Math.round(input.expectedCash);
 }
 
 /** Fond proposé à la réouverture : l’argent encore dans le tiroir. */

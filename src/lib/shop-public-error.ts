@@ -29,7 +29,7 @@ const MAPPED: Record<string, string> = {
 };
 
 const HIDE =
-  /AUTH_SECRET|DATABASE_URL|DIRECT_URL|prisma|ECONN|ETIMEDOUT|fetch failed|undefined|sql|postgres|supabase|stack|permission refusee|failed to fetch|vercel/i;
+  /AUTH_SECRET|DATABASE_URL|DIRECT_URL|prisma|P2024|connection pool|ECONN|ETIMEDOUT|fetch failed|undefined|sql|postgres|supabase|stack|permission refusee|failed to fetch|vercel/i;
 
 export function shopPublicError(err: unknown) {
   const raw = err instanceof Error ? err.message.trim() : "";

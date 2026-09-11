@@ -26,6 +26,7 @@ import {
   pickExactScanMatch,
   pickSearchEnterMatch,
   ticketTotals,
+  type HeldTicketPayload,
   type PosVariant,
 } from "@/lib/pos";
 
@@ -71,6 +72,7 @@ export function PosClient({
   const [customerName, setCustomerName] = useState("");
   const [customer, setCustomer] = useState<PosCustomerCardData | null>(null);
   const [held, setHeld] = useState(initialHeld);
+  const resumedHeldTicketId = useRef<string | null>(null);
   const [heldNote, setHeldNote] = useState("");
   const [ticket, setTicket] = useState<ReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +178,18 @@ export function PosClient({
     );
   }
 
+  function currentPayload(): HeldTicketPayload {
+    return {
+      lines: cart,
+      ticketDiscount,
+      customerId: customer?.id,
+      customerPhone,
+      customerName,
+      mixed,
+      method,
+    };
+  }
+
   function clearTicket() {
     setCart([]);
     setTicketDiscount(0);
@@ -187,6 +201,7 @@ export function PosClient({
     setHeldNote("");
     setMixed(false);
     setMethod("CASH");
+    resumedHeldTicketId.current = null;
   }
 
   function onScanEnter() {
@@ -240,6 +255,7 @@ export function PosClient({
           customerId: customer?.id,
           customerName: customerName.trim() || undefined,
           customerPhone: customerPhone.trim() || undefined,
+          heldTicketId: resumedHeldTicketId.current || undefined,
         });
         if (!result.ok) {
           setError(result.error);
@@ -267,21 +283,14 @@ export function PosClient({
     start(async () => {
       const result = await parkPosTicket({
         note: heldNote,
-        payload: {
-          lines: cart,
-          ticketDiscount,
-          customerId: customer?.id,
-          customerPhone,
-          customerName,
-          mixed,
-          method,
-        },
+        heldTicketId: resumedHeldTicketId.current || undefined,
+        payload: currentPayload(),
       });
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setHeld((current) => [result.ticket, ...current]);
+      setHeld((current) => [result.ticket, ...current.filter((row) => row.id !== result.ticket.id)]);
       clearTicket();
       setFlash("Ticket mis en attente");
     });
@@ -291,11 +300,26 @@ export function PosClient({
     if (cart.length && !confirm("Remplacer le ticket en cours par celui en attente ?")) return;
     setError(null);
     start(async () => {
+      const currentResumedId = resumedHeldTicketId.current;
+      let restored: HeldTicketRow | null = null;
+      if (currentResumedId && cart.length && currentResumedId !== id) {
+        const parked = await parkPosTicket({
+          heldTicketId: currentResumedId,
+          note: heldNote,
+          payload: currentPayload(),
+        });
+        if (!parked.ok) {
+          setError(parked.error);
+          return;
+        }
+        restored = parked.ticket;
+      }
       const result = await resumeHeldTicket(id);
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      resumedHeldTicketId.current = result.ticket.id;
       const payload = result.ticket.payload;
       setCart(payload.lines ?? []);
       setTicketDiscount(payload.ticketDiscount ?? 0);
@@ -304,7 +328,13 @@ export function PosClient({
       setCustomer(payload.customerId ? { id: payload.customerId, code: "", firstName: payload.customerName || "Cliente", lastName: "", phone: payload.customerPhone || null, totalSpent: 0, sales: [] } : null);
       setMixed(Boolean(payload.mixed));
       setMethod(payload.method ?? "CASH");
-      setHeld((current) => current.filter((row) => row.id !== id));
+      setHeld((current) => {
+        const withoutB = current.filter((row) => row.id !== id);
+        if (restored && !withoutB.some((row) => row.id === restored.id)) {
+          return [restored, ...withoutB];
+        }
+        return withoutB;
+      });
       setTab("vente");
     });
   }
@@ -360,7 +390,7 @@ export function PosClient({
                 <form action={closeRegister} className="mt-4">
                   <input type="hidden" name="sessionId" value={occupiedSessionId} />
                   <PendingSubmitButton
-                    idle="Fermer cette caisse (admin)"
+                    idle="Fermer cette caisse"
                     pendingLabel="Fermeture…"
                     className="rounded-full bg-wine px-5 py-2 text-cream disabled:cursor-not-allowed disabled:opacity-60"
                   />

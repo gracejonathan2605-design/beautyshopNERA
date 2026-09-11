@@ -132,6 +132,13 @@ describe("tickets en attente", () => {
   });
 });
 
+describe("droits responsable caisse", () => {
+  it("autorise le manager à annuler une vente, pas le caissier", () => {
+    expect(ROLE_PRESETS.manager).toContain("sales.cancel");
+    expect(ROLE_PRESETS.cashier).not.toContain("sales.cancel");
+  });
+});
+
 
 describe("entrée recherche caisse", () => {
   it("n’ajoute pas le seul résultat stale d’une recherche précédente", () => {

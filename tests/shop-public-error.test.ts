@@ -12,6 +12,9 @@ describe("messages d’erreur grand public", () => {
     expect(shopPublicError(new Error("AUTH_SECRET manquant"))).toMatch(/676 93 51 95/);
     expect(shopPublicError(new Error("Failed to fetch"))).toMatch(/676 93 51 95/);
     expect(shopPublicError(new Error("DATABASE_URL manquant"))).not.toMatch(/DATABASE_URL/);
+    expect(shopPublicError(new Error("Timed out fetching a new connection from the connection pool"))).toMatch(
+      /676 93 51 95/,
+    );
   });
 
   it("n’expose pas les variables d’environnement sur les pages boutique", () => {

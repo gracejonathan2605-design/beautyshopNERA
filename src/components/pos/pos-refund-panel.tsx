@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { formatCfa } from "@/lib/money";
 import { PAYMENT_LABELS } from "@/lib/receipt";
 import { refundPosSale, searchPosSales } from "@/app/actions/pos";
@@ -18,6 +19,7 @@ function formatWhen(value: Date | string) {
 }
 
 export function PosRefundPanel() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [sales, setSales] = useState<SaleHit[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export function PosRefundPanel() {
       }
       setOk(`${sale.number} remboursé. Stock remis.`);
       setSales((list) => list.filter((item) => item.id !== sale.id));
+      router.refresh();
     });
   }
 
