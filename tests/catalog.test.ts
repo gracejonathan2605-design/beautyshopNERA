@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { catalogHommeShelfHint, catalogShelfHint, catalogSlugs, CLOSURES_SLUG, hommeTargetFromOldCategory, LINGERIE_SLUG, NERA_CATALOG } from "../src/lib/catalog";
+import { readFileSync } from "node:fs";
+import { catalogHommeShelfHint, catalogParentsAreInstalled, catalogShelfHint, catalogSlugs, CLOSURES_SLUG, hommeTargetFromOldCategory, LINGERIE_SLUG, mergeNavCategories, mergeShopRayons, neraParentRayons, NERA_CATALOG } from "../src/lib/catalog";
 
 describe("catalogue NERA", () => {
   it("a des slugs uniques", () => {
@@ -76,5 +77,27 @@ describe("catalogue NERA", () => {
     expect(hommeTargetFromOldCategory("Parfums homme", "parfumerie-parfums-homme")).toBe("homme-parfums");
     expect(hommeTargetFromOldCategory("Ceintures Hommes", "ceintures-hommes-2834")).toBe("homme-ceintures");
     expect(hommeTargetFromOldCategory("Ceintures femme", "accessoires-bijoux-ceintures-femme")).toBeNull();
+  });
+
+  it("affiche Homme même si la base n’a pas encore été synchronisée", () => {
+    expect(catalogParentsAreInstalled(["cosmetiques-soins", "mode"])).toBe(false);
+    expect(catalogParentsAreInstalled(NERA_CATALOG.map((g) => g.slug))).toBe(true);
+    const merged = mergeNavCategories([
+      { id: "1", name: "Mode", slug: "mode" },
+      { id: "2", name: "hygiène intimes", slug: "hygiene-intimes-8901" },
+    ]);
+    expect(merged.map((row) => row.slug)).toContain("homme");
+    expect(merged.map((row) => row.name)).toContain("Homme");
+    expect(merged.map((row) => row.slug)).toContain("hygiene-intimes-8901");
+    expect(neraParentRayons().map((row) => row.slug)).toEqual(NERA_CATALOG.map((g) => g.slug));
+    expect(mergeShopRayons([{ slug: "mode", name: "Mode" }]).some((row) => row.slug === "homme")).toBe(true);
+  });
+
+  it("garde les pastilles rayons visibles même pendant le chargement du header", () => {
+    const chrome = readFileSync("src/components/shop/chrome.tsx", "utf8");
+    expect(chrome).toContain("neraParentRayons");
+    expect(chrome).toContain('aria-label="Rayons NERA"');
+    expect(readFileSync("package.json", "utf8")).toContain("sync-catalog.ts --soft");
+    expect(readFileSync("src/lib/catalog-ensure.ts", "utf8")).toContain("ensureNeraCatalog");
   });
 });

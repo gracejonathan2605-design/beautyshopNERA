@@ -190,6 +190,33 @@ export function catalogSlugs() {
   return NERA_CATALOG.flatMap((g) => [g.slug, ...g.children.map((c) => c.slug)]);
 }
 
+export function neraParentRayons() {
+  return NERA_CATALOG.map((g) => ({ name: g.name, slug: g.slug }));
+}
+
+export function catalogParentsAreInstalled(presentParentSlugs: Iterable<string>) {
+  const have = new Set(presentParentSlugs);
+  return NERA_CATALOG.every((g) => have.has(g.slug));
+}
+
+export function mergeNavCategories(
+  fromDb: { id: string; name: string; slug: string }[],
+): { id: string; name: string; slug: string }[] {
+  const bySlug = new Map(fromDb.map((row) => [row.slug, row]));
+  const official = NERA_CATALOG.map(
+    (g) => bySlug.get(g.slug) ?? { id: g.slug, name: g.name, slug: g.slug },
+  );
+  const extra = fromDb.filter((row) => !NERA_CATALOG.some((g) => g.slug === row.slug));
+  return [...official, ...extra];
+}
+
+export function mergeShopRayons(fromDb: { slug: string; name: string }[]) {
+  const bySlug = new Map(fromDb.map((row) => [row.slug, row]));
+  const official = NERA_CATALOG.map((g) => bySlug.get(g.slug) ?? { name: g.name, slug: g.slug });
+  const extra = fromDb.filter((row) => !NERA_CATALOG.some((g) => g.slug === row.slug));
+  return [...official, ...extra];
+}
+
 type Db = PrismaClient | Prisma.TransactionClient;
 
 export const LINGERIE_SLUG = "mode-lingerie";

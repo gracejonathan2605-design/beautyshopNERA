@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getShopSettings, DEFAULT_SETTINGS } from "@/lib/settings";
 import { getCart } from "@/lib/cart";
+import { neraParentRayons } from "@/lib/catalog";
 import { getNavCategories } from "@/lib/catalog-cache";
 import { StaffToolbar } from "@/components/staff/toolbar";
 import { whatsappChatUrl } from "@/lib/receipt";
@@ -21,6 +22,24 @@ function WhatsAppIcon() {
   );
 }
 
+function RayonChips({ categories }: { categories: { id?: string; name: string; slug: string }[] }) {
+  if (!categories.length) return null;
+  return (
+    <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
+      {categories.map((c) => (
+        <Link
+          key={c.id ?? c.slug}
+          href={`/categorie/${c.slug}`}
+          prefetch={false}
+          className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
+        >
+          {c.name}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 export function ShopHeaderFallback() {
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
@@ -38,6 +57,7 @@ export function ShopHeaderFallback() {
           className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
         />
       </form>
+      <RayonChips categories={neraParentRayons()} />
     </header>
   );
 }
@@ -48,12 +68,14 @@ export async function ShopHeader() {
     phone: "",
   };
   let cart: Awaited<ReturnType<typeof getCart>> = [];
-  let categories: { id: string; name: string; slug: string }[] = [];
+  let categories: { id: string; name: string; slug: string }[] = neraParentRayons().map((row) => ({
+    id: row.slug,
+    ...row,
+  }));
   try {
     [cart, categories] = await Promise.all([getCart(), getNavCategories()]);
   } catch {
     cart = [];
-    categories = [];
   }
   const count = cart.reduce((s, i) => s + i.quantity, 0);
 
@@ -100,20 +122,7 @@ export async function ShopHeader() {
           className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
         />
       </form>
-      {categories.length ? (
-        <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
-          {categories.map((c) => (
-            <Link
-              key={c.id}
-              href={`/categorie/${c.slug}`}
-              prefetch={false}
-              className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
-            >
-              {c.name}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
+      <RayonChips categories={categories} />
     </header>
   );
 }
