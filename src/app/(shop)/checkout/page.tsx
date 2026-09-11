@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
@@ -32,16 +33,20 @@ export default async function CheckoutPage() {
         })
       : null;
 
+    const missing = cart.some((item) => !variants.some((x) => x.id === item.variantId));
     const subtotal = cart.reduce((s, item) => {
       const v = variants.find((x) => x.id === item.variantId);
       return s + (v ? unitPrice(v) * item.quantity : 0);
     }, 0);
 
-    if (!subtotal) {
+    if (missing || !subtotal) {
       return (
         <div className="mx-auto max-w-xl px-4 py-10">
           <h1 className="font-serif text-4xl text-wine">Finaliser</h1>
           <p className="mt-4 text-black/60">Votre panier n’est plus valable. Revenez au panier pour le mettre à jour.</p>
+          <Link href="/panier" className="mt-6 inline-block rounded-full bg-brown px-6 py-3 text-cream">
+            Retour au panier
+          </Link>
         </div>
       );
     }
@@ -80,6 +85,9 @@ export default async function CheckoutPage() {
         <p className="mt-4 text-black/60">
           La commande n’a pas pu se charger. Vérifiez votre connexion, puis réessayez depuis le panier.
         </p>
+        <Link href="/panier" className="mt-6 inline-block rounded-full bg-brown px-6 py-3 text-cream">
+          Retour au panier
+        </Link>
       </div>
     );
   }

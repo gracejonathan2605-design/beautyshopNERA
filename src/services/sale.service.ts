@@ -6,6 +6,7 @@ import { getShopSettings } from "@/lib/settings";
 import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
 import { clampDiscount, isValidSaleQuantity, settlePosPayments, ticketTotals } from "@/lib/pos";
+import { cashReturnTillExpenseAmount } from "@/lib/till";
 
 export type SaleLineInput = {
   variantId: string;
@@ -145,6 +146,70 @@ export async function createPosSale(input: {
   return result;
 }
 
+
+async function recordCashReturnTillExpense(
+  tx: Prisma.TransactionClient,
+  input: {
+    userId: string;
+    saleNumber: string;
+    cashSessionId: string | null;
+    payments: { method: string; status: string; amount: number }[];
+    kind: "refund" | "cancel";
+  },
+) {
+  const cashPortion = input.payments
+    .filter((p) => p.method === "CASH" && p.status === "COMPLETED")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  let originalStatus: string | null = null;
+  if (input.cashSessionId) {
+    const session = await tx.cashSession.findUnique({
+      where: { id: input.cashSessionId },
+      select: { status: true },
+    });
+    originalStatus = session?.status ?? null;
+  }
+
+  const expenseAmount = cashReturnTillExpenseAmount(cashPortion, originalStatus);
+  if (expenseAmount <= 0) return;
+
+  const open = await tx.cashSession.findFirst({
+    where: { status: "OPEN", openedById: input.userId },
+    select: { id: true },
+  });
+  if (!open) {
+    throw new Error(
+      input.kind === "refund"
+        ? `Ouvrez la caisse pour rembourser ${expenseAmount} FCFA en espèces.`
+        : `Ouvrez la caisse pour annuler une vente de ${expenseAmount} FCFA en espèces.`,
+    );
+  }
+
+  let category = await tx.expenseCategory.findFirst({
+    where: { isActive: true, OR: [{ slug: "autre" }, { name: "Autre" }] },
+  });
+  if (!category) {
+    category = await tx.expenseCategory.findFirst({ where: { isActive: true } });
+  }
+  if (!category) {
+    throw new Error("Aucune catégorie de dépense. Créez-en une dans Admin → Dépenses.");
+  }
+
+  await tx.expense.create({
+    data: {
+      categoryId: category.id,
+      amount: expenseAmount,
+      date: new Date(),
+      description:
+        input.kind === "refund"
+          ? `Remboursement ${input.saleNumber}`
+          : `Annulation ${input.saleNumber}`,
+      userId: input.userId,
+      cashSessionId: open.id,
+    },
+  });
+}
+
 export async function cancelSale(input: { saleId: string; userId: string; restock: boolean }) {
   return prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findUnique({
@@ -161,6 +226,14 @@ export async function cancelSale(input: { saleId: string; userId: string; restoc
     await tx.payment.updateMany({
       where: { saleId: sale.id },
       data: { status: "REFUNDED" },
+    });
+
+    await recordCashReturnTillExpense(tx, {
+      userId: input.userId,
+      saleNumber: sale.number,
+      cashSessionId: sale.cashSessionId,
+      payments: sale.payments,
+      kind: "cancel",
     });
 
     if (input.restock) {
@@ -216,6 +289,14 @@ export async function refundSale(input: { saleId: string; userId: string; restoc
     await tx.payment.updateMany({
       where: { saleId: sale.id },
       data: { status: "REFUNDED" },
+    });
+
+    await recordCashReturnTillExpense(tx, {
+      userId: input.userId,
+      saleNumber: sale.number,
+      cashSessionId: sale.cashSessionId,
+      payments: sale.payments,
+      kind: "refund",
     });
 
     if (restock) {

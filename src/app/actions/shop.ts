@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import { shopPublicError } from "@/lib/shop-public-error";
-import { attachGuestOrdersByPhone } from "@/services/customer.service";
+import { attachGuestOrdersByPhone, findCustomerByPhone } from "@/services/customer.service";
 
 async function availableForVariant(variantId: string) {
   const variant = await prisma.productVariant.findFirst({
@@ -120,10 +120,11 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
         },
       });
       if (session?.customerId) {
+        const phoneTaken = phone ? await findCustomerByPhone(phone, session.customerId) : null;
         await prisma.customer.update({
           where: { id: session.customerId },
           data: {
-            phone: phone || undefined,
+            ...(phone && !phoneTaken ? { phone } : {}),
             ...(shippingAddress ? { address: shippingAddress } : {}),
             ...(shippingCity ? { city: shippingCity } : {}),
           },
@@ -169,10 +170,7 @@ export async function updateCustomerProfile(
     });
     if (emailTaken) return { ok: false, error: "Cet email est déjà utilisé." };
     if (phone) {
-      const phoneTaken = await prisma.customer.findFirst({
-        where: { phone, deletedAt: null, NOT: { id: session.customerId } },
-        select: { id: true },
-      });
+      const phoneTaken = await findCustomerByPhone(phone, session.customerId);
       if (phoneTaken) return { ok: false, error: "Ce téléphone est déjà utilisé." };
     }
     await prisma.customer.update({

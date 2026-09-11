@@ -81,4 +81,22 @@ describe("hygiène catalogue", () => {
     expect(plan.feature).toContain("meche");
     expect(plan.sheets.some((row) => row.id === "meche")).toBe(true);
   });
+
+  it("dépublie les fiches en ligne sans description hors sélection phare", () => {
+    const now = new Date("2026-01-01");
+    const products = Array.from({ length: 25 }, (_, i) => ({
+      id: `p-${i}`,
+      name: `Produit unique ${i}`,
+      shortDescription: null,
+      description: null,
+      onlineVisible: true,
+      isFeatured: false,
+      photoCount: 1,
+      createdAt: now,
+    }));
+    const plan = planCatalogHygiene(products, 20);
+    expect(plan.unpublish.length).toBe(5);
+    expect(plan.unpublish.every((row) => /description/i.test(row.reason))).toBe(true);
+    expect(plan.sheets.length).toBeGreaterThan(0);
+  });
 });

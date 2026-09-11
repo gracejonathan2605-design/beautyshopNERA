@@ -43,15 +43,22 @@ export async function saveCart(items: CartItem[]) {
 
 export async function clearCart() {
   const jar = await cookies();
-  jar.delete(CART_COOKIE);
+  jar.delete({ name: CART_COOKIE, path: "/" });
 }
 
 export function upsertCartItem(items: CartItem[], variantId: string, quantity: number) {
   return normalizeCartItems([...items.filter((i) => i.variantId !== variantId), { variantId, quantity }]);
 }
 
-export function cartCanCheckout(rows: { available: number; quantity: number }[]) {
-  return rows.length > 0 && rows.every((row) => row.available >= row.quantity && row.quantity > 0);
+export function cartCanCheckout(
+  rows: { available: number; quantity: number }[],
+  cookieLineCount = rows.length,
+) {
+  return (
+    rows.length > 0 &&
+    rows.length === cookieLineCount &&
+    rows.every((row) => row.available >= row.quantity && row.quantity > 0)
+  );
 }
 
 export function checkoutLinesFromCart(

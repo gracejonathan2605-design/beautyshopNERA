@@ -31,13 +31,15 @@ export function CheckoutForm({
   const [couponLabel, setCouponLabel] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponBusy, startCoupon] = useTransition();
+  const canDeliver = zones.length > 0;
+  const fulfillmentMode = canDeliver ? fulfillment : "PICKUP";
   const zoneFee = zones.find((z) => z.id === zoneId)?.fee ?? 0;
-  const shipping = shippingFeeFor(fulfillment, zoneFee);
+  const shipping = shippingFeeFor(fulfillmentMode, zoneFee);
   const total = useMemo(
     () => payableTotal(subtotal, couponDiscount, shipping),
     [subtotal, couponDiscount, shipping],
   );
-  const delivery = fulfillment === "DELIVERY";
+  const delivery = fulfillmentMode === "DELIVERY";
 
   function applyCoupon() {
     startCoupon(async () => {
@@ -70,12 +72,14 @@ export function CheckoutForm({
         Mode
         <select
           name="fulfillment"
-          value={fulfillment}
-          onChange={(e) => setFulfillment(e.target.value)}
+          value={fulfillmentMode}
+          onChange={(e) => setFulfillment(e.target.value === "DELIVERY" && canDeliver ? "DELIVERY" : "PICKUP")}
           className="mt-1 w-full rounded-xl border px-4 py-3"
         >
           <option value="PICKUP">Retrait boutique — 0 F de livraison</option>
-          <option value="DELIVERY">Livraison — frais selon la zone</option>
+          <option value="DELIVERY" disabled={!canDeliver}>
+            {canDeliver ? "Livraison — frais selon la zone" : "Livraison indisponible (retrait uniquement)"}
+          </option>
         </select>
       </label>
 

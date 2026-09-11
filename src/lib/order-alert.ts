@@ -2,6 +2,9 @@ import { formatCfa } from "./money";
 import { NERA_IDENTITY } from "./nera-identity";
 import { normalizeWhatsAppPhone } from "./receipt";
 import { getShopSettings, type ShopSettings } from "./settings";
+import { normalizeGreenApiId, normalizeGreenApiToken, normalizeGreenApiUrl } from "./green-api";
+
+export { normalizeGreenApiId, normalizeGreenApiToken, normalizeGreenApiUrl };
 
 export type StaffOrderAlert = {
   number: string;
@@ -81,16 +84,6 @@ export function formatStaffOrderWhatsApp(order: StaffOrderAlert) {
   return lines.join("\n");
 }
 
-export function normalizeGreenApiUrl(raw?: string | null) {
-  let value = (raw ?? "").trim().replace(/^apiUrl\s*[:=]\s*/i, "");
-  value = value.replace(/^["']|["']$/g, "").replace(/\/$/, "");
-  if (!value) return "";
-  if (value.startsWith("http://")) value = `https://${value.slice(7)}`;
-  else if (!/^https:\/\//i.test(value) && /green-?api/i.test(value)) value = `https://${value.replace(/^\/+/, "")}`;
-  value = value.replace(/\/waInstance.*$/i, "").replace(/\/$/, "");
-  return value;
-}
-
 export function greenApiSendUrl(apiUrl: string, id: string, token: string, method = "sendMessage") {
   const base = normalizeGreenApiUrl(apiUrl);
   if (!base) return "";
@@ -130,8 +123,8 @@ export function resolveOrderAlertChannels(stored?: Partial<OrderAlertStored> | n
     callmebot: process.env.CALLMEBOT_APIKEY?.trim() || undefined,
     whatsappToken: process.env.WHATSAPP_TOKEN?.trim() || undefined,
     whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() || undefined,
-    greenApiId: firstText(process.env.GREEN_API_ID, stored?.greenApiId) || undefined,
-    greenApiToken: firstText(process.env.GREEN_API_TOKEN, stored?.greenApiToken) || undefined,
+    greenApiId: normalizeGreenApiId(firstText(process.env.GREEN_API_ID, stored?.greenApiId)) || undefined,
+    greenApiToken: normalizeGreenApiToken(firstText(process.env.GREEN_API_TOKEN, stored?.greenApiToken)) || undefined,
     greenApiUrl: normalizeGreenApiUrl(firstText(process.env.GREEN_API_URL, stored?.greenApiUrl)) || undefined,
   };
 }

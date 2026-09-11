@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransitionOrder, stockEffectForTransition } from "../src/lib/order-flow";
+import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } from "../src/lib/order-flow";
 import { safeNextPath } from "../src/lib/safe-path";
 import { summarizeTill } from "../src/lib/till";
 
@@ -11,6 +11,9 @@ describe("statuts commande", () => {
     expect(stockEffectForTransition("READY", "SHIPPED")).toBe("ship");
     expect(stockEffectForTransition("SHIPPED", "DELIVERED")).toBe("none");
     expect(stockEffectForTransition("DELIVERED", "REFUNDED")).toBe("restock");
+    expect(releasesCouponOnStatus("CANCELLED")).toBe(true);
+    expect(releasesCouponOnStatus("REFUNDED")).toBe(true);
+    expect(releasesCouponOnStatus("SHIPPED")).toBe(false);
   });
 });
 

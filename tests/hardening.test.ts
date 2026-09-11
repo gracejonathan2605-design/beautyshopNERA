@@ -5,7 +5,7 @@ import { cronAuthorized } from "../src/lib/cron-auth";
 import { parseCfaInput } from "../src/lib/money";
 import { stockEffectForTransition } from "../src/lib/order-flow";
 import { isValidSaleQuantity } from "../src/lib/pos";
-import { phoneLastNine } from "../src/lib/phone-match";
+import { phoneLastNine, phonesLikelyMatch } from "../src/lib/phone-match";
 
 describe("saisie FCFA", () => {
   it("lit les milliers à la française (10.000 = dix mille)", () => {
@@ -23,6 +23,11 @@ describe("panier checkout", () => {
     expect(cartCanCheckout([{ available: 3, quantity: 1 }, { available: 0, quantity: 1 }])).toBe(false);
     expect(cartCanCheckout([{ available: 3, quantity: 1 }])).toBe(true);
     expect(cartCanCheckout([{ available: 2, quantity: 3 }])).toBe(false);
+  });
+
+  it("refuse de commander si le cookie contient encore un article disparu", () => {
+    expect(cartCanCheckout([{ available: 3, quantity: 1 }], 2)).toBe(false);
+    expect(cartCanCheckout([{ available: 3, quantity: 1 }], 1)).toBe(true);
   });
 
   it("détecte un article disparu ou un stock trop bas", () => {
@@ -77,5 +82,11 @@ describe("téléphone suffixe", () => {
     expect(phoneLastNine("696565654")).toBe("696565654");
     expect(phoneLastNine("69656565499")?.endsWith("6565499")).toBe(true);
     expect(phoneLastNine("69656565499")).not.toBe("696565654");
+  });
+
+  it("traite 690000000 et 237690000000 comme le même numéro", () => {
+    expect(phonesLikelyMatch("690000000", "237690000000")).toBe(true);
+    expect(phonesLikelyMatch("690000000", "0690000000")).toBe(true);
+    expect(phonesLikelyMatch("690000000", "691000000")).toBe(false);
   });
 });

@@ -83,10 +83,9 @@ export function TillBoard({
           <div className="mt-2 flex flex-wrap gap-2">
             <input
               name="amount"
-              type="number"
-              min={1}
+              inputMode="numeric"
               required
-              placeholder="Montant FCFA"
+              placeholder="Montant FCFA (ex. 2000)"
               className="min-w-[8rem] flex-1 rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
             />
             <select name="categoryId" className="min-w-[9rem] flex-1 rounded-xl border border-[#eee0e6] px-3 py-2 text-sm">
@@ -108,8 +107,7 @@ export function TillBoard({
           </p>
           <input
             name="actualCash"
-            type="number"
-            min={0}
+            inputMode="numeric"
             placeholder={`Espèces comptées (optionnel) — ${snapshot.expectedCash}`}
             className="mt-3 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
           />

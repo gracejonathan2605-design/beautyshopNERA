@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { normalizeFlashDurationDays } from "./flash";
 import { NERA_IDENTITY } from "./nera-identity";
 import { DEFAULT_PENDING_ORDER_HOURS, normalizePendingOrderHours } from "./pending-orders";
+import { normalizeGreenApiId, normalizeGreenApiToken, normalizeGreenApiUrl } from "./green-api";
 
 export type ShopSettings = {
   name: string;
@@ -97,9 +98,9 @@ export function mergeShopSettings(stored?: Partial<ShopSettings> | null): ShopSe
   merged.flashDurationDays = normalizeFlashDurationDays(merged.flashDurationDays);
   merged.pendingOrderHours = normalizePendingOrderHours(merged.pendingOrderHours);
   merged.orderWhatsAppTo = String(merged.orderWhatsAppTo ?? "").replace(/\D/g, "") || DEFAULT_SETTINGS.orderWhatsAppTo;
-  merged.greenApiId = String(merged.greenApiId ?? "").trim();
-  merged.greenApiToken = String(merged.greenApiToken ?? "").trim();
-  merged.greenApiUrl = String(merged.greenApiUrl ?? "").trim().replace(/\/$/, "");
+  merged.greenApiId = normalizeGreenApiId(merged.greenApiId);
+  merged.greenApiToken = normalizeGreenApiToken(merged.greenApiToken);
+  merged.greenApiUrl = normalizeGreenApiUrl(merged.greenApiUrl);
   return merged;
 }
 

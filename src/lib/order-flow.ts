@@ -27,3 +27,7 @@ export function stockEffectForTransition(from: OrderStatus, to: OrderStatus): "n
   if (to === "REFUNDED" && alreadyShipped) return "restock";
   return "none";
 }
+
+export function releasesCouponOnStatus(to: OrderStatus) {
+  return to === "CANCELLED" || to === "REFUNDED";
+}

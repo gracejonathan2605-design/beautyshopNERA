@@ -15,7 +15,7 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { defaultStaffPath } from "@/lib/permissions";
 import { safeNextPath } from "@/lib/safe-path";
-import { attachGuestOrdersByPhone } from "@/services/customer.service";
+import { attachGuestOrdersByPhone, findCustomerByPhone } from "@/services/customer.service";
 
 export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -86,10 +86,7 @@ export async function registerCustomer(formData: FormData) {
   const exists = await prisma.customer.findUnique({ where: { email } });
   if (exists) redirect("/compte/inscription?error=exists");
   if (phone) {
-    const phoneTaken = await prisma.customer.findFirst({
-      where: { phone, deletedAt: null },
-      select: { id: true },
-    });
+    const phoneTaken = await findCustomerByPhone(phone);
     if (phoneTaken) redirect("/compte/inscription?error=exists");
   }
   const passwordHash = await hashPassword(password);

@@ -22,6 +22,7 @@ import { PosRefundPanel } from "@/components/pos/pos-refund-panel";
 import {
   buildCheckoutPayments,
   pickExactScanMatch,
+  pickSearchEnterMatch,
   ticketTotals,
   type PosVariant,
 } from "@/lib/pos";
@@ -51,6 +52,7 @@ export function PosClient({
   const [scanMode, setScanMode] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(initial);
+  const [resultsForQuery, setResultsForQuery] = useState("");
   const [cart, setCart] = useState<Line[]>([]);
   const [ticketDiscount, setTicketDiscount] = useState(0);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
@@ -107,7 +109,11 @@ export function PosClient({
   useEffect(() => {
     if (scanMode) return;
     const timer = window.setTimeout(() => {
-      startSearch(async () => setResults(await searchPosProducts(query)));
+      startSearch(async () => {
+        const q = query;
+        setResults(await searchPosProducts(q));
+        setResultsForQuery(q);
+      });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [query, scanMode]);
@@ -356,9 +362,9 @@ export function PosClient({
               <input
                 id="openingFloat"
                 name="openingFloat"
-                type="number"
-                min={0}
+                inputMode="numeric"
                 defaultValue={0}
+                placeholder="ex. 10000 ou 10.000"
                 className="mt-1 rounded-xl border border-[#eee0e6] px-3 py-2"
               />
               <button className="ml-3 rounded-full bg-brown px-5 py-2 text-cream">Ouvrir la caisse</button>
@@ -390,7 +396,7 @@ export function PosClient({
                 e.preventDefault();
                 if (scanMode) onScanEnter();
                 else {
-                  const pick = pickExactScanMatch(results, query) ?? (results.length === 1 ? results[0] : null);
+                  const pick = pickSearchEnterMatch(results, query, resultsForQuery);
                   if (pick) {
                     add(pick);
                     setQuery("");

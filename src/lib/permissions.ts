@@ -177,5 +177,8 @@ export function defaultStaffPath(session: StaffAuthz) {
   if (hasPermission(session, "dashboard.view")) return "/admin";
   if (hasPermission(session, "pos.access")) return "/pos";
   if (hasPermission(session, "stock.view")) return "/admin/stocks";
-  return "/admin";
+  if (hasPermission(session, "products.view")) return "/admin/produits";
+  if (hasPermission(session, "orders.view")) return "/admin/commandes";
+  // Never fall back to /admin: that page redirects here again without dashboard.view.
+  return "/admin/interdit";
 }

@@ -11,4 +11,12 @@ describe("defaultStaffPath", () => {
     expect(hasPermission(cashier, "dashboard.view")).toBe(false);
     expect(defaultStaffPath(cashier)).toBe("/pos");
   });
+
+  it("évite une boucle /admin pour un rôle sans tableau de bord", () => {
+    const limited = { permissions: ["products.view"] };
+    expect(hasPermission(limited, "dashboard.view")).toBe(false);
+    expect(defaultStaffPath(limited)).toBe("/admin/produits");
+    expect(defaultStaffPath({ permissions: ["orders.view"] })).toBe("/admin/commandes");
+    expect(defaultStaffPath({ permissions: [] })).toBe("/admin/interdit");
+  });
 });

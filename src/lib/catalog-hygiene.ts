@@ -215,5 +215,19 @@ export function planCatalogHygiene(products: HygieneProduct[], flagshipCount = 2
     }
   }
 
+  // Align with publishOnlineBlocker: photo alone is not enough.
+  // Featured rows receive sheets above; other online empties must leave the boutique.
+  const featuredIds = new Set(feature);
+  for (const product of cleaned) {
+    if (!product.onlineVisible || unpublished.has(product.id) || featuredIds.has(product.id)) continue;
+    const hasText =
+      Boolean(String(product.shortDescription ?? "").trim()) ||
+      Boolean(String(product.description ?? "").trim());
+    if (!hasText) {
+      unpublish.push({ id: product.id, reason: "Fiche en ligne sans description" });
+      unpublished.add(product.id);
+    }
+  }
+
   return { rename, unpublish, sheets, feature, sizeNotes };
 }

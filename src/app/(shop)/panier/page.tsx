@@ -34,8 +34,13 @@ export default async function CartPage({
       return variant ? { item, variant, available: variantAvailable(variant.inventories) } : null;
     })
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
+  const staleItems = cart.filter((item) => !variants.some((v) => v.id === item.variantId));
   const total = rows.reduce((s, r) => s + unitPrice(r.variant) * r.item.quantity, 0);
-  const canCheckout = cartCanCheckout(rows.map((r) => ({ available: r.available, quantity: r.item.quantity })));
+  const canCheckout = cartCanCheckout(
+    rows.map((r) => ({ available: r.available, quantity: r.item.quantity })),
+    cart.length,
+  );
+  const hasLines = rows.length > 0 || staleItems.length > 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -47,7 +52,7 @@ export default async function CartPage({
           {ignore ? ` ${ignore} en rupture (bientôt de retour).` : ""}
         </p>
       ) : null}
-      {!rows.length ? (
+      {!hasLines ? (
         <div className="mt-8 rounded-[1.7rem] border border-[#eee0e6] bg-white/80 p-8 text-center">
           <p className="text-black/60">Votre panier est encore vide.</p>
           <Link href="/boutique" className="mt-6 inline-block rounded-full bg-brown px-6 py-3 text-cream">
@@ -56,6 +61,24 @@ export default async function CartPage({
         </div>
       ) : (
         <div className="mt-8 space-y-4">
+          {staleItems.map((item) => (
+            <div
+              key={item.variantId}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#eee0e6] bg-white p-4"
+            >
+              <div>
+                <p className="font-medium">Article plus en vente</p>
+                <p className="mt-1 text-xs text-wine">Retirez-le pour commander le reste.</p>
+              </div>
+              <form action={setCartQtyForm}>
+                <input type="hidden" name="variantId" value={item.variantId} />
+                <input type="hidden" name="quantity" value={0} />
+                <button className="text-sm text-red-700" type="submit">
+                  Retirer
+                </button>
+              </form>
+            </div>
+          ))}
           {rows.map(({ item, variant, available }) => (
             <div key={item.variantId} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#eee0e6] bg-white p-4">
               <div>
@@ -104,7 +127,7 @@ export default async function CartPage({
             </Link>
           ) : (
             <p className="rounded-2xl bg-blush px-4 py-3 text-center text-sm text-wine">
-              Ajustez ou retirez les articles en rupture avant de commander.
+              Ajustez ou retirez les articles indisponibles avant de commander.
             </p>
           )}
         </div>
