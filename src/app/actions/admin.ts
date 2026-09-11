@@ -17,6 +17,7 @@ import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
+import { getOpenSessionForUser } from "@/services/cash.service";
 import { assignFlashOnPublish, isPublishedOnline, normalizeFlashDurationDays } from "@/lib/flash";
 import { cleanProductTitle, publishOnlineBlocker } from "@/lib/catalog-hygiene";
 import { applyCatalogHygiene } from "@/services/catalog-hygiene.service";
@@ -768,6 +769,7 @@ export async function saveExpense(formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "");
   const date = dateRaw ? new Date(dateRaw) : new Date();
   if (Number.isNaN(date.getTime())) throw new Error("Date invalide.");
+  const open = await getOpenSessionForUser(session.userId);
   await prisma.expense.create({
     data: {
       categoryId: String(formData.get("categoryId")),
@@ -775,9 +777,11 @@ export async function saveExpense(formData: FormData) {
       date,
       description: String(formData.get("description") ?? "") || null,
       userId: session.userId,
+      cashSessionId: open?.id,
     },
   });
   revalidatePath("/admin/depenses");
+  if (open) revalidatePath("/pos");
 }
 
 export async function saveSettings(formData: FormData) {

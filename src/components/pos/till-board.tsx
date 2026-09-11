@@ -1,10 +1,14 @@
-import { addTillExpense, closeRegister } from "@/app/actions/pos";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { closeRegister } from "@/app/actions/pos";
 import { PendingSubmitButton } from "@/components/admin/form-pending";
+import { TillExpenseForm } from "@/components/pos/till-expense-form";
 import { formatCfa } from "@/lib/money";
 import type { TillSnapshot } from "@/lib/till";
 
 export function TillBoard({
-  snapshot,
+  snapshot: initial,
   categories,
   openedByName,
   openedAt,
@@ -14,9 +18,21 @@ export function TillBoard({
   openedByName?: string;
   openedAt?: Date | string;
 }) {
+  const [snapshot, setSnapshot] = useState(initial);
+  const [flash, setFlash] = useState<string | null>(null);
   const openedLabel = openedAt
     ? new Date(openedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     : null;
+
+  useEffect(() => {
+    setSnapshot(initial);
+  }, [initial]);
+
+  const onSnapshot = useCallback((next: TillSnapshot, message: string) => {
+    setSnapshot(next);
+    setFlash(message);
+  }, []);
+
   return (
     <section className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-5">
       <h2 className="font-serif text-2xl text-wine">Caisse ouverte</h2>
@@ -28,8 +44,13 @@ export function TillBoard({
       ) : null}
       <p className="mt-1 text-sm text-black/50">
         Le fond d’ouverture reste affiché. Les ventes s’ajoutent toutes seules. Une dépense est déduite des recettes
-        et des espèces.
+        et des espèces tout de suite.
       </p>
+      {flash ? (
+        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800" role="status">
+          {flash}
+        </p>
+      ) : null}
       <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl bg-blush p-4">
           <dt className="text-xs uppercase tracking-wide text-black/45">Fond d’ouverture</dt>
@@ -78,37 +99,7 @@ export function TillBoard({
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <form action={addTillExpense} className="rounded-2xl border border-[#eee0e6] p-4">
-          <h3 className="font-medium text-wine">Ajouter une dépense</h3>
-          <p className="mt-1 text-sm text-black/50">Taxi, eau, courses… le montant est retiré des recettes tout de suite.</p>
-          <input
-            name="description"
-            required
-            placeholder="Motif (ex. taxi, bouteille d’eau)"
-            className="mt-3 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
-          />
-          <div className="mt-2 flex flex-wrap gap-2">
-            <input
-              name="amount"
-              inputMode="numeric"
-              required
-              placeholder="Montant FCFA (ex. 2000)"
-              className="min-w-[8rem] flex-1 rounded-xl border border-[#eee0e6] px-3 py-2 text-sm"
-            />
-            <select name="categoryId" className="min-w-[9rem] flex-1 rounded-xl border border-[#eee0e6] px-3 py-2 text-sm">
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <PendingSubmitButton
-            idle="Enregistrer la dépense"
-            pendingLabel="Enregistrement…"
-            className="mt-3 rounded-full bg-brown px-5 py-2 text-sm text-cream disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </form>
+        <TillExpenseForm sessionId={snapshot.sessionId} categories={categories} onSnapshot={onSnapshot} />
 
         <form action={closeRegister} className="rounded-2xl border border-[#eee0e6] p-4">
           <h3 className="font-medium text-wine">Fermer la caisse</h3>

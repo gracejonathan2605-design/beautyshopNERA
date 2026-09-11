@@ -17,7 +17,7 @@ import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } f
 import { formatCfa, parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
-import { canCloseCashSession } from "@/lib/till";
+import { canCloseCashSession, type TillSnapshot } from "@/lib/till";
 import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@/services/held-ticket.service";
 
 export { listHeldTickets, type HeldTicketRow };
@@ -160,26 +160,43 @@ export async function closeRegister(formData: FormData) {
   }
 }
 
-export async function addTillExpense(formData: FormData) {
+export type TillExpenseResult =
+  | { ok: true; snapshot: TillSnapshot; message: string }
+  | { ok: false; error: string };
+
+export async function addTillExpense(formData: FormData): Promise<TillExpenseResult> {
   try {
     const session = await requireStaff("pos.access");
     const amount = parseCfaInput(String(formData.get("amount") ?? ""));
     const description = String(formData.get("description") ?? "").trim();
-    if (!amount) bouncePos("erreur", "Indiquez un montant de dépense valide.");
-    if (!description) bouncePos("erreur", "Indiquez le motif de la dépense (taxi, eau, etc.).");
-    await recordTillExpense({
+    if (!amount) return { ok: false, error: "Indiquez un montant de dépense valide." };
+    if (!description) return { ok: false, error: "Indiquez le motif de la dépense (taxi, eau, etc.)." };
+    const { snapshot, expense } = await recordTillExpense({
       userId: session.userId,
       amount,
       description,
       categoryId: String(formData.get("categoryId") ?? "") || null,
+      sessionId: String(formData.get("sessionId") ?? "") || null,
+      isSuperAdmin: session.isSuperAdmin,
     });
     revalidatePath("/pos");
     revalidatePath("/admin/depenses");
-    bouncePos("ok", "Dépense enregistrée et déduite des recettes.");
+    return {
+      ok: true,
+      snapshot,
+      message: `Dépense de ${formatCfa(expense.amount)} déduite. Espèces attendues : ${formatCfa(snapshot.expectedCash)}.`,
+    };
   } catch (err) {
     unstable_rethrow(err);
-    bouncePos("erreur", err instanceof Error ? err.message : "Dépense impossible.");
+    return { ok: false, error: err instanceof Error ? err.message : "Dépense impossible." };
   }
+}
+
+export async function submitTillExpense(
+  _prev: TillExpenseResult | null,
+  formData: FormData,
+): Promise<TillExpenseResult> {
+  return addTillExpense(formData);
 }
 
 export type PosSaleResult =

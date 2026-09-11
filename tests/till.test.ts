@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { canCloseCashSession, cashReturnTillExpenseAmount, nextOpeningFloatFromClose, summarizeTill } from "../src/lib/till";
+import { applyTillExpense, canCloseCashSession, cashReturnTillExpenseAmount, nextOpeningFloatFromClose, summarizeTill } from "../src/lib/till";
 
 describe("caisse du jour", () => {
   it("garde le fond d’ouverture et ajoute les ventes espèces", () => {
@@ -111,6 +111,40 @@ describe("ouvrir et fermer à tout moment", () => {
     expect(nextOpeningFloatFromClose({ actualCash: 42000, expectedCash: 40000 })).toBe(42000);
     expect(nextOpeningFloatFromClose({ actualCash: null, expectedCash: 40000 })).toBe(40000);
     expect(nextOpeningFloatFromClose({})).toBe(0);
+  });
+
+  it("défalque une dépense des espèces attendues tout de suite", () => {
+    const snap = summarizeTill({
+      sessionId: "s1",
+      openingFloat: 10000,
+      sales: [
+        {
+          status: "COMPLETED",
+          total: 15000,
+          payments: [{ method: "CASH", status: "COMPLETED", amount: 15000 }],
+        },
+      ],
+      expenses: [],
+    });
+    const next = applyTillExpense(snap, {
+      id: "e1",
+      amount: 2000,
+      description: "Taxi",
+      categoryName: "Transport",
+    });
+    expect(next.expensesTotal).toBe(2000);
+    expect(next.netRevenue).toBe(13000);
+    expect(next.expectedCash).toBe(23000);
+    expect(next.expenses[0]?.description).toBe("Taxi");
+  });
+
+  it("envoie la dépense sur la session ouverte, pas par redirection", () => {
+    const form = readFileSync("src/components/pos/till-expense-form.tsx", "utf8");
+    const action = readFileSync("src/app/actions/pos.ts", "utf8");
+    expect(form).toContain('name="sessionId"');
+    expect(form).toContain("submitTillExpense");
+    expect(action).toContain("submitTillExpense");
+    expect(action).toMatch(/return \{\s*ok: true/);
   });
 
   it("ferme sans attendre la fin de journée et affiche le résultat", () => {

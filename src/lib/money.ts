@@ -8,7 +8,9 @@ export function formatCfa(amount: number) {
 
 /** FCFA n’a pas de sous-unité : espaces, points et virgules sont des séparateurs de milliers (ex. 10.000). */
 export function parseCfaInput(value: string) {
-  const cleaned = String(value ?? "").replace(/[\s.,]/g, "");
+  const raw = String(value ?? "").trim();
+  if (!raw || raw.startsWith("-")) return 0;
+  const cleaned = raw.replace(/[^\d]/g, "");
   if (!cleaned) return 0;
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n < 0) return 0;

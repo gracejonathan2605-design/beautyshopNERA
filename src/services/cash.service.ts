@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
-import { summarizeTill, type TillSnapshot } from "@/lib/till";
+import { canCloseCashSession, summarizeTill, type TillSnapshot } from "@/lib/till";
 
 const tillSaleSelect = {
   status: true,
@@ -241,40 +241,87 @@ export async function ensureOpenCashSession(userId: string, openingFloat = 0) {
   });
 }
 
+async function resolveTillExpenseCategoryId(
+  tx: Prisma.TransactionClient,
+  requestedId?: string | null,
+) {
+  if (requestedId) {
+    const found = await tx.expenseCategory.findFirst({
+      where: { id: requestedId, isActive: true },
+      select: { id: true },
+    });
+    if (found) return found.id;
+  }
+  const fallback = await tx.expenseCategory.upsert({
+    where: { slug: "autre" },
+    update: { isActive: true, name: "Autre" },
+    create: { name: "Autre", slug: "autre" },
+    select: { id: true },
+  });
+  return fallback.id;
+}
+
 export async function recordTillExpense(input: {
   userId: string;
   amount: number;
   description: string;
   categoryId?: string | null;
+  sessionId?: string | null;
+  isSuperAdmin?: boolean;
 }) {
-  if (input.amount <= 0) throw new Error("Indiquez le montant de la dépense.");
-  const open = await getOpenSessionForUser(input.userId);
-  if (!open) throw new Error("Ouvrez d’abord la caisse.");
-  let categoryId = input.categoryId || "";
-  if (!categoryId) {
-    const fallback = await prisma.expenseCategory.findFirst({
-      where: { isActive: true, OR: [{ slug: "autre" }, { name: "Autre" }] },
-    });
-    const any = fallback ?? (await prisma.expenseCategory.findFirst({ where: { isActive: true } }));
-    if (!any) throw new Error("Aucune catégorie de dépense. Créez-en une dans Admin → Dépenses.");
-    categoryId = any.id;
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    throw new Error("Indiquez le montant de la dépense.");
   }
-  const expense = await prisma.expense.create({
-    data: {
-      categoryId,
-      amount: input.amount,
-      date: new Date(),
-      description: input.description || "Dépense caisse",
-      userId: input.userId,
-      cashSessionId: open.id,
-    },
+  const description = input.description.trim();
+  if (!description) throw new Error("Indiquez le motif de la dépense (taxi, eau, etc.).");
+
+  const amount = Math.round(input.amount);
+  const expense = await prisma.$transaction(async (tx) => {
+    const open = input.sessionId
+      ? await tx.cashSession.findFirst({
+          where: { id: input.sessionId, status: "OPEN" },
+          select: { id: true, openedById: true },
+        })
+      : await tx.cashSession.findFirst({
+          where: { status: "OPEN", openedById: input.userId },
+          select: { id: true, openedById: true },
+          orderBy: { openedAt: "desc" },
+        });
+    if (!open) throw new Error("Ouvrez d’abord la caisse.");
+    if (
+      !canCloseCashSession({
+        openedById: open.openedById,
+        userId: input.userId,
+        isSuperAdmin: input.isSuperAdmin,
+      })
+    ) {
+      throw new Error("Cette dépense doit être saisie sur la caisse ouverte.");
+    }
+
+    const categoryId = await resolveTillExpenseCategoryId(tx, input.categoryId);
+    const row = await tx.expense.create({
+      data: {
+        categoryId,
+        amount,
+        date: new Date(),
+        description,
+        userId: input.userId,
+        cashSessionId: open.id,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: input.userId,
+        action: "TILL_EXPENSE",
+        entity: "Expense",
+        entityId: row.id,
+        after: { amount, cashSessionId: open.id, description },
+      },
+    });
+    return row;
   });
-  await writeAudit({
-    userId: input.userId,
-    action: "TILL_EXPENSE",
-    entity: "Expense",
-    entityId: expense.id,
-    after: { amount: input.amount, cashSessionId: open.id },
-  });
-  return expense;
+
+  const snapshot = await getTillSnapshot(expense.cashSessionId ?? "");
+  if (!snapshot) throw new Error("Dépense enregistrée, mais la caisse n’a pas pu être relue.");
+  return { expense, snapshot };
 }
