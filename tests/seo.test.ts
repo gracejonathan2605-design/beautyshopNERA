@@ -258,3 +258,15 @@ describe("Google Tag Manager", () => {
     expect(layout.indexOf("<body")).toBeLessThan(layout.indexOf("googletagmanager.com/ns.html"));
   });
 });
+
+describe("Google Analytics", () => {
+  it("colle G-PNJ2MC62V3 une seule fois, juste après head", () => {
+    const layout = readFileSync("src/app/layout.tsx", "utf8");
+    expect(layout).toContain('GA_MEASUREMENT_ID = "G-PNJ2MC62V3"');
+    expect(layout).toContain("googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}");
+    expect(layout).toContain("gtag('config', '${GA_MEASUREMENT_ID}')");
+    expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("gtag/js"));
+    expect(layout.indexOf("gtag/js")).toBeLessThan(layout.indexOf("googletagmanager.com/gtm.js"));
+    expect(layout.split("gtag('config'").length - 1).toBe(1);
+  });
+});
