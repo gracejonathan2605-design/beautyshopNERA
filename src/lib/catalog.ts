@@ -61,6 +61,7 @@ export const NERA_CATALOG: CatalogGroup[] = [
     "Mèches diverses",
     "Perruques",
     "Frontales",
+    "Closures",
     "Ponytails",
     "Bonnets",
     "Bonnets pour perruques",
@@ -136,6 +137,7 @@ export const NERA_CATALOG: CatalogGroup[] = [
     "Sacs à main",
     "Chaussures",
     "Sandales",
+    "Lingerie",
   ]),
   group("Articles divers", [
     "Miroirs de poche",
@@ -174,6 +176,59 @@ export function catalogSlugs() {
 }
 
 type Db = PrismaClient | Prisma.TransactionClient;
+
+export const LINGERIE_SLUG = "mode-lingerie";
+export const CLOSURES_SLUG = "meches-perruques-extensions-closures";
+
+/** Range une fiche déjà dans Mode / Mèches vers Lingerie ou Closures, sans toucher aux autres rayons. */
+export function catalogShelfHint(name: string): typeof LINGERIE_SLUG | typeof CLOSURES_SLUG | null {
+  const hay = String(name ?? "").toLowerCase();
+  if (/\blingerie\b/.test(hay) || /\bsous-v[eê]tements?\b/.test(hay)) return LINGERIE_SLUG;
+  if (/\bclosures?\b/.test(hay)) return CLOSURES_SLUG;
+  return null;
+}
+
+function slugsInGroup(parentSlug: string) {
+  const group = NERA_CATALOG.find((item) => item.slug === parentSlug);
+  if (!group) return [] as string[];
+  return [group.slug, ...group.children.map((child) => child.slug)];
+}
+
+async function fileLingerieAndClosures(db: Db, ids: Record<string, string>) {
+  const lingerieId = ids[LINGERIE_SLUG];
+  const closuresId = ids[CLOSURES_SLUG];
+  if (!lingerieId && !closuresId) return;
+
+  const modeIds = new Set(slugsInGroup("mode").map((slug) => ids[slug]).filter(Boolean));
+  const mecheIds = new Set(
+    slugsInGroup("meches-perruques-extensions").map((slug) => ids[slug]).filter(Boolean),
+  );
+
+  const products = await db.product.findMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        { name: { contains: "lingerie", mode: "insensitive" } },
+        { name: { contains: "sous-vêtement", mode: "insensitive" } },
+        { name: { contains: "sous-vetement", mode: "insensitive" } },
+        { name: { contains: "closure", mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, categoryId: true },
+  });
+
+  for (const product of products) {
+    const hint = catalogShelfHint(product.name);
+    const target = hint ? ids[hint] : undefined;
+    if (!target || product.categoryId === target) continue;
+    const allowed = hint === LINGERIE_SLUG ? modeIds : mecheIds;
+    if (product.categoryId && !allowed.has(product.categoryId)) continue;
+    await db.product.update({
+      where: { id: product.id },
+      data: { categoryId: target },
+    });
+  }
+}
 
 export async function syncNeraCatalog(db: Db) {
   const ids: Record<string, string> = {};
@@ -232,6 +287,7 @@ export async function syncNeraCatalog(db: Db) {
       data: { isActive: false },
     });
   }
+  await fileLingerieAndClosures(db, ids);
   return ids;
 }
 

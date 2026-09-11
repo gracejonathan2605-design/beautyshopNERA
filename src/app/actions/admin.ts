@@ -152,10 +152,12 @@ export async function installNeraCatalog() {
     entity: "Category",
     after: { count: Object.keys(ids).length },
   });
+  updateTag("catalog");
   revalidatePath("/admin/categories");
   revalidatePath("/admin/produits");
   revalidatePath("/");
   revalidatePath("/boutique");
+  revalidatePath("/categorie", "layout");
 }
 
 export type ProductFormState = {
