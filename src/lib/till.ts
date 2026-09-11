@@ -71,3 +71,25 @@ export function cashReturnTillExpenseAmount(
   if (originalSessionStatus === "OPEN") return 0;
   return Math.round(cashPortion);
 }
+
+export function canCloseCashSession(input: {
+  openedById: string;
+  userId: string;
+  isSuperAdmin?: boolean;
+}) {
+  return input.openedById === input.userId || Boolean(input.isSuperAdmin);
+}
+
+/** Fond proposé à la réouverture : l’argent encore dans le tiroir. */
+export function nextOpeningFloatFromClose(input: {
+  actualCash?: number | null;
+  expectedCash?: number | null;
+}) {
+  if (input.actualCash != null && Number.isFinite(input.actualCash) && input.actualCash >= 0) {
+    return Math.round(input.actualCash);
+  }
+  if (input.expectedCash != null && Number.isFinite(input.expectedCash) && input.expectedCash >= 0) {
+    return Math.round(input.expectedCash);
+  }
+  return 0;
+}
