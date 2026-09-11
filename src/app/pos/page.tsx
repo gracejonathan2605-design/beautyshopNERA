@@ -88,7 +88,7 @@ export default async function PosPage({
             openSession={open ? { id: open.id, openingFloat: open.openingFloat, openedByName } : null}
             occupiedBy={open ? null : openedByName || null}
             occupiedSessionId={occupied?.id ?? null}
-            canForceClose={Boolean(session.isSuperAdmin && occupied)}
+            canForceClose={Boolean(occupied && (session.isSuperAdmin || hasPermission(session, "sales.cancel")))}
             suggestedOpeningFloat={suggestedOpeningFloat}
             shop={toReceiptShop(settings)}
             canRefund={hasPermission(session, "sales.refund")}

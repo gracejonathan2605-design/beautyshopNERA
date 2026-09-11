@@ -18,6 +18,7 @@ import { formatCfa, parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
 import { canCloseCashSession, type TillSnapshot } from "@/lib/till";
+import { hasPermission } from "@/lib/permissions";
 import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@/services/held-ticket.service";
 
 export { listHeldTickets, type HeldTicketRow };
@@ -123,7 +124,8 @@ export async function closeRegister(formData: FormData) {
     const session = await requireStaff("pos.access");
     const requestedId = String(formData.get("sessionId") ?? "").trim();
     const mine = await getOpenSessionForUser(session.userId);
-    const occupied = session.isSuperAdmin ? await getOccupiedCashSession(session.userId) : null;
+    const canForce = session.isSuperAdmin || hasPermission(session, "sales.cancel");
+    const occupied = canForce ? await getOccupiedCashSession(session.userId) : null;
     const target = requestedId ? await getOpenCashSessionById(requestedId) : mine ?? occupied;
     if (!target) bouncePos("erreur", "Aucune caisse ouverte à fermer.");
     if (
@@ -131,9 +133,10 @@ export async function closeRegister(formData: FormData) {
         openedById: target.openedById,
         userId: session.userId,
         isSuperAdmin: session.isSuperAdmin,
+        canForce,
       })
     ) {
-      bouncePos("erreur", "Seul celui qui a ouvert la caisse (ou l’admin) peut la fermer.");
+      bouncePos("erreur", "Seul celui qui a ouvert la caisse (ou le responsable) peut la fermer.");
     }
     const raw = String(formData.get("actualCash") ?? "").trim();
     const actualCash = raw === "" ? null : parseCfaInput(raw);
@@ -178,6 +181,7 @@ export async function addTillExpense(formData: FormData): Promise<TillExpenseRes
       categoryId: String(formData.get("categoryId") ?? "") || null,
       sessionId: String(formData.get("sessionId") ?? "") || null,
       isSuperAdmin: session.isSuperAdmin,
+      canForce: session.isSuperAdmin || hasPermission(session, "sales.cancel"),
     });
     revalidatePath("/pos");
     revalidatePath("/admin/depenses");
@@ -212,6 +216,7 @@ export async function submitPosSale(input: {
   customerPhone?: string;
   discount?: number;
   notes?: string;
+  heldTicketId?: string;
   lines: { variantId: string; quantity: number; discount?: number }[];
   payments: { method: PaymentMethod; amount: number }[];
 }): Promise<PosSaleResult> {
@@ -236,6 +241,7 @@ export async function submitPosSale(input: {
       customerId,
       discount: input.discount,
       notes: input.notes,
+      heldTicketId: input.heldTicketId,
       lines: input.lines,
       payments: input.payments,
     });
@@ -293,25 +299,47 @@ export async function createPosCustomer(input: { firstName: string; lastName?: s
   }
 }
 
-export async function parkPosTicket(input: { note?: string; payload: HeldTicketPayload }) {
+export async function parkPosTicket(input: {
+  note?: string;
+  payload: HeldTicketPayload;
+  heldTicketId?: string;
+}) {
   try {
     const session = await requireStaff("pos.access");
     if (!input.payload.lines.length) return { ok: false as const, error: "Le ticket est vide." };
     const open = await getOpenSessionForUser(session.userId);
-    const count = await prisma.heldTicket.count({ where: { cashierId: session.userId } });
-    if (count >= 20) return { ok: false as const, error: "Trop de tickets en attente (20 max). Encaisser ou reprendre d’abord." };
     const note =
       input.note?.trim() ||
       input.payload.customerName.trim() ||
       `Ticket ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
-    const row = await prisma.heldTicket.create({
-      data: {
-        cashierId: session.userId,
-        cashSessionId: open?.id,
-        note,
-        payload: input.payload as unknown as Prisma.InputJsonValue,
-      },
-    });
+    const payload = input.payload as unknown as Prisma.InputJsonValue;
+    const existingId = input.heldTicketId?.trim();
+    let row: { id: string; note: string | null; createdAt: Date };
+    if (existingId) {
+      const updated = await prisma.heldTicket.updateMany({
+        where: { id: existingId, cashierId: session.userId },
+        data: { note, payload, cashSessionId: open?.id },
+      });
+      if (updated.count !== 1) {
+        return { ok: false as const, error: "Ce ticket en attente a déjà été encaissé ou retiré." };
+      }
+      const existing = await prisma.heldTicket.findUnique({ where: { id: existingId } });
+      if (!existing) return { ok: false as const, error: "Ticket introuvable." };
+      row = existing;
+    } else {
+      const count = await prisma.heldTicket.count({ where: { cashierId: session.userId } });
+      if (count >= 20) {
+        return { ok: false as const, error: "Trop de tickets en attente (20 max). Encaisser ou reprendre d’abord." };
+      }
+      row = await prisma.heldTicket.create({
+        data: {
+          cashierId: session.userId,
+          cashSessionId: open?.id,
+          note,
+          payload,
+        },
+      });
+    }
     revalidatePath("/pos");
     return {
       ok: true as const,
@@ -352,26 +380,20 @@ export async function discardHeldTicket(id: string) {
 export async function resumeHeldTicket(id: string) {
   try {
     const session = await requireStaff("pos.access");
-    const result = await prisma.$transaction(async (tx) => {
-      const row = await tx.heldTicket.findUnique({ where: { id } });
-      if (!row) return { ok: false as const, error: "Ticket introuvable." };
-      if (row.cashierId !== session.userId && !session.isSuperAdmin) {
-        return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
-      }
-      const claimed = await tx.heldTicket.deleteMany({ where: { id: row.id } });
-      if (claimed.count !== 1) return { ok: false as const, error: "Ticket déjà repris." };
-      return {
-        ok: true as const,
-        ticket: {
-          id: row.id,
-          note: row.note,
-          createdAt: row.createdAt,
-          payload: row.payload as HeldTicketPayload,
-        } satisfies HeldTicketRow,
-      };
-    });
-    if (result.ok) revalidatePath("/pos");
-    return result;
+    const row = await prisma.heldTicket.findUnique({ where: { id } });
+    if (!row) return { ok: false as const, error: "Ticket introuvable." };
+    if (row.cashierId !== session.userId && !session.isSuperAdmin) {
+      return { ok: false as const, error: "Ce ticket appartient à une autre caisse." };
+    }
+    return {
+      ok: true as const,
+      ticket: {
+        id: row.id,
+        note: row.note,
+        createdAt: row.createdAt,
+        payload: row.payload as HeldTicketPayload,
+      } satisfies HeldTicketRow,
+    };
   } catch (err) {
     unstable_rethrow(err);
     if (isMissingHeldTicketStore(err)) return { ok: false as const, error: "Tickets en attente indisponibles." };

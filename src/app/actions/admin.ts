@@ -17,7 +17,7 @@ import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
 import { parseCfaInput } from "@/lib/money";
-import { getOpenSessionForUser } from "@/services/cash.service";
+import { getOpenSessionForUser, lockOpenCashSession } from "@/services/cash.service";
 import { assignFlashOnPublish, isPublishedOnline, normalizeFlashDurationDays } from "@/lib/flash";
 import { cleanProductTitle, publishOnlineBlocker } from "@/lib/catalog-hygiene";
 import { applyCatalogHygiene } from "@/services/catalog-hygiene.service";
@@ -771,19 +771,45 @@ export async function saveExpense(formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "");
   const date = dateRaw ? new Date(dateRaw) : new Date();
   if (Number.isNaN(date.getTime())) throw new Error("Date invalide.");
-  const open = await getOpenSessionForUser(session.userId);
+  const onTill = String(formData.get("onTill") ?? "") === "1";
+  const description = String(formData.get("description") ?? "") || null;
+  const categoryId = String(formData.get("categoryId"));
+  if (onTill) {
+    const open = await getOpenSessionForUser(session.userId);
+    if (!open) {
+      throw new Error("Aucune caisse ouverte. Décochez « Déduire de la caisse » ou ouvrez d’abord le tiroir.");
+    }
+    await prisma.$transaction(async (tx) => {
+      await lockOpenCashSession(
+        tx,
+        open.id,
+        "La caisse n’est plus ouverte. Décochez « Déduire de la caisse » ou rouvrez le tiroir.",
+      );
+      await tx.expense.create({
+        data: {
+          categoryId,
+          amount,
+          date,
+          description,
+          userId: session.userId,
+          cashSessionId: open.id,
+        },
+      });
+    });
+    revalidatePath("/admin/depenses");
+    revalidatePath("/pos");
+    return;
+  }
   await prisma.expense.create({
     data: {
-      categoryId: String(formData.get("categoryId")),
+      categoryId,
       amount,
       date,
-      description: String(formData.get("description") ?? "") || null,
+      description,
       userId: session.userId,
-      cashSessionId: open?.id,
     },
   });
   revalidatePath("/admin/depenses");
-  if (open) revalidatePath("/pos");
 }
 
 export async function saveSettings(formData: FormData) {

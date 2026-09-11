@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { applyTillExpense, canCloseCashSession, cashReturnTillExpenseAmount, nextOpeningFloatFromClose, summarizeTill } from "../src/lib/till";
+import {
+  applyTillExpense,
+  canCloseCashSession,
+  cashReturnTillExpenseAmount,
+  countedCashFromClose,
+  nextOpeningFloatFromClose,
+  summarizeTill,
+} from "../src/lib/till";
 
 describe("caisse du jour", () => {
   it("garde le fond d’ouverture et ajoute les ventes espèces", () => {
@@ -101,15 +108,23 @@ describe("remboursement hors session ouverte", () => {
 });
 
 describe("ouvrir et fermer à tout moment", () => {
-  it("autorise la fermeture par la vendeuse ou l’admin", () => {
+  it("autorise la fermeture par la vendeuse, l’admin ou un responsable", () => {
     expect(canCloseCashSession({ openedById: "a", userId: "a" })).toBe(true);
     expect(canCloseCashSession({ openedById: "a", userId: "b" })).toBe(false);
     expect(canCloseCashSession({ openedById: "a", userId: "b", isSuperAdmin: true })).toBe(true);
+    expect(canCloseCashSession({ openedById: "a", userId: "b", canForce: true })).toBe(true);
+  });
+
+  it("ne transforme pas un tiroir négatif en faux surplus si on ne compte pas", () => {
+    expect(countedCashFromClose({ counted: null, expectedCash: -5000 })).toBe(-5000);
+    expect(countedCashFromClose({ counted: undefined, expectedCash: 12000 })).toBe(12000);
+    expect(countedCashFromClose({ counted: 11000, expectedCash: 12000 })).toBe(11000);
   });
 
   it("reprend l’argent du tiroir comme fond de la prochaine ouverture", () => {
     expect(nextOpeningFloatFromClose({ actualCash: 42000, expectedCash: 40000 })).toBe(42000);
     expect(nextOpeningFloatFromClose({ actualCash: null, expectedCash: 40000 })).toBe(40000);
+    expect(nextOpeningFloatFromClose({ actualCash: -5000, expectedCash: -5000 })).toBe(0);
     expect(nextOpeningFloatFromClose({})).toBe(0);
   });
 
@@ -156,5 +171,58 @@ describe("ouvrir et fermer à tout moment", () => {
     expect(pos).toContain("autant de fois que besoin dans la");
     expect(pos).not.toMatch(/ce matin/);
     expect(readFileSync("src/components/pos/till-close-recap.tsx", "utf8")).toContain("Dernière fermeture");
+  });
+});
+
+describe("courses caisse restantes", () => {
+  it("verrouille la session ouverte avant clôture, vente et dépense", () => {
+    const cash = readFileSync("src/services/cash.service.ts", "utf8");
+    expect(cash).toContain("lockOpenCashSession");
+    expect(cash).toContain("lockCashSessionRow");
+    expect(cash).toContain("FOR UPDATE");
+    expect(cash).toContain("countedCashFromClose");
+    const closeFn = cash.slice(cash.indexOf("export async function closeCashSession"));
+    expect(closeFn).toMatch(/await lockOpenCashSession/);
+  });
+
+  it("verrouille la session d’origine avant remboursement ou annulation", () => {
+    const sale = readFileSync("src/services/sale.service.ts", "utf8");
+    expect(sale).toContain("lockCashSessionRow");
+    expect(sale).toContain("heldTicket.deleteMany");
+    expect(sale).toContain("heldTicketId");
+  });
+
+  it("ne supprime pas le ticket mis de côté à la reprise", () => {
+    const src = readFileSync("src/app/actions/pos.ts", "utf8");
+    const resume = src.slice(
+      src.indexOf("export async function resumeHeldTicket"),
+      src.indexOf("export async function searchPosSales"),
+    );
+    expect(resume).not.toContain("deleteMany");
+    expect(resume).not.toMatch(/heldTicket\.delete/);
+    expect(src).toContain("heldTicketId: input.heldTicketId");
+    expect(src).toContain("canForce");
+  });
+
+  it("ne rattache une dépense admin à la caisse que si on le demande", () => {
+    const form = readFileSync("src/app/admin/depenses/page.tsx", "utf8");
+    const action = readFileSync("src/app/actions/admin.ts", "utf8");
+    expect(form).toContain('name="onTill"');
+    expect(action).toContain('formData.get("onTill")');
+    expect(action).toContain("lockOpenCashSession");
+  });
+
+  it("rafraîchit le tableau de caisse après un remboursement POS", () => {
+    const panel = readFileSync("src/components/pos/pos-refund-panel.tsx", "utf8");
+    expect(panel).toContain("router.refresh()");
+  });
+
+  it("laisse le responsable forcer la fermeture d’une caisse occupée", () => {
+    const page = readFileSync("src/app/pos/page.tsx", "utf8");
+    const pos = readFileSync("src/components/pos/pos-client.tsx", "utf8");
+    expect(page).toContain("sales.cancel");
+    expect(page).toContain("canForceClose");
+    expect(pos).toContain("Fermer cette caisse");
+    expect(pos).toContain("heldTicketId: resumedHeldTicketId.current");
   });
 });

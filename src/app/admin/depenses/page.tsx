@@ -25,6 +25,10 @@ export default async function ExpensesAdminPage() {
         />
         <input name="date" type="date" required className="rounded-xl border px-3 py-2" />
         <input name="description" placeholder="Libellé" className="rounded-xl border px-3 py-2" />
+        <label className="flex items-center gap-2 text-sm text-black/70 md:col-span-4">
+          <input type="checkbox" name="onTill" value="1" className="rounded border-[#eee0e6]" />
+          Déduire de la caisse ouverte (sinon c’est seulement la liste Admin)
+        </label>
         <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
       </form>
       <ul className="mt-6 space-y-2">
