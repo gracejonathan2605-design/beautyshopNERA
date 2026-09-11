@@ -190,7 +190,9 @@ describe("sitemap public", () => {
     const xml = readFileSync("public/sitemap.xml", "utf8");
     expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
     expect(xml).toContain("<loc>https://www.nerabeaute237.com/</loc>");
+    expect(readFileSync("package.json", "utf8")).toContain("tsx scripts/sync-catalog.ts --soft");
     expect(readFileSync("package.json", "utf8")).toContain("tsx scripts/write-sitemap.ts");
+    expect(readFileSync("vercel.json", "utf8")).toContain("tsx scripts/sync-catalog.ts --soft");
     expect(readFileSync("vercel.json", "utf8")).toContain("tsx scripts/write-sitemap.ts");
     expect(readFileSync("next.config.ts", "utf8")).toContain("application/xml; charset=utf-8");
   });

@@ -6,6 +6,7 @@ import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { JsonLd } from "@/components/seo/json-ld";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { faqJsonLd, pageMetadata, webPageJsonLd } from "@/lib/seo";
+import { neraParentRayons } from "@/lib/catalog";
 import { getNavCategories } from "@/lib/catalog-cache";
 
 export const metadata: Metadata = pageMetadata({
@@ -16,7 +17,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function AboutPage() {
-  const categories = await getNavCategories().catch(() => []);
+  const categories = await getNavCategories().catch(() => neraParentRayons());
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <JsonLd

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { mergeShopRayons } from "@/lib/catalog";
 import { withFlashProductSelect } from "@/lib/product-query";
 import { displayUnitPrice } from "@/lib/stock-display";
 
@@ -260,9 +261,10 @@ export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?:
 }
 
 export async function shopRayons() {
-  return prisma.category.findMany({
+  const rows = await prisma.category.findMany({
     where: { isActive: true, parentId: null, deletedAt: null },
     orderBy: { sortOrder: "asc" },
     select: { slug: true, name: true },
   });
+  return mergeShopRayons(rows);
 }
