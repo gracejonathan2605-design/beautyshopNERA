@@ -187,7 +187,7 @@ export function ProductEditForm({
             type="file"
             accept={PRODUCT_IMAGE_ACCEPT}
             multiple
-            className="mt-1 w-full rounded-xl border px-3 py-2"
+            className="mt-1 min-h-12 w-full rounded-xl border px-3 py-3"
           />
         </label>
       ) : null}
