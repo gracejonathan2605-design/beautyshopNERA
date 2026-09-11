@@ -167,6 +167,16 @@ describe("sitemap public", () => {
     expect(urls.some((url) => url.includes("/panier") || url.includes("/checkout") || url.includes("/compte"))).toBe(false);
     expect(urls).toContain("https://www.nerabeaute237.com/a-propos");
   });
+
+  it("écrit lastmod sans millisecondes pour Search Console", () => {
+    const entries = shopSitemapEntries({
+      base: "https://www.nerabeaute237.com",
+      categories: [{ slug: "parfums", updatedAt: new Date("2026-08-24T18:53:08.249Z") }],
+      products: [],
+    });
+    const row = entries.find((item) => item.url.endsWith("/categorie/parfums"));
+    expect(row?.lastModified).toBe("2026-08-24T18:53:08Z");
+  });
 });
 
 describe("indexation IA et listes", () => {

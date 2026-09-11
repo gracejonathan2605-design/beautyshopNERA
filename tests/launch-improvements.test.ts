@@ -12,7 +12,7 @@ import { isAllowedProductImage, isHeicFile, PRODUCT_IMAGE_ACCEPT } from "../src/
 import { isAllowedBulkImage } from "../src/lib/bulk-products";
 import { scanMatchDecision } from "../src/lib/pos";
 import { buildReceiptText, receiptChangeAmount, saleToReceipt } from "../src/lib/receipt";
-import { shopSitemapEntries, SITEMAP_PRODUCT_CAP } from "../src/lib/sitemap-shop";
+import { shopSitemapEntries, SITEMAP_PRODUCT_CAP, SITEMAP_REVALIDATE_SECONDS } from "../src/lib/sitemap-shop";
 import { catalogPageMeta, catalogSkip, SHOP_PAGE_SIZE } from "../src/lib/shop-browse";
 
 const shop = {
@@ -140,6 +140,7 @@ describe("sitemap et pagination SQL", () => {
     expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/produit/serum")).toBe(true);
     expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/a-propos")).toBe(true);
     expect(SITEMAP_PRODUCT_CAP).toBe(5000);
+    expect(SITEMAP_REVALIDATE_SECONDS).toBe(3600);
   });
 
   it("calcule skip/take sans tout charger", () => {

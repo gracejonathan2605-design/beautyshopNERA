@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/sitemap.xml", "/llms.txt"],
         disallow: PRIVATE,
       },
       {
@@ -24,7 +24,7 @@ export default function robots(): MetadataRoute.Robots {
           "Google-Extended",
           "Applebot-Extended",
         ],
-        allow: ["/", "/llms.txt"],
+        allow: ["/", "/sitemap.xml", "/llms.txt"],
         disallow: PRIVATE,
       },
     ],
