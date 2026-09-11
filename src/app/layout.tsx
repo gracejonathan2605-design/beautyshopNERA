@@ -5,6 +5,7 @@ import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const GTM_ID = "GTM-T973VWFC";
+export const GA_MEASUREMENT_ID = "G-PNJ2MC62V3";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
 const cormorant = Cormorant_Garamond({
@@ -74,6 +75,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${outfit.variable} ${cormorant.variable} h-full`}>
       <head>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');`,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
