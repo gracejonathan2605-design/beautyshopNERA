@@ -5,7 +5,7 @@ import { ProductGallery } from "@/components/shop/product-gallery";
 import { ProductBuy } from "@/components/shop/product-buy";
 import { ProductCard } from "@/components/shop/product-card";
 import { catalogPhotoFor } from "@/lib/product-photos";
-import { getCachedProductPage, getRelatedProducts } from "@/lib/catalog-cache";
+import { getCachedProductPage, getRelatedProducts, getActiveDeliveryZones } from "@/lib/catalog-cache";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { formatCfa } from "@/lib/money";
 import { unitPrice, promoPercent } from "@/lib/pricing";
@@ -63,8 +63,10 @@ export default async function ProductPage({ params }: Props) {
   );
   const inStock = productInStock(variants);
   const related = await getRelatedProducts(product.id, product.category?.id ?? null);
+  const shippingZones = await getActiveDeliveryZones().catch(() => []);
   const description = productPlainText(product.description, product.shortDescription);
   const image = gallery.find((m) => m.kind === "IMAGE")?.url;
+  const barcode = variants.map((row) => row.barcode).find((value) => value?.trim());
   const crumbs = [
     { name: "Accueil", path: "/" },
     ...(product.category ? [{ name: product.category.name, path: `/categorie/${product.category.slug}` }] : [{ name: "Boutique", path: "/boutique" }]),
@@ -84,8 +86,10 @@ export default async function ProductPage({ params }: Props) {
           brand: product.brand?.name,
           category: product.category?.name,
           sku: product.sku || variants[0]?.sku,
+          barcode,
           price,
           inStock,
+          shippingZones,
         })}
       />
       <ShopBreadcrumbs

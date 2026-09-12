@@ -81,7 +81,8 @@ export default async function AboutPage() {
       <h2 className="mt-10 font-serif text-3xl text-wine">Services</h2>
       <p className="mt-3 leading-relaxed text-black/65">
         Achat en magasin, commande en ligne, retrait, et livraison disponible. Paiement Orange Money, MTN MoMo
-        et espèces selon les options proposées.
+        et espèces selon les options proposées. Les articles d'hygiène et les mèches ouvertes ne sont ni repris
+        ni échangés.
       </p>
       <p className="mt-8">
         <Link href="/boutique" className="rounded-full bg-brown px-8 py-3 text-cream inline-block">

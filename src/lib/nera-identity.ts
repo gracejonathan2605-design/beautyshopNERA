@@ -67,6 +67,10 @@ export const NERA_FAQS = [
     question: "Quels sont les horaires de NERA Beauté & Shop ?",
     answer: `La boutique est ouverte ${NERA_IDENTITY.hoursSummary}, au Marché Neptune Ahala, face Skymotors.`,
   },
+  {
+    question: "Peut-on retourner un article ?",
+    answer: "Les articles d'hygiène et les mèches ouvertes ne sont ni repris ni échangés.",
+  },
 ] as const;
 
 export function buildLlmsTxt() {
