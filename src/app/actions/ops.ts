@@ -345,6 +345,7 @@ export async function saveDeliveryZone(formData: FormData) {
     }
     revalidatePath("/admin/promos");
     revalidatePath("/checkout");
+    updateTag("catalog");
     bounce("/admin/promos", "ok", id ? "Zone mise à jour." : "Zone créée.");
   } catch (err) {
     unstable_rethrow(err);

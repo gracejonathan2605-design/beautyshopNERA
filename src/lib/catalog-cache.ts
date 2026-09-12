@@ -153,6 +153,7 @@ const productPageSelectWithoutFlash = {
       sku: true,
       salePrice: true,
       promoPrice: true,
+      barcode: true,
       inventories: shopInventorySelect,
     },
   },
@@ -216,5 +217,18 @@ export function getRelatedProducts(productId: string, categoryId: string | null,
       ),
     ["related-products", productId, categoryId, String(take)],
     { revalidate: 60, tags: ["catalog"] },
+  )();
+}
+
+export function getActiveDeliveryZones() {
+  return unstable_cache(
+    () =>
+      prisma.deliveryZone.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { name: true, fee: true },
+      }),
+    ["delivery-zones"],
+    { revalidate: 120, tags: ["catalog"] },
   )();
 }

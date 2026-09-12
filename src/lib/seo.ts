@@ -166,6 +166,54 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
+/** GTIN réel seulement : 8, 12, 13 ou 14 chiffres. N’invente pas de code. */
+export function gtinFromBarcode(raw?: string | null) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (![8, 12, 13, 14].includes(digits.length)) return undefined;
+  return digits;
+}
+
+export function merchantReturnPolicy() {
+  return {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: "CM",
+    returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+    merchantReturnLink: absoluteUrl("/a-propos"),
+  };
+}
+
+const yaoundeDestination = {
+  "@type": "DefinedRegion",
+  addressCountry: "CM",
+} as const;
+
+function deliveryTimeDays(min: number, max: number) {
+  return {
+    "@type": "ShippingDeliveryTime",
+    handlingTime: { "@type": "QuantitativeValue", minValue: min, maxValue: max, unitCode: "DAY" },
+    transitTime: { "@type": "QuantitativeValue", minValue: min, maxValue: max, unitCode: "DAY" },
+  };
+}
+
+/** Retrait 0 F (vrai) + zones de livraison enregistrées. N’invente pas de tarif. */
+export function merchantShippingDetails(zones: { name: string; fee: number }[] = []) {
+  const pickup = {
+    "@type": "OfferShippingDetails",
+    shippingLabel: "Retrait en boutique",
+    shippingDestination: yaoundeDestination,
+    shippingRate: { "@type": "MonetaryAmount", value: "0", currency: "XAF" },
+    deliveryTime: deliveryTimeDays(0, 0),
+  };
+  const deliveries = zones.map((zone) => ({
+    "@type": "OfferShippingDetails",
+    shippingLabel: zone.name,
+    shippingDestination: yaoundeDestination,
+    shippingRate: { "@type": "MonetaryAmount", value: String(zone.fee), currency: "XAF" },
+    deliveryTime: deliveryTimeDays(0, 1),
+  }));
+  return [pickup, ...deliveries];
+}
+
 export function productJsonLd(input: {
   name: string;
   description: string;
@@ -174,11 +222,15 @@ export function productJsonLd(input: {
   brand?: string | null;
   category?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   price?: number | null;
   inStock: boolean;
+  shippingZones?: { name: string; fee: number }[];
 }) {
   const url = absoluteUrl(input.path);
   const image = absolutizeMediaUrl(input.image);
+  const sku = input.sku?.trim() || undefined;
+  const gtin = gtinFromBarcode(input.barcode);
   const offer =
     input.price != null && input.price > 0
       ? {
@@ -186,10 +238,13 @@ export function productJsonLd(input: {
           url,
           priceCurrency: "XAF",
           price: String(input.price),
+          itemCondition: "https://schema.org/NewCondition",
           availability: input.inStock
             ? "https://schema.org/InStock"
             : "https://schema.org/OutOfStock",
           seller: { "@id": NERA_IDENTITY.organizationId },
+          hasMerchantReturnPolicy: merchantReturnPolicy(),
+          shippingDetails: merchantShippingDetails(input.shippingZones),
         }
       : undefined;
   return {
@@ -199,7 +254,9 @@ export function productJsonLd(input: {
     description: input.description || input.name,
     url,
     image: image ? [image] : undefined,
-    sku: input.sku || undefined,
+    sku,
+    mpn: sku,
+    gtin,
     brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
     category: input.category || undefined,
     offers: offer,

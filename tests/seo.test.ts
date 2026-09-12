@@ -7,6 +7,9 @@ import {
   categoryIntro,
   collectionJsonLd,
   faqJsonLd,
+  gtinFromBarcode,
+  merchantReturnPolicy,
+  merchantShippingDetails,
   neraOrganizationGraph,
   pageMetadata,
   productJsonLd,
@@ -98,10 +101,51 @@ describe("identité et données structurées", () => {
     });
   });
 
+  it("complète l’offre marchande sans inventer GTIN ni délai de retour", () => {
+    expect(gtinFromBarcode("6131234567890")).toBe("6131234567890");
+    expect(gtinFromBarcode("ABC-12")).toBeUndefined();
+    expect(gtinFromBarcode("")).toBeUndefined();
+    const json = productJsonLd({
+      name: "Gloss",
+      description: "Gloss hydratant",
+      path: "/produit/gloss",
+      brand: "Fenty",
+      sku: "MAQ-GLO-NU",
+      barcode: "6131234567890",
+      price: 3900,
+      inStock: true,
+      shippingZones: [{ name: "Yaoundé", fee: 1500 }],
+    });
+    expect(json.brand).toEqual({ "@type": "Brand", name: "Fenty" });
+    expect(json.gtin).toBe("6131234567890");
+    expect(json.mpn).toBe("MAQ-GLO-NU");
+    expect(json.offers).toMatchObject({
+      hasMerchantReturnPolicy: merchantReturnPolicy(),
+    });
+    expect(json.offers?.hasMerchantReturnPolicy.returnPolicyCategory).toContain("MerchantReturnNotPermitted");
+    expect(json.offers?.shippingDetails).toEqual(
+      merchantShippingDetails([{ name: "Yaoundé", fee: 1500 }]),
+    );
+    expect(json.offers?.shippingDetails[0]?.shippingRate.value).toBe("0");
+    expect(json.offers?.shippingDetails[1]?.shippingRate.value).toBe("1500");
+    const withoutId = productJsonLd({
+      name: "Gloss",
+      description: "Gloss hydratant",
+      path: "/produit/gloss",
+      sku: "MAQ-GLO-NU",
+      price: 3900,
+      inStock: true,
+    });
+    expect(withoutId.brand).toBeUndefined();
+    expect(withoutId.gtin).toBeUndefined();
+    expect(withoutId.mpn).toBe("MAQ-GLO-NU");
+  });
+
   it("construit une FAQ alignée sur les questions visibles", () => {
     const faq = faqJsonLd();
     expect(faq.mainEntity).toHaveLength(NERA_FAQS.length);
     expect(faq.mainEntity[0]?.name).toBe("Où se trouve NERA Beauté & Shop ?");
+    expect(faq.mainEntity.map((row) => row.name)).toContain("Peut-on retourner un article ?");
   });
 
   it("produit des fil d’Ariane avec URLs absolues", () => {
