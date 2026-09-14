@@ -41,7 +41,7 @@ export default async function ProductsAdminPage({
       <h1 className="font-serif text-4xl">Produits</h1>
       <AdminFlash ok={ok} erreur={erreur} />
       <p className="mt-2 max-w-2xl text-sm text-black/60">
-        Pour la boutique : nom, rayon, prix, <strong>photo</strong> et courte description. Sans ça, ne publiez pas en ligne.
+        Pour la boutique : nom, rayon, prix, <strong>photo</strong> et courte description. Une suggestion apparaît après le choix d’une photo — à utiliser, modifier ou ignorer. Sans ça, ne publiez pas en ligne.
         Lot :{" "}
         <Link href="/admin/produits/lot" className="text-brown underline">
           10–15 produits

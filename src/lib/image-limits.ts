@@ -1,5 +1,7 @@
 /** Taille max d’une photo catalogue (boutique + caisse). */
 export const IMAGE_MAX_EDGE = 960;
+/** Plus petite que le catalogue : assez pour l’analyse, moins de tokens. */
+export const VISION_MAX_EDGE = 768;
 /** Qualité WebP côté serveur (sharp, 1–100). */
 export const IMAGE_WEBP_QUALITY = 64;
 /** Qualité WebP / JPEG côté navigateur (0–1). */
