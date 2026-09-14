@@ -5,6 +5,7 @@ import { updateProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput } from "@/components/admin/video-input";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
+import { PhotoDescriptionSuggestion } from "@/components/admin/photo-description-suggestion";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
 import { PRODUCT_IMAGE_ACCEPT } from "@/lib/product-images";
 import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
@@ -58,6 +59,8 @@ export function ProductEditForm({
   const [, startTransition] = useTransition();
   const [clientError, setClientError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [shortText, setShortText] = useState(shortDescription);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const remainingPhotos = MAX_PRODUCT_PHOTOS - photoCount;
   const busy = pending || saving;
   const message = clientError || state.error;
@@ -164,7 +167,8 @@ export function ProductEditForm({
       ) : null}
       <input
         name="shortDescription"
-        defaultValue={shortDescription}
+        value={shortText}
+        onChange={(event) => setShortText(event.target.value)}
         className="rounded-xl border px-3 py-2 md:col-span-2"
       />
       <label className="flex items-center gap-2 text-sm">
@@ -188,9 +192,16 @@ export function ProductEditForm({
             accept={PRODUCT_IMAGE_ACCEPT}
             multiple
             className="mt-1 min-h-12 w-full rounded-xl border px-3 py-3"
+            onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
           />
         </label>
       ) : null}
+      <PhotoDescriptionSuggestion
+        file={photoFile}
+        hintName={name}
+        className="md:col-span-2"
+        onApply={(draft) => setShortText(draft.shortDescription)}
+      />
       {!hasVideo ? <VideoInput label={`Ajouter une vidéo (40 s / 3,5 Mo max)`} /> : null}
       <PendingSubmitButton
         idle="Enregistrer"

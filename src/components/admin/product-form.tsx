@@ -7,6 +7,7 @@ import { VideoInput } from "@/components/admin/video-input";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay, PendingSubmitButton } from "@/components/admin/form-pending";
 import { VariantEditor } from "@/components/admin/variant-editor";
+import { PhotoDescriptionSuggestion } from "@/components/admin/photo-description-suggestion";
 import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
 import { PRODUCT_IMAGE_ACCEPT } from "@/lib/product-images";
 import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
@@ -29,6 +30,9 @@ export function ProductForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [clientError, setClientError] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [shortDescription, setShortDescription] = useState("");
+  const [longDescription, setLongDescription] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const noCategories = categoryGroups.length === 0;
   const busy = pending || publishing;
   const message = clientError || state.error;
@@ -41,6 +45,9 @@ export function ProductForm({
     if (state.ok) {
       formRef.current?.reset();
       setClientError("");
+      setShortDescription("");
+      setLongDescription("");
+      setPhotoFile(null);
     }
   }, [state]);
 
@@ -109,7 +116,7 @@ export function ProductForm({
       <div className="md:col-span-4">
         <h2 className="font-serif text-2xl text-wine">Publier un nouveau produit</h2>
         <p className="mt-1 text-sm text-black/55">
-          Pour publier en boutique : nom, rayon, prix, <strong>une photo</strong> et une courte description. Sans photo ni texte, le produit reste hors ligne (caisse seulement si vous décochez « Publier en boutique »).
+          Pour publier en boutique : nom, rayon, prix, <strong>une photo</strong> et une courte description. Après le choix d’une photo, une suggestion apparaît : vous pouvez la modifier puis l’utiliser, ou l’ignorer. Sans photo ni texte, le produit reste hors ligne (caisse seulement si vous décochez « Publier en boutique »).
         </p>
       </div>
       {noCategories ? (
@@ -129,7 +136,12 @@ export function ProductForm({
           {state.warning ?? `${state.name} a été publié en boutique et à la caisse.`}
         </p>
       ) : null}
-      <input name="name" required placeholder="Nom du produit" className="rounded-xl border px-3 py-2 md:col-span-2" />
+      <input
+        name="name"
+        required
+        placeholder="Nom du produit"
+        className="rounded-xl border px-3 py-2 md:col-span-2"
+      />
       <CategorySelect groups={categoryGroups} className="rounded-xl border px-3 py-2 md:col-span-2" />
       {brands.length ? (
         <select name="brandId" className="rounded-xl border px-3 py-2">
@@ -151,7 +163,14 @@ export function ProductForm({
           ))}
         </select>
       ) : null}
-      <input name="shortDescription" placeholder="Petite description" className="rounded-xl border px-3 py-2 md:col-span-2" />
+      <input
+        name="shortDescription"
+        value={shortDescription}
+        onChange={(event) => setShortDescription(event.target.value)}
+        placeholder="Petite description"
+        className="rounded-xl border px-3 py-2 md:col-span-2"
+      />
+      <input type="hidden" name="description" value={longDescription} />
       <VariantEditor />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isFeatured" /> Vedette
@@ -176,9 +195,18 @@ export function ProductForm({
           accept={PRODUCT_IMAGE_ACCEPT}
           multiple
           className="mt-1 min-h-12 w-full rounded-xl border px-3 py-3 text-sm"
+          onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
         />
       </label>
       <VideoInput />
+      <PhotoDescriptionSuggestion
+        file={photoFile}
+        className="md:col-span-4"
+        onApply={(draft) => {
+          setShortDescription(draft.shortDescription);
+          setLongDescription(draft.description);
+        }}
+      />
       <PendingSubmitButton
         idle="Publier le produit"
         pendingLabel="Publication en cours…"

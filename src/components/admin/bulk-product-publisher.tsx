@@ -5,6 +5,7 @@ import { saveProduct } from "@/app/actions/admin";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 import { fillBulkProductFormData, type BulkFieldValues } from "@/lib/bulk-form";
+import { PhotoDescriptionSuggestion } from "@/components/admin/photo-description-suggestion";
 import {
   BULK_IMAGE_ACCEPT,
   MAX_BULK_PRODUCTS,
@@ -553,6 +554,20 @@ export function BulkProductPublisher({
                     placeholder="Petite description"
                     className="rounded-xl border px-3 py-2 md:col-span-2"
                   />
+                  {row.status !== "ok" ? (
+                    <PhotoDescriptionSuggestion
+                      file={row.file}
+                      hintName={row.name}
+                      compact
+                      className="md:col-span-2"
+                      onApply={(draft) =>
+                        patch(row.id, {
+                          shortDescription: draft.shortDescription,
+                          description: draft.description,
+                        })
+                      }
+                    />
+                  ) : null}
                   <textarea
                     value={row.description}
                     onChange={(event) => patch(row.id, { description: event.target.value })}
