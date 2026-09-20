@@ -149,7 +149,7 @@ export async function applyCatalogHygiene(userId?: string) {
         data: { shortDescription: current ? `${current} ${row.note}` : row.note },
       });
     }
-  });
+  }, { maxWait: 10_000, timeout: 60_000 });
 
   await writeAudit({
     userId,
