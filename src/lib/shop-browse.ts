@@ -260,6 +260,14 @@ export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?:
   };
 }
 
+export async function countShopProducts(categoryIds?: string[]) {
+  const whereSql = shopBrowseSqlWhere({ categoryIds, vue: "all" });
+  const countRows = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*)::bigint AS count FROM "Product" p WHERE ${whereSql}
+  `;
+  return Number(countRows[0]?.count ?? 0);
+}
+
 export async function shopRayons() {
   const rows = await prisma.category.findMany({
     where: { isActive: true, parentId: null, deletedAt: null },

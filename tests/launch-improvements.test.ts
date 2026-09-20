@@ -140,7 +140,7 @@ describe("sitemap et pagination SQL", () => {
     expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/produit/serum")).toBe(true);
     expect(entries.some((row) => row.url === "https://www.nerabeaute237.com/a-propos")).toBe(true);
     expect(SITEMAP_PRODUCT_CAP).toBe(5000);
-    expect(SITEMAP_REVALIDATE_SECONDS).toBe(3600);
+    expect(SITEMAP_REVALIDATE_SECONDS).toBe(600);
   });
 
   it("calcule skip/take sans tout charger", () => {

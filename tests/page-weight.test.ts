@@ -34,7 +34,6 @@ describe("pages légères sans casser l’apparence", () => {
   it("garde les cartes produit en Server Component (JS seulement pour le flash)", () => {
     const card = src("src/components/shop/product-card.tsx");
     expect(card.trimStart().startsWith('"use client"')).toBe(false);
-    expect(card).toMatch(/prefetch=\{false\}/);
   });
 
   it("reste sur la grille d’origine : 1 colonne téléphone, 2 dès sm", () => {
@@ -54,6 +53,7 @@ describe("pages légères sans casser l’apparence", () => {
     );
     expect(hero).not.toMatch(/hidden md:block/);
     expect(hero).toMatch(/100vw/);
+    expect(hero).toMatch(/priority/);
   });
 
   it("ne charge plus 80 produits pour une fiche rayon", () => {

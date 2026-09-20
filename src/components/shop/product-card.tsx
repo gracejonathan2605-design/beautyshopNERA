@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatCfa } from "@/lib/money";
 import { promoPercent, unitPrice } from "@/lib/pricing";
-import { catalogPhotoFor } from "@/lib/product-photos";
+import { catalogPhotoAlt, catalogPhotoFor } from "@/lib/product-photos";
 import { displayVariant, productInStock } from "@/lib/stock-display";
 import { isFlashActive } from "@/lib/flash";
 import { PRODUCT_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
@@ -37,7 +37,7 @@ export function ProductCard({
   const onPromo = percent > 0;
   const inStock = productInStock(product.variants);
   const photo = product.images?.[0]?.url ?? catalogPhotoFor(product.slug, product.name);
-  const photoAlt = product.images?.[0]?.alt ?? product.name;
+  const photoAlt = product.images?.[0]?.alt ?? catalogPhotoAlt(product.name, photo);
   const flash = isFlashActive({
     status: product.status ?? "ACTIVE",
     onlineVisible: product.onlineVisible ?? true,
@@ -48,7 +48,6 @@ export function ProductCard({
   return (
     <Link
       href={`/produit/${product.slug}`}
-      prefetch={false}
       className="group overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)] transition hover:-translate-y-0.5 hover:border-gold/50"
     >
       <div className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">

@@ -24,3 +24,12 @@ export function catalogPhotoFor(slug: string, name = "") {
   if (/(gloss|maquillage|lipstick)/.test(hay)) return "/products/gloss.jpg";
   return "/products/perfume.jpg";
 }
+
+export function isCatalogFallbackPhoto(url?: string | null) {
+  return Boolean(url?.startsWith("/products/"));
+}
+
+export function catalogPhotoAlt(name: string, url?: string | null, category?: string | null) {
+  if (!isCatalogFallbackPhoto(url)) return name;
+  return category ? `Photo illustrative — ${category}` : "Photo illustrative — sélection NERA";
+}

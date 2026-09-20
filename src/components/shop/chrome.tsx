@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getShopSettings, DEFAULT_SETTINGS } from "@/lib/settings";
 import { getCart } from "@/lib/cart";
@@ -30,7 +31,6 @@ function RayonChips({ categories }: { categories: { id?: string; name: string; s
         <Link
           key={c.id ?? c.slug}
           href={`/categorie/${c.slug}`}
-          prefetch={false}
           className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
         >
           {c.name}
@@ -38,6 +38,25 @@ function RayonChips({ categories }: { categories: { id?: string; name: string; s
       ))}
     </nav>
   );
+}
+
+function CartLink({ count }: { count: number }) {
+  return (
+    <Link href="/panier" className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
+      Panier ({count})
+    </Link>
+  );
+}
+
+async function ShopCartBadge() {
+  let cart: Awaited<ReturnType<typeof getCart>> = [];
+  try {
+    cart = await getCart();
+  } catch {
+    cart = [];
+  }
+  const count = cart.reduce((s, i) => s + i.quantity, 0);
+  return <CartLink count={count} />;
 }
 
 export function ShopHeaderFallback() {
@@ -48,7 +67,7 @@ export function ShopHeaderFallback() {
       </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <BrandLockup size="sm" priority />
-        <span className="rounded-full bg-brown px-3 py-2 text-sm text-cream sm:px-4">Panier (0)</span>
+        <CartLink count={0} />
       </div>
       <form action="/boutique" className="px-4 pb-3 md:hidden" role="search" aria-label="Rechercher dans la boutique">
         <input
@@ -67,17 +86,15 @@ export async function ShopHeader() {
     name: "NERA Beauté & Shop",
     phone: "",
   };
-  let cart: Awaited<ReturnType<typeof getCart>> = [];
   let categories: { id: string; name: string; slug: string }[] = neraParentRayons().map((row) => ({
     id: row.slug,
     ...row,
   }));
   try {
-    [cart, categories] = await Promise.all([getCart(), getNavCategories()]);
+    categories = await getNavCategories();
   } catch {
-    cart = [];
+    /* fallback rayons officiels déjà en place */
   }
-  const count = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
@@ -86,7 +103,7 @@ export async function ShopHeader() {
         Yaoundé · OM & MoMo · Livraison rapide sous 24h
       </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
-        <Link href="/" prefetch={false} className="min-w-0 shrink" aria-label={settings.name}>
+        <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
           <BrandLockup size="sm" priority />
         </Link>
         <form action="/boutique" className="hidden min-w-0 flex-1 md:block" role="search" aria-label="Rechercher dans la boutique">
@@ -97,22 +114,22 @@ export async function ShopHeader() {
           />
         </form>
         <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1 text-sm sm:gap-x-3">
-          <Link href="/flash" prefetch={false} className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/flash" className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             <span className="sm:hidden">Flash</span>
             <span className="hidden sm:inline">Flash NERA</span>
           </Link>
-          <Link href="/a-propos" prefetch={false} className="hidden text-wine/80 hover:text-wine sm:inline">
+          <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
             À propos
           </Link>
-          <Link href="/boutique" prefetch={false} className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/boutique" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Boutique
           </Link>
-          <Link href="/compte" prefetch={false} className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/compte" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Compte
           </Link>
-          <Link href="/panier" prefetch={false} className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
-            Panier ({count})
-          </Link>
+          <Suspense fallback={<CartLink count={0} />}>
+            <ShopCartBadge />
+          </Suspense>
         </nav>
       </div>
       <form action="/boutique" className="px-4 pb-3 md:hidden" role="search" aria-label="Rechercher dans la boutique">

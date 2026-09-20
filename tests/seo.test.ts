@@ -17,7 +17,8 @@ import {
   truncateMeta,
 } from "../src/lib/seo";
 import { getSiteUrl } from "../src/lib/site-url";
-import { renderSitemapXml, shopSitemapEntries } from "../src/lib/sitemap-shop";
+import { renderSitemapXml, shopSitemapEntries, categoriesWithOnlineProducts } from "../src/lib/sitemap-shop";
+import { catalogPhotoAlt } from "../src/lib/product-photos";
 
 const envKeys = ["VERCEL_ENV", "APP_URL"] as const;
 const snapshot = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
@@ -55,15 +56,13 @@ describe("identité et données structurées", () => {
     expect(NERA_IDENTITY.hoursSunday).toMatch(/9h/);
   });
 
-  it("relie Organization, Store et WebSite au même @id", () => {
+  it("relie HealthAndBeautyBusiness et WebSite au même @id", () => {
     process.env.VERCEL_ENV = "production";
     const graph = neraOrganizationGraph();
-    const org = graph["@graph"][0] as { "@id": string; "@type": string[]; telephone: string };
-    const site = graph["@graph"][1] as { publisher: { "@id": string } };
+    const org = graph["@graph"][0] as { "@id": string; "@type": string; telephone: string };
+    const site = graph["@graph"][1] as { publisher: { "@id": string }; potentialAction?: unknown };
     expect(org["@id"]).toBe(NERA_IDENTITY.organizationId);
-    expect(org["@type"]).toEqual(
-      expect.arrayContaining(["Organization", "Store", "LocalBusiness", "HealthAndBeautyBusiness"]),
-    );
+    expect(org["@type"]).toBe("HealthAndBeautyBusiness");
     expect((org as { description?: string }).description).toBe(NERA_PITCH);
     expect(org.telephone).toBe("+237676935195");
     expect(JSON.stringify(graph)).not.toMatch(/latitude|aggregateRating/);
@@ -72,6 +71,7 @@ describe("identité et données structurées", () => {
     expect(JSON.stringify(graph)).toMatch(/Su 09:00-15:00/);
     expect(org).not.toHaveProperty("sameAs");
     expect(site.publisher["@id"]).toBe(NERA_IDENTITY.organizationId);
+    expect(site.potentialAction).toBeUndefined();
   });
 
   it("n’invente pas de marque ni d’offre sans prix", () => {
@@ -118,7 +118,8 @@ describe("identité et données structurées", () => {
     });
     expect(json.brand).toEqual({ "@type": "Brand", name: "Fenty" });
     expect(json.gtin).toBe("6131234567890");
-    expect(json.mpn).toBe("MAQ-GLO-NU");
+    expect(json["@id"]).toMatch(/\/produit\/gloss#product$/);
+    expect(json).not.toHaveProperty("mpn");
     expect(json.offers).toMatchObject({
       hasMerchantReturnPolicy: merchantReturnPolicy(),
     });
@@ -138,7 +139,7 @@ describe("identité et données structurées", () => {
     });
     expect(withoutId.brand).toBeUndefined();
     expect(withoutId.gtin).toBeUndefined();
-    expect(withoutId.mpn).toBe("MAQ-GLO-NU");
+    expect(withoutId).not.toHaveProperty("mpn");
   });
 
   it("construit une FAQ alignée sur les questions visibles", () => {
@@ -167,6 +168,10 @@ describe("métadonnées et textes", () => {
     expect(categoryIntro("Mèches", "Texture soyeuse.")).toBe("Texture soyeuse.");
     expect(categoryIntro("Mèches")).toMatch(/Mèches/);
     expect(categoryIntro("Mèches")).toMatch(/Yaoundé/);
+    expect(categoryIntro("Soins du visage", null, { slug: "soins-du-visage" })).toBe(
+      PARENT_CATEGORY_INTROS["soins-du-visage"],
+    );
+    expect(categoryIntro("Lait corporel", null, { parentName: "Cosmétiques & soins" })).toMatch(/Cosmétiques/);
   });
 
   it("structure une description courte sans inventer de caractéristiques", () => {
@@ -184,9 +189,9 @@ describe("métadonnées et textes", () => {
     });
     expect(meta.alternates).toMatchObject({
       canonical: "https://www.nerabeaute237.com/categorie/meches",
-      languages: { "fr-CM": "https://www.nerabeaute237.com/categorie/meches" },
+      languages: { "fr-CM": "https://www.nerabeaute237.com/categorie/meches", "x-default": "https://www.nerabeaute237.com/categorie/meches" },
     });
-    expect(meta.openGraph).toMatchObject({ type: "website", locale: "fr_FR" });
+    expect(meta.openGraph).toMatchObject({ type: "website", locale: "fr_CM" });
   });
 
   it("omet og:type Next sur une fiche produit (balise product ailleurs)", () => {
@@ -197,6 +202,17 @@ describe("métadonnées et textes", () => {
       ogType: null,
     });
     expect(meta.openGraph && "type" in meta.openGraph ? meta.openGraph.type : undefined).toBeUndefined();
+  });
+
+  it("garde follow sur une page catalogue noindex", () => {
+    const meta = pageMetadata({
+      title: "Boutique",
+      description: "Catalogue NERA.",
+      path: "/boutique",
+      index: false,
+      follow: true,
+    });
+    expect(meta.robots).toEqual({ index: false, follow: true });
   });
 });
 
@@ -227,18 +243,30 @@ describe("sitemap public", () => {
     expect(xml).toContain("<priority>1.0</priority>");
   });
 
-  it("est un fichier public statique, pas une fonction Next", () => {
-    expect(existsSync("src/app/sitemap.ts")).toBe(false);
-    expect(existsSync("public/sitemap.xml")).toBe(true);
-    expect(existsSync("scripts/write-sitemap.ts")).toBe(true);
-    const xml = readFileSync("public/sitemap.xml", "utf8");
-    expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
-    expect(xml).toContain("<loc>https://www.nerabeaute237.com/</loc>");
-    expect(readFileSync("package.json", "utf8")).toContain("tsx scripts/sync-catalog.ts --soft");
-    expect(readFileSync("package.json", "utf8")).toContain("tsx scripts/write-sitemap.ts");
-    expect(readFileSync("vercel.json", "utf8")).toContain("tsx scripts/sync-catalog.ts --soft");
-    expect(readFileSync("vercel.json", "utf8")).toContain("tsx scripts/write-sitemap.ts");
-    expect(readFileSync("next.config.ts", "utf8")).toContain("application/xml; charset=utf-8");
+  it("n’envoie que les catégories qui ont des produits, hors anciens slugs", () => {
+    const kept = categoriesWithOnlineProducts({
+      categories: [
+        { id: "p1", slug: "parfumerie", parentId: null },
+        { id: "c1", slug: "parfumerie-parfums-femme", parentId: "p1" },
+        { id: "empty", slug: "ongles", parentId: null },
+        { id: "legacy", slug: "meches", parentId: null },
+      ],
+      productCategoryIds: ["c1", "legacy"],
+    });
+    expect(kept.map((row) => row.slug).sort()).toEqual(["parfumerie", "parfumerie-parfums-femme"]);
+  });
+
+  it("redirige les anciens rayons et sert un sitemap dynamique", () => {
+    expect(LEGACY_CATEGORY_REDIRECTS.meches).toBe("meches-perruques-extensions");
+    expect(LEGACY_CATEGORY_REDIRECTS.parfums).toBe("parfumerie");
+    expect(existsSync("src/app/sitemap.ts")).toBe(true);
+    expect(existsSync("public/sitemap.xml")).toBe(false);
+    expect(existsSync("src/app/robots.ts")).toBe(true);
+    expect(readFileSync("src/app/robots.ts", "utf8")).toContain('sitemap: `${base}/sitemap.xml`');
+    expect(readFileSync("src/app/robots.ts", "utf8")).not.toMatch(/\bhost:/);
+    expect(readFileSync("next.config.ts", "utf8")).toContain("LEGACY_CATEGORY_REDIRECTS");
+    expect(readFileSync("next.config.ts", "utf8")).toContain("s-maxage=600");
+    expect(PARENT_CATEGORY_INTROS["soins-du-visage"]).toMatch(/Yaoundé/);
   });
 });
 
@@ -312,5 +340,29 @@ describe("Google Analytics", () => {
     expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("gtag/js"));
     expect(layout.indexOf("gtag/js")).toBeLessThan(layout.indexOf("googletagmanager.com/gtm.js"));
     expect(layout.split("gtag('config'").length - 1).toBe(1);
+  });
+});
+
+describe("signaux locaux, FAQ et images", () => {
+  it("cible le Cameroun dans html et Open Graph", () => {
+    const layout = readFileSync("src/app/layout.tsx", "utf8");
+    expect(layout).toContain('lang="fr-CM"');
+    expect(layout).toContain('locale: "fr_CM"');
+  });
+
+  it("montre la FAQ à l’accueil sans second JSON-LD FAQPage", () => {
+    const home = readFileSync("src/app/(shop)/page.tsx", "utf8");
+    expect(home).toContain("ShopFaq");
+    expect(home).not.toContain("faqJsonLd");
+    expect(readFileSync("src/app/(shop)/a-propos/page.tsx", "utf8")).toContain("faqJsonLd");
+  });
+
+  it("cible Yaoundé dans les zones de livraison schema", () => {
+    expect(JSON.stringify(merchantShippingDetails())).toMatch(/Yaoundé/);
+  });
+
+  it("n’attribue pas une photo générique comme si c’était le produit", () => {
+    expect(catalogPhotoAlt("Gloss", "/products/perfume.jpg", "Maquillage")).toBe("Photo illustrative — Maquillage");
+    expect(catalogPhotoAlt("Gloss", "https://cdn.example/real.jpg")).toBe("Gloss");
   });
 });

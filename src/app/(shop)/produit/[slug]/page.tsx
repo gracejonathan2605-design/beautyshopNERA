@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { ProductBuy } from "@/components/shop/product-buy";
 import { ProductCard } from "@/components/shop/product-card";
-import { catalogPhotoFor } from "@/lib/product-photos";
+import { catalogPhotoAlt, catalogPhotoFor } from "@/lib/product-photos";
 import { getCachedProductPage, getRelatedProducts, getActiveDeliveryZones } from "@/lib/catalog-cache";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { formatCfa } from "@/lib/money";
@@ -16,9 +16,10 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { ProductOpenGraphTags } from "@/components/seo/product-open-graph";
 import { isFlashActive } from "@/lib/flash";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
-import { breadcrumbJsonLd, pageMetadata, productJsonLd, productPlainText, truncateMeta } from "@/lib/seo";
+import { breadcrumbJsonLd, pageMetadata, productJsonLd, productPageTitle, productPlainText, truncateMeta } from "@/lib/seo";
 import { productInStock } from "@/lib/stock-display";
 import { ProductCopy, ProductFacts } from "@/components/shop/product-copy";
+import { ProductHeroImage } from "@/components/shop/product-hero-image";
 import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     text ||
     `${product.name}${product.category?.name ? ` — ${product.category.name}` : ""} chez NERA Beauté & Shop à Yaoundé.`;
   return pageMetadata({
-    title: product.name,
+    title: productPageTitle(product.name, product.category?.name),
     description: truncateMeta(desc),
     path: `/produit/${product.slug}`,
     image,
@@ -52,7 +53,7 @@ export default async function ProductPage({ params }: Props) {
 
   const gallery = product.images.length
     ? product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))
-    : [{ id: "catalog", url: catalogPhotoFor(product.slug, product.name), alt: product.name, kind: "IMAGE" as const }];
+    : [{ id: "catalog", url: catalogPhotoFor(product.slug, product.name), alt: catalogPhotoAlt(product.name, catalogPhotoFor(product.slug, product.name), product.category?.name), kind: "IMAGE" as const }];
 
   const price = unitPrice(variants[0]);
   const flash = isFlashActive(product);
@@ -66,6 +67,8 @@ export default async function ProductPage({ params }: Props) {
   const shippingZones = await getActiveDeliveryZones().catch(() => []);
   const description = productPlainText(product.description, product.shortDescription);
   const image = gallery.find((m) => m.kind === "IMAGE")?.url;
+  const photos = gallery.filter((m) => m.kind === "IMAGE");
+  const hasVideo = gallery.some((m) => m.kind === "VIDEO");
   const barcode = variants.map((row) => row.barcode).find((value) => value?.trim());
   const crumbs = [
     { name: "Accueil", path: "/" },
@@ -102,7 +105,11 @@ export default async function ProductPage({ params }: Props) {
         ]}
       />
       <div className="mt-6 grid gap-10 md:grid-cols-2">
-        <ProductGallery name={product.name} media={gallery} />
+        {photos.length <= 1 && !hasVideo && photos[0] ? (
+          <ProductHeroImage src={photos[0].url} alt={photos[0].alt ?? product.name} />
+        ) : (
+          <ProductGallery name={product.name} media={gallery} />
+        )}
         <div>
           {product.category ? (
             <p className="text-xs uppercase tracking-[0.28em] text-gold">
@@ -121,6 +128,7 @@ export default async function ProductPage({ params }: Props) {
           <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
           {product.brand?.name ? <p className="mt-2 text-sm text-black/50">{product.brand.name}</p> : null}
           <ProductCopy description={product.description} shortDescription={product.shortDescription} />
+          <h2 className="mt-8 font-serif text-2xl text-wine">Détails</h2>
           <ProductFacts
             category={product.category}
             brand={product.brand?.name}

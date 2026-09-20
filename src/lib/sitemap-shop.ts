@@ -1,6 +1,8 @@
+import { LEGACY_CATEGORY_REDIRECTS } from "./category-seo";
+
 export const SITEMAP_PRODUCT_CAP = 5000;
-/** Cache CDN 1 h une fois le fichier généré au build. */
-export const SITEMAP_REVALIDATE_SECONDS = 3600;
+/** Revalidation courte : le catalogue change plus souvent qu’un build. */
+export const SITEMAP_REVALIDATE_SECONDS = 600;
 
 export type ShopSitemapEntry = {
   url: string;
@@ -71,4 +73,72 @@ export function renderSitemapXml(entries: ShopSitemapEntry[]) {
 ${urls}
 </urlset>
 `;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("sitemap-timeout")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+/** Catégories avec au moins un produit en ligne (y compris via un enfant). */
+export function categoriesWithOnlineProducts(input: {
+  categories: { id: string; slug: string; parentId: string | null; updatedAt?: Date | string }[];
+  productCategoryIds: (string | null)[];
+}) {
+  const byId = new Map(input.categories.map((row) => [row.id, row]));
+  const keep = new Set<string>();
+  for (const categoryId of input.productCategoryIds) {
+    let current = categoryId ? byId.get(categoryId) : undefined;
+    while (current) {
+      keep.add(current.id);
+      current = current.parentId ? byId.get(current.parentId) : undefined;
+    }
+  }
+  return input.categories.filter((row) => keep.has(row.id) && !LEGACY_CATEGORY_REDIRECTS[row.slug]);
+}
+
+export async function loadIndexableSitemapEntries(base: string): Promise<ShopSitemapEntry[]> {
+  const fallback = shopSitemapEntries({ base, categories: [], products: [] });
+  if (!process.env.DATABASE_URL) return fallback;
+  try {
+    const { prisma } = await import("./prisma");
+    const [categories, products] = await withTimeout(
+      Promise.all([
+        prisma.category.findMany({
+          where: { isActive: true, deletedAt: null },
+          select: { id: true, slug: true, parentId: true, updatedAt: true },
+        }),
+        prisma.product.findMany({
+          where: { status: "ACTIVE", onlineVisible: true, deletedAt: null },
+          select: { slug: true, updatedAt: true, categoryId: true },
+          orderBy: { updatedAt: "desc" },
+          take: SITEMAP_PRODUCT_CAP,
+        }),
+      ]),
+      15000,
+    );
+    const indexableCategories = categoriesWithOnlineProducts({
+      categories,
+      productCategoryIds: products.map((row) => row.categoryId),
+    });
+    return shopSitemapEntries({
+      base,
+      categories: indexableCategories,
+      products,
+    });
+  } catch (err) {
+    console.warn("sitemap: catalogue indisponible, URLs statiques seulement", err);
+    return fallback;
+  }
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { parentCategoryIntro } from "./category-seo";
 import { NERA_FAQS, NERA_IDENTITY, NERA_OPENING_HOURS, NERA_PITCH } from "./nera-identity";
 import { absoluteUrl, getSiteUrl } from "./site-url";
 
@@ -14,10 +15,25 @@ export function absolutizeMediaUrl(url?: string | null) {
   return absoluteUrl(url.startsWith("/") ? url : `/${url}`);
 }
 
-export function categoryIntro(name: string, description?: string | null) {
+export function categoryIntro(
+  name: string,
+  description?: string | null,
+  opts?: { slug?: string; parentName?: string | null },
+) {
   const fromDb = description?.replace(/\s+/g, " ").trim();
   if (fromDb) return fromDb;
+  const parentCopy = opts?.slug ? parentCategoryIntro(opts.slug) : null;
+  if (parentCopy) return parentCopy;
+  if (opts?.parentName) {
+    return `${name} — dans le rayon ${opts.parentName} de NERA Beauté & Shop à Yaoundé. Commandez en ligne ou passez au Marché Neptune Ahala.`;
+  }
   return `La sélection ${name} de NERA Beauté & Shop, boutique de beauté à Yaoundé. Commandez en ligne ou passez au Marché Neptune Ahala, face Skymotors.`;
+}
+
+export function productPageTitle(name: string, categoryName?: string | null) {
+  const clean = name.replace(/\s+/g, " ").trim();
+  if (categoryName && clean.length <= 48) return `${clean} · ${categoryName}`;
+  return clean;
 }
 
 export function productPlainText(description?: string | null, shortDescription?: string | null) {
@@ -38,6 +54,7 @@ export function pageMetadata({
   path,
   image,
   index = true,
+  follow,
   ogType = "website",
   absoluteTitle = false,
 }: {
@@ -46,6 +63,8 @@ export function pageMetadata({
   path: string;
   image?: string | null;
   index?: boolean;
+  /** Pages filtrées / vides : noindex mais follow pour transmettre les fiches produit. */
+  follow?: boolean;
   /** `null` : ne pas émettre og:type via l’API Next (ex. product, géré en balise). */
   ogType?: "website" | "article" | null;
   absoluteTitle?: boolean;
@@ -56,21 +75,18 @@ export function pageMetadata({
     ? [{ url: image, alt: title }]
     : [{ url: "/brand/nera-hero-products.jpg", alt: `${NERA_IDENTITY.name} — boutique beauté à Yaoundé` }];
   const fullTitle = title.includes(NERA_IDENTITY.name) ? title : `${title} | ${NERA_IDENTITY.name}`;
+  const allowFollow = follow ?? index;
   return {
     title: absoluteTitle ? { absolute: title } : title,
     description: desc,
     alternates: {
       canonical: url,
-      languages: { "fr-CM": url, fr: url, "x-default": url },
+      languages: { "fr-CM": url, "x-default": url },
     },
-    robots: index ? { index: true, follow: true } : { index: false, follow: false },
-    other: {
-      "geo.placename": NERA_IDENTITY.addressLocality,
-      "geo.region": "CM",
-    },
+    robots: { index, follow: allowFollow },
     openGraph: {
       ...(ogType ? { type: ogType } : {}),
-      locale: "fr_FR",
+      locale: "fr_CM",
       siteName: NERA_IDENTITY.name,
       title: fullTitle,
       description: desc,
@@ -96,7 +112,7 @@ export function neraOrganizationGraph() {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": ["Organization", "Store", "LocalBusiness", "HealthAndBeautyBusiness"],
+        "@type": "HealthAndBeautyBusiness",
         "@id": NERA_IDENTITY.organizationId,
         name: NERA_IDENTITY.name,
         alternateName: "NERA",
@@ -140,14 +156,6 @@ export function neraOrganizationGraph() {
         name: NERA_IDENTITY.name,
         inLanguage: "fr-CM",
         publisher: { "@id": NERA_IDENTITY.organizationId },
-        potentialAction: {
-          "@type": "SearchAction",
-          target: {
-            "@type": "EntryPoint",
-            urlTemplate: `${site}/boutique?q={search_term_string}`,
-          },
-          "query-input": "required name=search_term_string",
-        },
       },
     ],
   };
@@ -185,6 +193,7 @@ export function merchantReturnPolicy() {
 const yaoundeDestination = {
   "@type": "DefinedRegion",
   addressCountry: "CM",
+  addressLocality: "Yaoundé",
 } as const;
 
 function deliveryTimeDays(min: number, max: number) {
@@ -254,8 +263,8 @@ export function productJsonLd(input: {
     description: input.description || input.name,
     url,
     image: image ? [image] : undefined,
+    "@id": `${url}#product`,
     sku,
-    mpn: sku,
     gtin,
     brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
     category: input.category || undefined,
