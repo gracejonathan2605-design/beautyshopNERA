@@ -98,6 +98,8 @@ describe("catalogue NERA", () => {
     expect(chrome).toContain("neraParentRayons");
     expect(chrome).toContain('aria-label="Rayons NERA"');
     expect(chrome).not.toContain("getCart");
+    expect(chrome).not.toContain("getShopSettings");
+    expect(chrome).not.toContain("getNavCategories");
     expect(chrome).toContain("StaffToolbarClient");
     expect(readFileSync("src/app/(shop)/layout.tsx", "utf8")).toContain("revalidate = 60");
     expect(readFileSync("package.json", "utf8")).toContain("sync-catalog.ts --soft");
