@@ -17,12 +17,14 @@ import { defaultStaffPath } from "@/lib/permissions";
 import { safeNextPath } from "@/lib/safe-path";
 import { attachGuestOrdersByPhone, findCustomerByPhone } from "@/services/customer.service";
 
+function failStaffLogin(next: string, code: "1" | "busy"): never {
+  redirect(`/login?error=${code}&next=${encodeURIComponent(next)}`);
+}
+
 export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin");
-  const fail = (code: "1" | "busy") =>
-    redirect(`/login?error=${code}&next=${encodeURIComponent(next)}`);
   let user;
   try {
     user = await prisma.user.findUnique({
@@ -31,16 +33,16 @@ export async function loginStaff(formData: FormData) {
     });
   } catch (err) {
     console.error("loginStaff", err);
-    fail("busy");
+    failStaffLogin(next, "busy");
   }
-  if (!user || !user.isActive || user.deletedAt) fail("1");
+  if (!user || !user.isActive || user.deletedAt) failStaffLogin(next, "1");
   const ok = await verifyPassword(password, user.passwordHash);
-  if (!ok) fail("1");
+  if (!ok) failStaffLogin(next, "1");
   try {
     await createStaffSession(user.id);
   } catch (err) {
     console.error("loginStaff session", err);
-    fail("busy");
+    failStaffLogin(next, "busy");
   }
   const sessionLike = {
     isSuperAdmin: user.role.isSuperAdmin,
