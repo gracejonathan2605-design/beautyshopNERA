@@ -5,8 +5,6 @@ export const runtime = "nodejs";
 export const revalidate = 60;
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
-
-export default function ShopLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <a
