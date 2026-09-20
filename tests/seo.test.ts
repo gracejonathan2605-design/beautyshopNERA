@@ -19,6 +19,7 @@ import {
 import { getSiteUrl } from "../src/lib/site-url";
 import { renderSitemapXml, shopSitemapEntries, categoriesWithOnlineProducts } from "../src/lib/sitemap-shop";
 import { catalogPhotoAlt } from "../src/lib/product-photos";
+import { LEGACY_CATEGORY_REDIRECTS, PARENT_CATEGORY_INTROS } from "../src/lib/category-seo";
 
 const envKeys = ["VERCEL_ENV", "APP_URL"] as const;
 const snapshot = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
@@ -261,7 +262,7 @@ describe("sitemap public", () => {
     expect(LEGACY_CATEGORY_REDIRECTS.parfums).toBe("parfumerie");
     expect(existsSync("src/app/sitemap.ts")).toBe(true);
     expect(existsSync("public/sitemap.xml")).toBe(false);
-    expect(existsSync("src/app/robots.ts")).toBe(true);
+    expect(readFileSync("src/app/sitemap.ts", "utf8")).toContain("export const revalidate = 600");
     expect(readFileSync("src/app/robots.ts", "utf8")).toContain('sitemap: `${base}/sitemap.xml`');
     expect(readFileSync("src/app/robots.ts", "utf8")).not.toMatch(/\bhost:/);
     expect(readFileSync("next.config.ts", "utf8")).toContain("LEGACY_CATEGORY_REDIRECTS");

@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function FlashPage() {
-  const products = await getActiveFlashProducts(48);
+  const products = await getActiveFlashProducts(48).catch(() => []);
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <JsonLd
