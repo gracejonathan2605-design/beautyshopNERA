@@ -19,7 +19,13 @@ export default async function CustomerLoginPage({
       <p className="text-xs uppercase tracking-[0.28em] text-gold">Espace cliente</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Connexion</h1>
       {error === "busy" ? (
-        <p className="mt-3 text-sm text-red-700">La boutique est saturée un instant. Réessayez dans quelques secondes.</p>
+        <p className="mt-3 text-sm text-red-700">
+          La boutique est saturée un instant. Réessayez, ou connectez-vous en équipe via{" "}
+          <Link href="/login" className="underline">
+            Connexion caisse / admin
+          </Link>
+          .
+        </p>
       ) : error ? (
         <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p>
       ) : null}
@@ -34,6 +40,13 @@ export default async function CustomerLoginPage({
           Créer un compte cliente
         </Link>
         . Les commandes passées avec le même téléphone seront rattachées automatiquement.
+      </p>
+      <p className="mt-3 text-sm text-black/60">
+        Équipe NERA (caisse, administration) :{" "}
+        <Link href="/login" className="underline">
+          connexion équipe
+        </Link>
+        .
       </p>
     </div>
   );

@@ -96,9 +96,9 @@ describe("téléphone suffixe", () => {
 });
 
 describe("pool Prisma", () => {
-  it("n’impose plus une seule connexion (timeouts P2024 en prod)", () => {
+  it("limite le pool Prisma sous le plafond session Supabase (15)", () => {
     const url = prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?schema=public");
-    expect(url).toContain("connection_limit=5");
+    expect(url).toContain("connection_limit=2");
     expect(url).toContain("pool_timeout=20");
     expect(url).not.toMatch(/connection_limit=1(?!\d)/);
     expect(

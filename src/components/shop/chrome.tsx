@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { getShopSettings, DEFAULT_SETTINGS } from "@/lib/settings";
+import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { neraParentRayons } from "@/lib/catalog";
-import { getNavCategories } from "@/lib/catalog-cache";
 import { StaffToolbarClient } from "@/components/staff/toolbar-client";
 import { CartLink, ShopCartBadge } from "@/components/shop/cart-badge";
 import { whatsappChatUrl } from "@/lib/receipt";
@@ -62,20 +61,8 @@ export function ShopHeaderFallback() {
   );
 }
 
-export async function ShopHeader() {
-  let settings = (await getShopSettings().catch(() => null)) ?? {
-    name: "NERA Beauté & Shop",
-    phone: "",
-  };
-  let categories: { id: string; name: string; slug: string }[] = neraParentRayons().map((row) => ({
-    id: row.slug,
-    ...row,
-  }));
-  try {
-    categories = await getNavCategories();
-  } catch {
-    /* fallback rayons officiels déjà en place */
-  }
+export function ShopHeader() {
+  const categories = neraParentRayons();
 
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
@@ -84,7 +71,7 @@ export async function ShopHeader() {
         Yaoundé · OM & MoMo · Livraison rapide sous 24h
       </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
-        <Link href="/" className="min-w-0 shrink" aria-label={settings.name}>
+        <Link href="/" className="min-w-0 shrink" aria-label={NERA_IDENTITY.name}>
           <BrandLockup size="sm" priority />
         </Link>
         <form action="/boutique" className="hidden min-w-0 flex-1 md:block" role="search" aria-label="Rechercher dans la boutique">
@@ -125,8 +112,8 @@ export async function ShopHeader() {
   );
 }
 
-export async function ShopFooter() {
-  const settings = (await getShopSettings().catch(() => null)) ?? DEFAULT_SETTINGS;
+export function ShopFooter() {
+  const settings = DEFAULT_SETTINGS;
   const wa = whatsappChatUrl(NERA_IDENTITY.phoneE164, "Bonjour NERA Beauté, j’aimerais un conseil.");
   return (
     <>
