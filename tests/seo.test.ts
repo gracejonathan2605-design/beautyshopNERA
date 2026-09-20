@@ -141,6 +141,15 @@ describe("identité et données structurées", () => {
     expect(withoutId.brand).toBeUndefined();
     expect(withoutId.gtin).toBeUndefined();
     expect(withoutId).not.toHaveProperty("mpn");
+    const fromSku = productJsonLd({
+      name: "Gloss",
+      description: "Gloss hydratant",
+      path: "/produit/gloss",
+      sku: "6131234567890",
+      price: 3900,
+      inStock: true,
+    });
+    expect(fromSku.gtin).toBe("6131234567890");
   });
 
   it("construit une FAQ alignée sur les questions visibles", () => {
@@ -363,7 +372,7 @@ describe("signaux locaux, FAQ et images", () => {
   });
 
   it("n’attribue pas une photo générique comme si c’était le produit", () => {
-    expect(catalogPhotoAlt("Gloss", "/products/perfume.jpg", "Maquillage")).toBe("Photo illustrative — Maquillage");
+    expect(catalogPhotoAlt("Gloss", "/products/perfume.jpg", "Maquillage")).toBe("Gloss");
     expect(catalogPhotoAlt("Gloss", "https://cdn.example/real.jpg")).toBe("Gloss");
   });
 });

@@ -1,11 +1,12 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { ProductBuy } from "@/components/shop/product-buy";
 import { ProductCard } from "@/components/shop/product-card";
-import { catalogPhotoAlt, catalogPhotoFor } from "@/lib/product-photos";
-import { getCachedProductPage, getRelatedProducts, getActiveDeliveryZones } from "@/lib/catalog-cache";
+import { shopProductImage } from "@/lib/product-photos";
+import { getCachedProductPage, getCatalogDuplicateIdentity, getRelatedProducts, getActiveDeliveryZones } from "@/lib/catalog-cache";
+import { uniquePublicTitle } from "@/lib/catalog-hygiene";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { formatCfa } from "@/lib/money";
 import { unitPrice, promoPercent } from "@/lib/pricing";
@@ -20,23 +21,45 @@ import { breadcrumbJsonLd, pageMetadata, productJsonLd, productPageTitle, produc
 import { productInStock } from "@/lib/stock-display";
 import { ProductCopy, ProductFacts } from "@/components/shop/product-copy";
 import { ProductHeroImage } from "@/components/shop/product-hero-image";
+import { ProductPhotoPlaceholder } from "@/components/shop/product-photo";
 import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
 
 type Props = { params: Promise<{ slug: string }> };
 
+async function loadSellableProduct(slug: string) {
+  const [product, identity] = await Promise.all([
+    getCachedProductPage(slug),
+    getCatalogDuplicateIdentity().catch(() => ({ redirects: {}, collidingIds: [] as string[] })),
+  ]);
+  if (!product || product.deletedAt || !product.onlineVisible || product.status !== "ACTIVE") {
+    const dest = identity.redirects[slug];
+    if (dest && dest !== slug) permanentRedirect(`/produit/${dest}`);
+    return null;
+  }
+  const heading = identity.collidingIds.includes(product.id)
+    ? uniquePublicTitle(product.name, {
+        sku: product.sku || product.variants[0]?.sku,
+        slug: product.slug,
+        variantName: product.variants[0]?.name,
+      })
+    : product.name;
+  return { product, heading };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getCachedProductPage(slug);
-  if (!product || product.deletedAt || !product.onlineVisible || product.status !== "ACTIVE") {
+  const loaded = await loadSellableProduct(slug);
+  if (!loaded) {
     return pageMetadata({ title: "Produit", description: "Produit NERA Beauté & Shop.", path: `/produit/${slug}`, index: false });
   }
+  const { product, heading } = loaded;
   const text = productPlainText(product.description, product.shortDescription);
-  const image = product.images.find((m) => m.kind === "IMAGE")?.url ?? catalogPhotoFor(product.slug, product.name);
+  const image = shopProductImage(product.slug, product.images.find((m) => m.kind === "IMAGE")?.url, product.name);
   const desc =
     text ||
-    `${product.name}${product.category?.name ? ` — ${product.category.name}` : ""} chez NERA Beauté & Shop à Yaoundé.`;
+    `${heading}${product.category?.name ? ` — ${product.category.name}` : ""} chez NERA Beauté & Shop à Yaoundé.`;
   return pageMetadata({
-    title: productPageTitle(product.name, product.category?.name),
+    title: productPageTitle(heading, product.category?.name),
     description: truncateMeta(desc),
     path: `/produit/${product.slug}`,
     image,
@@ -46,21 +69,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = await getCachedProductPage(slug);
-  if (!product || product.deletedAt || !product.onlineVisible || product.status !== "ACTIVE") notFound();
+  const loaded = await loadSellableProduct(slug);
+  if (!loaded) notFound();
+  const { product, heading } = loaded;
   const variants = product.variants;
   if (!variants.length) notFound();
 
-  const gallery = product.images.length
-    ? product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }))
-    : [{ id: "catalog", url: catalogPhotoFor(product.slug, product.name), alt: catalogPhotoAlt(product.name, catalogPhotoFor(product.slug, product.name), product.category?.name), kind: "IMAGE" as const }];
+  const uploaded = product.images.map((m) => ({ id: m.id, url: m.url, alt: m.alt, kind: m.kind }));
+  const seedPhoto = shopProductImage(product.slug, null, product.name);
+  const gallery = uploaded.length
+    ? uploaded
+    : seedPhoto
+      ? [{ id: "catalog", url: seedPhoto, alt: heading, kind: "IMAGE" as const }]
+      : [];
 
   const price = unitPrice(variants[0]);
   const flash = isFlashActive(product);
   const percent = promoPercent(variants[0].salePrice, variants[0].promoPrice);
   const wa = whatsappChatUrl(
     NERA_IDENTITY.phoneE164,
-    `Bonjour NERA Beauté, je souhaite commander ${product.name} (${formatCfa(price)}).`,
+    `Bonjour NERA Beauté, je souhaite commander ${heading} (${formatCfa(price)}).`,
   );
   const inStock = productInStock(variants);
   const related = await getRelatedProducts(product.id, product.category?.id ?? null);
@@ -73,7 +101,7 @@ export default async function ProductPage({ params }: Props) {
   const crumbs = [
     { name: "Accueil", path: "/" },
     ...(product.category ? [{ name: product.category.name, path: `/categorie/${product.category.slug}` }] : [{ name: "Boutique", path: "/boutique" }]),
-    { name: product.name, path: `/produit/${product.slug}` },
+    { name: heading, path: `/produit/${product.slug}` },
   ];
 
   return (
@@ -82,8 +110,8 @@ export default async function ProductPage({ params }: Props) {
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
       <JsonLd
         data={productJsonLd({
-          name: product.name,
-          description: description || product.name,
+          name: heading,
+          description: description || heading,
           path: `/produit/${product.slug}`,
           image,
           brand: product.brand?.name,
@@ -101,14 +129,18 @@ export default async function ProductPage({ params }: Props) {
           product.category
             ? { name: product.category.name, href: `/categorie/${product.category.slug}` }
             : { name: "Boutique", href: "/boutique" },
-          { name: product.name },
+          { name: heading },
         ]}
       />
       <div className="mt-6 grid gap-10 md:grid-cols-2">
-        {photos.length <= 1 && !hasVideo && photos[0] ? (
-          <ProductHeroImage src={photos[0].url} alt={photos[0].alt ?? product.name} />
+        {photos.length === 0 && !hasVideo ? (
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem]">
+            <ProductPhotoPlaceholder name={heading} />
+          </div>
+        ) : photos.length <= 1 && !hasVideo && photos[0] ? (
+          <ProductHeroImage src={photos[0].url} alt={photos[0].alt ?? heading} />
         ) : (
-          <ProductGallery name={product.name} media={gallery} />
+          <ProductGallery name={heading} media={gallery} />
         )}
         <div>
           {product.category ? (
@@ -125,7 +157,7 @@ export default async function ProductPage({ params }: Props) {
             isPromo={product.isPromo}
             isNew={product.isNew}
           />
-          <h1 className="mt-2 font-serif text-5xl text-wine">{product.name}</h1>
+          <h1 className="mt-2 font-serif text-5xl text-wine">{heading}</h1>
           {product.brand?.name ? <p className="mt-2 text-sm text-black/50">{product.brand.name}</p> : null}
           <ProductCopy description={product.description} shortDescription={product.shortDescription} />
           <h2 className="mt-8 font-serif text-2xl text-wine">Détails</h2>

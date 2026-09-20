@@ -76,6 +76,71 @@ export function catalogDuplicateKey(name: string) {
   return slugify(cleanProductTitle(name).name);
 }
 
+/** Marques lues dans le nom seulement — jamais inventées. */
+const BRAND_FROM_NAME: { pattern: RegExp; name: string }[] = [
+  { pattern: /\bla roche[\s-]*posay\b/i, name: "La Roche-Posay" },
+  { pattern: /\bcerave\b/i, name: "CeraVe" },
+  { pattern: /\bnakae\b/i, name: "Nakae" },
+  { pattern: /\bxuping\b/i, name: "Xuping" },
+  { pattern: /\bstanle[yt]\b/i, name: "Stanley" },
+  { pattern: /\bcolgate\b/i, name: "Colgate" },
+  { pattern: /\blipikar\b|\blipakar\b/i, name: "Lipikar" },
+  { pattern: /\beffaclar\b/i, name: "Effaclar" },
+  { pattern: /\bnera\b/i, name: "NERA" },
+];
+
+export function inferBrandFromName(name: string): string | null {
+  const hay = String(name ?? "");
+  for (const token of BRAND_FROM_NAME) {
+    if (token.pattern.test(hay)) return token.name;
+  }
+  return null;
+}
+
+export function gtinFromSkuOrBarcode(barcode?: string | null, sku?: string | null) {
+  const fromBarcode = String(barcode ?? "").replace(/\D/g, "");
+  if ([8, 12, 13, 14].includes(fromBarcode.length)) return fromBarcode;
+  const fromSku = String(sku ?? "").replace(/\D/g, "");
+  if ([8, 12, 13, 14].includes(fromSku.length)) return fromSku;
+  return undefined;
+}
+
+export function uniquePublicTitle(
+  name: string,
+  extras?: { sku?: string | null; slug?: string | null; variantName?: string | null },
+) {
+  const cleaned = cleanProductTitle(name).name;
+  const sku = extras?.sku?.trim();
+  if (sku && !cleaned.toLowerCase().includes(sku.toLowerCase())) return `${cleaned} · ${sku}`;
+  const variant = extras?.variantName?.trim();
+  if (variant && variant.toLowerCase() !== cleaned.toLowerCase() && !cleaned.toLowerCase().includes(variant.toLowerCase())) {
+    return `${cleaned} · ${variant}`;
+  }
+  const slug = extras?.slug?.trim();
+  if (slug && slug !== slugify(cleaned)) return `${cleaned} · ${slug}`;
+  return cleaned;
+}
+
+export function applyUniquePublicTitles<T extends { id: string; name: string; sku?: string | null; slug?: string }>(
+  products: T[],
+): T[] {
+  const groups = new Map<string, T[]>();
+  for (const product of products) {
+    const key = catalogDuplicateKey(product.name);
+    const list = groups.get(key) ?? [];
+    list.push(product);
+    groups.set(key, list);
+  }
+  const titles = new Map<string, string>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    for (const product of group) {
+      titles.set(product.id, uniquePublicTitle(product.name, { sku: product.sku, slug: product.slug }));
+    }
+  }
+  return products.map((product) => (titles.has(product.id) ? { ...product, name: titles.get(product.id)! } : product));
+}
+
 export function neraProductSheet(name: string) {
   const title = cleanProductTitle(name).name;
   return {
@@ -98,20 +163,34 @@ export function publishOnlineBlocker(input: {
   return null;
 }
 
+export type HygieneVariant = {
+  id: string;
+  sku: string;
+  barcode: string | null;
+  name: string;
+};
+
 export type HygieneProduct = {
   id: string;
   name: string;
+  slug?: string;
+  sku?: string | null;
+  brandId?: string | null;
   shortDescription: string | null;
   description: string | null;
   onlineVisible: boolean;
   isFeatured: boolean;
   photoCount: number;
   createdAt: Date | string;
+  variants?: HygieneVariant[];
 };
 
 export type HygienePlan = {
   rename: { id: string; from: string; to: string }[];
   unpublish: { id: string; reason: string }[];
+  merge: { fromId: string; toId: string }[];
+  brands: { id: string; brandName: string }[];
+  barcodes: { variantId: string; barcode: string }[];
   sheets: { id: string; shortDescription: string; description: string }[];
   feature: string[];
   sizeNotes: { id: string; note: string }[];
@@ -145,9 +224,20 @@ function flagshipScore(name: string, photoCount: number, featured: boolean) {
   return (featured ? 1000 : 0) + (hint >= 0 ? 80 - hint : 0) + Math.min(20, photoCount * 5);
 }
 
+function rankHygieneGroup<T extends { photoCount: number; isFeatured: boolean; createdAt: Date | string }>(group: T[]) {
+  return [...group].sort((a, b) => {
+    if (b.photoCount !== a.photoCount) return b.photoCount - a.photoCount;
+    if (Number(b.isFeatured) !== Number(a.isFeatured)) return Number(b.isFeatured) - Number(a.isFeatured);
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+}
+
 export function planCatalogHygiene(products: HygieneProduct[], flagshipCount = 20): HygienePlan {
   const rename: HygienePlan["rename"] = [];
   const unpublish: HygienePlan["unpublish"] = [];
+  const merge: HygienePlan["merge"] = [];
+  const brands: HygienePlan["brands"] = [];
+  const barcodes: HygienePlan["barcodes"] = [];
   const sizeNotes: HygienePlan["sizeNotes"] = [];
   const cleaned = products.map((product) => {
     const { name, sizes } = cleanProductTitle(product.name);
@@ -164,16 +254,11 @@ export function planCatalogHygiene(products: HygieneProduct[], flagshipCount = 2
     list.push(product);
     groups.set(product.key, list);
   }
-  const keep = new Set<string>();
   for (const group of groups.values()) {
-    const ranked = [...group].sort((a, b) => {
-      if (b.photoCount !== a.photoCount) return b.photoCount - a.photoCount;
-      if (Number(b.isFeatured) !== Number(a.isFeatured)) return Number(b.isFeatured) - Number(a.isFeatured);
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-    keep.add(ranked[0].id);
+    const ranked = rankHygieneGroup(group);
     for (const extra of ranked.slice(1)) {
       if (extra.onlineVisible) {
+        merge.push({ fromId: extra.id, toId: ranked[0].id });
         unpublish.push({ id: extra.id, reason: `Doublon de « ${ranked[0].cleanedName} »` });
       }
     }
@@ -229,5 +314,27 @@ export function planCatalogHygiene(products: HygieneProduct[], flagshipCount = 2
     }
   }
 
-  return { rename, unpublish, sheets, feature, sizeNotes };
+  for (const product of cleaned) {
+    if (unpublished.has(product.id) || product.brandId) continue;
+    const brandName = inferBrandFromName(product.cleanedName) ?? inferBrandFromName(product.name);
+    if (brandName) brands.push({ id: product.id, brandName });
+  }
+
+  const seenBarcodes = new Set<string>();
+  for (const product of cleaned) {
+    if (unpublished.has(product.id)) continue;
+    for (const variant of product.variants ?? []) {
+      if (variant.barcode?.trim()) {
+        const existing = gtinFromSkuOrBarcode(variant.barcode);
+        if (existing) seenBarcodes.add(existing);
+        continue;
+      }
+      const gtin = gtinFromSkuOrBarcode(null, variant.sku) ?? gtinFromSkuOrBarcode(null, product.sku);
+      if (!gtin || seenBarcodes.has(gtin)) continue;
+      seenBarcodes.add(gtin);
+      barcodes.push({ variantId: variant.id, barcode: gtin });
+    }
+  }
+
+  return { rename, unpublish, merge, brands, barcodes, sheets, feature, sizeNotes };
 }

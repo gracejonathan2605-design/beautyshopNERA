@@ -55,6 +55,7 @@ export const productCardSelectWithoutFlash = {
     take: 1,
     select: { url: true, alt: true },
   },
+  sku: true,
 } satisfies Prisma.ProductSelect;
 
 export const productCardSelect = {

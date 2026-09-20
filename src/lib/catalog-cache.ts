@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { catalogSlugs, mergeNavCategories } from "@/lib/catalog";
+import { applyUniquePublicTitles, catalogDuplicateKey } from "@/lib/catalog-hygiene";
 import { ensureNeraCatalog, scheduleEnsureNeraCatalog } from "@/lib/catalog-ensure";
 import { isMissingFlashColumn, productCardSelect, shopInventorySelect, withFlashProductSelect } from "@/lib/product-query";
 import { flashPrismaWhere } from "@/lib/flash";
@@ -31,12 +32,13 @@ export function getActiveFlashProducts(take = 8) {
     async () => {
       const now = new Date();
       try {
-        return await prisma.product.findMany({
+        const rows = await prisma.product.findMany({
           where: flashPrismaWhere(now),
           select: productCardSelect,
           orderBy: { flashStartAt: "desc" },
           take,
         });
+        return applyUniquePublicTitles(rows);
       } catch (err) {
         if (isMissingFlashColumn(err)) return [];
         throw err;
@@ -105,7 +107,12 @@ const loadHomeCatalog = unstable_cache(
 export async function getHomeCatalog() {
   scheduleEnsureNeraCatalog();
   const catalog = await loadHomeCatalog();
-  return { ...catalog, categories: mergeNavCategories(catalog.categories) };
+  return {
+    featured: applyUniquePublicTitles(catalog.featured),
+    news: applyUniquePublicTitles(catalog.news),
+    promos: applyUniquePublicTitles(catalog.promos),
+    categories: mergeNavCategories(catalog.categories),
+  };
 }
 
 export function getCachedProductPage(slug: string) {
@@ -200,8 +207,8 @@ export async function getCachedCategoryPage(slug: string) {
 export function getRelatedProducts(productId: string, categoryId: string | null, take = 4) {
   if (!categoryId) return Promise.resolve([]);
   return unstable_cache(
-    async () =>
-      withFlashProductSelect((select) =>
+    async () => {
+      const rows = await withFlashProductSelect((select) =>
         prisma.product.findMany({
           where: {
             id: { not: productId },
@@ -214,10 +221,66 @@ export function getRelatedProducts(productId: string, categoryId: string | null,
           orderBy: { updatedAt: "desc" },
           take,
         }),
-      ),
+      );
+      return applyUniquePublicTitles(rows);
+    },
     ["related-products", productId, categoryId, String(take)],
     { revalidate: 60, tags: ["catalog"] },
   )();
+}
+
+export type CatalogDuplicateIdentity = {
+  redirects: Record<string, string>;
+  collidingIds: string[];
+};
+
+const loadCatalogDuplicateIdentity = unstable_cache(
+  async (): Promise<CatalogDuplicateIdentity> => {
+    const products = await prisma.product.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        onlineVisible: true,
+        status: true,
+        isFeatured: true,
+        createdAt: true,
+        images: { where: { kind: "IMAGE" }, select: { id: true } },
+      },
+    });
+    const groups = new Map<string, typeof products>();
+    for (const product of products) {
+      const key = catalogDuplicateKey(product.name);
+      const list = groups.get(key) ?? [];
+      list.push(product);
+      groups.set(key, list);
+    }
+    const redirects: Record<string, string> = {};
+    const collidingIds: string[] = [];
+    for (const group of groups.values()) {
+      const ranked = [...group].sort((a, b) => {
+        if (b.images.length !== a.images.length) return b.images.length - a.images.length;
+        if (Number(b.isFeatured) !== Number(a.isFeatured)) return Number(b.isFeatured) - Number(a.isFeatured);
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+      const keeper = ranked.find((row) => row.onlineVisible && row.status === "ACTIVE");
+      const online = ranked.filter((row) => row.onlineVisible && row.status === "ACTIVE");
+      if (online.length > 1) collidingIds.push(...online.map((row) => row.id));
+      if (!keeper) continue;
+      for (const extra of ranked) {
+        if (extra.slug === keeper.slug || extra.onlineVisible) continue;
+        redirects[extra.slug] = keeper.slug;
+      }
+    }
+    return { redirects, collidingIds };
+  },
+  ["catalog-duplicate-identity"],
+  { revalidate: 60, tags: ["catalog"] },
+);
+
+export function getCatalogDuplicateIdentity() {
+  return loadCatalogDuplicateIdentity();
 }
 
 export function getActiveDeliveryZones() {

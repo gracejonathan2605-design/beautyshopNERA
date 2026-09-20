@@ -3,6 +3,8 @@ import { cartCanCheckout, getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { setCartQtyForm } from "@/app/actions/shop";
+
+export const dynamic = "force-dynamic";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import Link from "next/link";

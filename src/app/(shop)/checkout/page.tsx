@@ -3,6 +3,8 @@ import { getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";

@@ -21,8 +21,9 @@ export function CatalogHygieneButton() {
         Nettoyer le catalogue live
       </button>
       <p className="mt-1 max-w-xl text-xs text-black/45">
-        Dépublie les doublons et les fiches sans photo, corrige les noms (tailles, Chanel/Hermès, fautes), et
-        complète 20 fiches phares. Ne crée pas de variantes inventées.
+        Dépublie les doublons (savons, lingeries, minaudières…) et les fiches sans photo, fusionne leurs variantes
+        sur une seule fiche, corrige les noms, rattache une marque seulement si elle est dans le nom, reprend un
+        GTIN seulement s’il est déjà dans le SKU, et complète 20 fiches phares.
       </p>
     </form>
   );

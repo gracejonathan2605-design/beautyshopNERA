@@ -6,6 +6,7 @@ import { prisma } from "./prisma";
 import type { PermissionCode } from "./permissions";
 
 const STAFF_COOKIE = "nera_staff";
+const STAFF_UI_COOKIE = "nera_staff_ui";
 const CUSTOMER_COOKIE = "nera_customer";
 
 function secret() {
@@ -86,6 +87,13 @@ export async function createStaffSession(userId: string) {
   const jar = await cookies();
   jar.set(STAFF_COOKIE, token, {
     httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 12,
+  });
+  jar.set(STAFF_UI_COOKIE, "1", {
+    httpOnly: false,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
@@ -176,6 +184,7 @@ export const getCustomerSession = cache(readCustomerSession);
 export async function clearStaffSession() {
   const jar = await cookies();
   jar.delete({ name: STAFF_COOKIE, path: "/" });
+  jar.delete({ name: STAFF_UI_COOKIE, path: "/" });
 }
 
 export async function clearCustomerSession() {
@@ -183,4 +192,4 @@ export async function clearCustomerSession() {
   jar.delete({ name: CUSTOMER_COOKIE, path: "/" });
 }
 
-export const COOKIES = { STAFF_COOKIE, CUSTOMER_COOKIE };
+export const COOKIES = { STAFF_COOKIE, STAFF_UI_COOKIE, CUSTOMER_COOKIE };

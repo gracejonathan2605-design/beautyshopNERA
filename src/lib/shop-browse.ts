@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { mergeShopRayons } from "@/lib/catalog";
+import { applyUniquePublicTitles } from "@/lib/catalog-hygiene";
 import { withFlashProductSelect } from "@/lib/product-query";
 import { displayUnitPrice } from "@/lib/stock-display";
 
@@ -248,7 +249,7 @@ export async function browseShopProducts(query: BrowseQuery, forcedCategoryIds?:
       select,
     }),
   );
-  const byId = new Map(products.map((product) => [product.id, product]));
+  const byId = new Map(applyUniquePublicTitles(products).map((product) => [product.id, product]));
   return {
     items: page.ids.flatMap((id) => {
       const product = byId.get(id);

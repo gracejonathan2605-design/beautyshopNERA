@@ -5,6 +5,8 @@ import { logoutCustomer } from "@/app/actions/auth";
 import { reorderFromOrder } from "@/app/actions/shop";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 import { ORDER_STATUS_LABELS } from "@/lib/status-labels";
 import { orderConfirmationPath } from "@/lib/order-access";
 import { AccountProfileForm } from "@/components/shop/account-profile-form";
