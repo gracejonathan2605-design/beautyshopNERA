@@ -29,7 +29,12 @@ type Props = { params: Promise<{ slug: string }> };
 async function loadSellableProduct(slug: string) {
   const [product, identity] = await Promise.all([
     getCachedProductPage(slug),
-    getCatalogDuplicateIdentity().catch(() => ({ redirects: {}, collidingIds: [] as string[] })),
+    getCatalogDuplicateIdentity().catch(
+      (): { redirects: Record<string, string>; collidingIds: string[] } => ({
+        redirects: {},
+        collidingIds: [],
+      }),
+    ),
   ]);
   if (!product || product.deletedAt || !product.onlineVisible || product.status !== "ACTIVE") {
     const dest = identity.redirects[slug];
