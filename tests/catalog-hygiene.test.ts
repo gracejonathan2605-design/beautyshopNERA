@@ -107,6 +107,7 @@ describe("hygiène catalogue", () => {
 
   it("lit une marque et un GTIN seulement s’ils sont déjà dans la fiche", () => {
     expect(inferBrandFromName("Crème CeraVe hydratante")).toBe("CeraVe");
+    expect(inferBrandFromName("Sérum Nakae")).toBe("Nakae Beauté");
     expect(inferBrandFromName("Gourde Stanley inoxydable")).toBe("Stanley");
     expect(inferBrandFromName("Savon")).toBeNull();
     expect(inferBrandFromName("Parfum")).toBeNull();

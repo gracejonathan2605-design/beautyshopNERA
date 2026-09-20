@@ -79,6 +79,29 @@ enum PromotionType {
   FIXED
 }
 
+enum PartnershipType {
+  UNSET
+  WHOLESALE
+  CONSIGNMENT
+  COMMISSION
+  CATALOG
+  ON_DEMAND
+}
+
+enum StockOwner {
+  NERA
+  PARTNER
+}
+
+enum BrandCollectionKind {
+  ALL
+  NEW
+  FEATURED
+  BESTSELLERS
+  CATEGORY
+  MANUAL
+}
+
 enum CashSessionStatus {
   OPEN
   CLOSED
@@ -216,6 +239,7 @@ model Category {
   deletedAt   DateTime?
   products    Product[]
   promotions  Promotion[]
+  collections BrandCollection[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -225,12 +249,54 @@ model Category {
 }
 
 model Brand {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  isActive  Boolean   @default(true)
-  deletedAt DateTime?
-  products  Product[]
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  logo             String?
+  banner           String?
+  description      String?
+  isPartner        Boolean           @default(false)
+  showOnSite       Boolean           @default(true)
+  isActive         Boolean           @default(true)
+  sortOrder        Int               @default(0)
+  partnershipType  PartnershipType   @default(UNSET)
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  products         Product[]
+  collections      BrandCollection[]
+
+  @@index([isPartner, showOnSite, isActive, sortOrder])
+}
+
+model BrandCollection {
+  id          String                 @id @default(cuid())
+  brandId     String
+  brand       Brand                  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  kind        BrandCollectionKind    @default(MANUAL)
+  categoryId  String?
+  category    Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sortOrder   Int                    @default(0)
+  isActive    Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  products    BrandCollectionProduct[]
+
+  @@unique([brandId, slug])
+  @@index([brandId, sortOrder])
+}
+
+model BrandCollectionProduct {
+  collectionId String
+  productId    String
+  sortOrder    Int             @default(0)
+  collection   BrandCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
 }
 
 model Supplier {
@@ -283,6 +349,7 @@ model Product {
   brand            Brand?         @relation(fields: [brandId], references: [id])
   supplierId       String?
   supplier         Supplier?      @relation(fields: [supplierId], references: [id])
+  stockOwner       StockOwner     @default(NERA)
   weightGrams      Int?
   dimensions       String?
   isFeatured       Boolean        @default(false)
@@ -297,8 +364,10 @@ model Product {
   variants         ProductVariant[]
   images           ProductImage[]
   promotions       Promotion[]
+  collectionItems  BrandCollectionProduct[]
 
   @@index([categoryId])
+  @@index([brandId])
   @@index([status, onlineVisible, deletedAt])
   @@index([name])
   @@index([flashEndAt])

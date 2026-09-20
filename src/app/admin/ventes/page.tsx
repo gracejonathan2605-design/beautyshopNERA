@@ -36,6 +36,13 @@ export default async function SalesAdminPage({
       createdAt: true,
       cashier: { select: { firstName: true, lastName: true } },
       payments: { select: { method: true } },
+      items: {
+        select: {
+          productName: true,
+          variant: { select: { product: { select: { brand: { select: { name: true, isPartner: true } } } } } },
+        },
+        take: 4,
+      },
     },
     take: 100,
   });
@@ -78,6 +85,15 @@ export default async function SalesAdminPage({
                     {formatWhen(s.createdAt)} · {cashierName}
                     {methods ? ` · ${methods}` : ""} · {SALE_STATUS_LABELS[s.status] ?? s.status}
                   </p>
+                  {s.items.some((item) => item.variant.product.brand?.isPartner) ? (
+                    <p className="mt-1 text-xs text-black/45">
+                      Produit partenaire :{" "}
+                      {s.items
+                        .filter((item) => item.variant.product.brand?.isPartner)
+                        .map((item) => `${item.variant.product.brand?.name} — ${item.productName}`)
+                        .join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
                 <span className="flex items-center gap-3">
                   <span className="font-serif text-xl text-wine">{formatCfa(s.total)}</span>

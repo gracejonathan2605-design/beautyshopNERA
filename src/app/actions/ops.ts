@@ -354,28 +354,8 @@ export async function saveDeliveryZone(formData: FormData) {
 }
 
 export async function saveBrand(formData: FormData) {
-  try {
-    await requireStaff("brands.manage");
-    const id = String(formData.get("id") ?? "");
-    const name = String(formData.get("name") ?? "").trim();
-    if (!name) bounce("/admin/marques", "erreur", "Nom de marque requis.");
-    const slug = slugify(name);
-    const isActive = !id || formData.get("isActive") === "on";
-    if (id) {
-      await prisma.brand.update({ where: { id }, data: { name, isActive } });
-    } else {
-      await prisma.brand.create({ data: { name, slug, isActive: true } });
-    }
-    revalidatePath("/admin/marques");
-    revalidatePath("/admin/produits");
-    bounce("/admin/marques", "ok", id ? "Marque mise à jour." : `${name} ajoutée.`);
-  } catch (err) {
-    unstable_rethrow(err);
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      bounce("/admin/marques", "erreur", "Cette marque existe déjà.");
-    }
-    bounce("/admin/marques", "erreur", err instanceof Error ? err.message : "Marque impossible.");
-  }
+  const { savePartnerBrand } = await import("./partner-brands");
+  return savePartnerBrand(formData);
 }
 
 export async function saveSupplier(formData: FormData) {

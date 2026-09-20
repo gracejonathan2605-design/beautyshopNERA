@@ -32,6 +32,7 @@ export function shopSitemapEntries(input: {
   base: string;
   categories: { slug: string; updatedAt?: Date | string }[];
   products: { slug: string; updatedAt?: Date | string }[];
+  brands?: { slug: string; updatedAt?: Date | string }[];
 }): ShopSitemapEntry[] {
   const base = input.base.replace(/\/$/, "");
   const staticPages: ShopSitemapEntry[] = [
@@ -39,9 +40,16 @@ export function shopSitemapEntries(input: {
     { url: `${base}/a-propos`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/flash`, changeFrequency: "daily", priority: 0.8 },
     { url: `${base}/boutique`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${base}/marques`, changeFrequency: "weekly", priority: 0.7 },
   ];
   const categories: ShopSitemapEntry[] = input.categories.map((row) => ({
     url: `${base}/categorie/${row.slug}`,
+    lastModified: sitemapLastmod(row.updatedAt),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }));
+  const brands: ShopSitemapEntry[] = (input.brands ?? []).map((row) => ({
+    url: `${base}/marques/${row.slug}`,
     lastModified: sitemapLastmod(row.updatedAt),
     changeFrequency: "weekly",
     priority: 0.7,
@@ -52,7 +60,7 @@ export function shopSitemapEntries(input: {
     changeFrequency: "weekly",
     priority: 0.6,
   }));
-  return [...staticPages, ...categories, ...products];
+  return [...staticPages, ...categories, ...brands, ...products];
 }
 
 export function renderSitemapXml(entries: ShopSitemapEntry[]) {
@@ -113,7 +121,7 @@ export async function loadIndexableSitemapEntries(base: string): Promise<ShopSit
   if (!process.env.DATABASE_URL) return fallback;
   try {
     const { prisma } = await import("./prisma");
-    const [categories, products] = await withTimeout(
+    const [categories, products, brands] = await withTimeout(
       Promise.all([
         prisma.category.findMany({
           where: { isActive: true, deletedAt: null },
@@ -124,6 +132,10 @@ export async function loadIndexableSitemapEntries(base: string): Promise<ShopSit
           select: { slug: true, updatedAt: true, categoryId: true },
           orderBy: { updatedAt: "desc" },
           take: SITEMAP_PRODUCT_CAP,
+        }),
+        prisma.brand.findMany({
+          where: { isPartner: true, showOnSite: true, isActive: true, deletedAt: null },
+          select: { slug: true, updatedAt: true },
         }),
       ]),
       15000,
@@ -136,6 +148,7 @@ export async function loadIndexableSitemapEntries(base: string): Promise<ShopSit
       base,
       categories: indexableCategories,
       products,
+      brands,
     });
   } catch (err) {
     console.warn("sitemap: catalogue indisponible, URLs statiques seulement", err);

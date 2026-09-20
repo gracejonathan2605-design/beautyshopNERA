@@ -1,10 +1,12 @@
+import Link from "next/link";
 import { requireStaff } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
-import { saveBrand } from "@/app/actions/ops";
 import { AdminFlash } from "@/components/admin/flash";
 import { hasPermission } from "@/lib/permissions";
+import { PartnerBrandForm } from "@/components/admin/partner-brand-form";
+import { PARTNERSHIP_TYPE_LABELS } from "@/lib/partner-brands";
 
-export default async function BrandsPage({
+export default async function PartnerBrandsAdminPage({
   searchParams,
 }: {
   searchParams: Promise<{ ok?: string; erreur?: string }>;
@@ -14,37 +16,46 @@ export default async function BrandsPage({
   const canManage = hasPermission(session, "brands.manage");
   const brands = await prisma.brand.findMany({
     where: { deletedAt: null },
-    orderBy: { name: "asc" },
+    orderBy: [{ isPartner: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
     include: { _count: { select: { products: true } } },
   });
   return (
     <div>
-      <h1 className="font-serif text-4xl">Marques</h1>
+      <h1 className="font-serif text-4xl">Marques partenaires</h1>
+      <p className="mt-2 max-w-2xl text-sm text-black/60">
+        NERA reste la boutique. Chaque marque a sa page <code>/marques/…</code>. Le client achète dans le panier NERA.
+        Logo, texte et collections se renseignent ici — sans inventer de contenu.
+      </p>
       <AdminFlash ok={ok} erreur={erreur} />
       {canManage ? (
-        <form action={saveBrand} className="mt-6 flex flex-wrap gap-3 rounded-2xl bg-cream p-5">
-          <input name="name" required placeholder="Nom de la marque" className="rounded-xl border px-3 py-2" />
-          <button className="rounded-full bg-brown px-4 py-2 text-cream">Ajouter</button>
-        </form>
+        <div className="mt-6">
+          <h2 className="font-serif text-2xl text-wine">Ajouter une marque</h2>
+          <PartnerBrandForm />
+        </div>
       ) : null}
-      <ul className="mt-6 space-y-2">
-        {brands.map((b) => (
-          <li key={b.id} className="rounded-2xl bg-cream p-4">
-            {canManage ? (
-              <form action={saveBrand} className="flex flex-wrap items-center gap-2">
-                <input type="hidden" name="id" value={b.id} />
-                <input name="name" defaultValue={b.name} className="rounded-lg border px-2 py-1" />
-                <label className="flex items-center gap-1 text-sm">
-                  <input type="checkbox" name="isActive" defaultChecked={b.isActive} /> Active
-                </label>
-                <span className="text-sm text-black/45">{b._count.products} produit(s)</span>
-                <button className="rounded-full bg-brown px-3 py-1 text-xs text-cream">OK</button>
-              </form>
-            ) : (
-              <p>
-                {b.name} · {b._count.products} produit(s)
-              </p>
-            )}
+      <ul className="mt-8 space-y-2">
+        {brands.map((brand) => (
+          <li key={brand.id} className="rounded-2xl bg-cream p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-medium text-wine">
+                  <Link href={`/admin/marques/${brand.id}`} className="underline">
+                    {brand.name}
+                  </Link>
+                </p>
+                <p className="text-sm text-black/50">
+                  /marques/{brand.slug} · {brand._count.products} produit(s)
+                  {brand.isPartner ? " · partenaire" : ""}
+                  {brand.showOnSite && brand.isActive ? " · visible" : " · masquée"}
+                  {brand.partnershipType !== "UNSET"
+                    ? ` · ${PARTNERSHIP_TYPE_LABELS[brand.partnershipType]}`
+                    : ""}
+                </p>
+              </div>
+              <Link href={`/admin/marques/${brand.id}`} className="rounded-full border px-3 py-1 text-sm">
+                Fiche
+              </Link>
+            </div>
           </li>
         ))}
       </ul>

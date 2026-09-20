@@ -115,6 +115,19 @@ export async function getHomeCatalog() {
   };
 }
 
+const loadPartnerBrands = unstable_cache(
+  async () => {
+    const { listPublicPartnerBrands } = await import("@/services/partner-brand.service");
+    return listPublicPartnerBrands();
+  },
+  ["partner-brands"],
+  { revalidate: 60, tags: ["catalog"] },
+);
+
+export function getCachedPartnerBrands() {
+  return loadPartnerBrands();
+}
+
 export function getCachedProductPage(slug: string) {
   return unstable_cache(
     async () => {
@@ -151,7 +164,7 @@ const productPageSelectWithoutFlash = {
   isNew: true,
   isPromo: true,
   category: { select: { id: true, name: true, slug: true } },
-  brand: { select: { name: true } },
+  brand: { select: { name: true, slug: true, isPartner: true, showOnSite: true } },
   variants: {
     where: { isActive: true, deletedAt: null },
     select: {

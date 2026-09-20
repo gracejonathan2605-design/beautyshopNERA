@@ -47,14 +47,18 @@ export async function getDashboardMetrics(range: ReportRange) {
       FROM "SaleItem" i
       JOIN "Sale" s ON s.id = i."saleId"
       JOIN "ProductVariant" v ON v.id = i."variantId"
+      JOIN "Product" p ON p.id = v."productId"
       WHERE s.status = 'COMPLETED' AND s."createdAt" BETWEEN ${from} AND ${to}
+        AND p."stockOwner" = 'NERA'
     `,
     prisma.$queryRaw<{ cogs: number }[]>`
       SELECT COALESCE(SUM(i.quantity * v."costPrice"), 0)::int as cogs
       FROM "OrderItem" i
       JOIN "Order" o ON o.id = i."orderId"
       JOIN "ProductVariant" v ON v.id = i."variantId"
+      JOIN "Product" p ON p.id = v."productId"
       WHERE o.status IN ('SHIPPED', 'DELIVERED') AND o."createdAt" BETWEEN ${from} AND ${to}
+        AND p."stockOwner" = 'NERA'
     `,
     prisma.$queryRaw<{ name: string; sku: string; qty: bigint; amount: number }[]>`
       SELECT i."productName" as name, i.sku, SUM(i.quantity)::bigint as qty, SUM(i.total)::int as amount

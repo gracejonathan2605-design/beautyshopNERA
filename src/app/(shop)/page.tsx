@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ProductCard } from "@/components/shop/product-card";
-import { getHomeCatalog, getActiveFlashProducts } from "@/lib/catalog-cache";
+import { getHomeCatalog, getActiveFlashProducts, getCachedPartnerBrands } from "@/lib/catalog-cache";
+import { PartnerBrandsSection } from "@/components/shop/partner-brands-section";
 import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { FlashSection } from "@/components/shop/flash-section";
@@ -32,6 +33,7 @@ const TRUST = [
 export default async function HomePage() {
   let catalog: Awaited<ReturnType<typeof getHomeCatalog>> | null = null;
   let flash: Awaited<ReturnType<typeof getActiveFlashProducts>> = [];
+  let partnerBrands: Awaited<ReturnType<typeof getCachedPartnerBrands>> = [];
   try {
     catalog = await getHomeCatalog();
   } catch {
@@ -41,6 +43,11 @@ export default async function HomePage() {
     flash = await getActiveFlashProducts(8);
   } catch {
     flash = [];
+  }
+  try {
+    partnerBrands = await getCachedPartnerBrands();
+  } catch {
+    partnerBrands = [];
   }
   if (!catalog) {
     return (
@@ -111,6 +118,8 @@ export default async function HomePage() {
       </section>
 
       <FlashSection products={flash} />
+
+      <PartnerBrandsSection brands={partnerBrands} />
 
       <section className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {TRUST.map((item) => (

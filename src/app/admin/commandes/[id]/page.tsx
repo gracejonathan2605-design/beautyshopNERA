@@ -27,7 +27,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
-      items: true,
+      items: {
+        include: {
+          variant: { select: { product: { select: { brand: { select: { name: true, isPartner: true } } } } } },
+        },
+      },
       payments: true,
       customer: true,
       deliveryZone: true,
@@ -78,8 +82,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         {order.items.map((item) => (
           <li key={item.id} className="flex justify-between rounded-2xl border border-[#eee0e6] bg-white px-4 py-3">
             <span>
+              {item.variant.product.brand?.isPartner ? `${item.variant.product.brand.name} — ` : ""}
               {item.productName}
               {item.variantName ? ` · ${item.variantName}` : ""} × {item.quantity}
+              {item.variant.product.brand?.isPartner ? (
+                <span className="mt-1 block text-xs text-black/40">Produit partenaire · {item.variant.product.brand.name}</span>
+              ) : null}
             </span>
             <span>{formatCfa(item.total)}</span>
           </li>

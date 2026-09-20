@@ -33,7 +33,15 @@ export default async function OrdersAdminPage() {
       shippingPhone: true,
       customer: { select: { firstName: true, lastName: true, phone: true } },
       payments: { select: { status: true, method: true, amount: true, reference: true } },
-      items: { select: { id: true, quantity: true, productName: true }, take: 5 },
+      items: {
+        select: {
+          id: true,
+          quantity: true,
+          productName: true,
+          variant: { select: { product: { select: { brand: { select: { name: true, isPartner: true } } } } } },
+        },
+        take: 5,
+      },
     },
     take: 100,
   });
@@ -84,7 +92,8 @@ export default async function OrdersAdminPage() {
                       <ul className="mt-2 text-sm text-black/60">
                         {o.items.slice(0, 4).map((item) => (
                           <li key={item.id}>
-                            {item.quantity} × {item.productName}
+                            {item.quantity} × {item.variant.product.brand?.isPartner ? `${item.variant.product.brand.name} — ` : ""}
+                            {item.productName}
                           </li>
                         ))}
                         {o.items.length > 4 ? <li>… {o.items.length - 4} autre(s)</li> : null}

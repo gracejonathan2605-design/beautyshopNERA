@@ -163,6 +163,10 @@ export function ProductForm({
           ))}
         </select>
       ) : null}
+      <select name="stockOwner" defaultValue="NERA" className="rounded-xl border px-3 py-2">
+        <option value="NERA">Stock NERA</option>
+        <option value="PARTNER">Stock partenaire</option>
+      </select>
       <input
         name="shortDescription"
         value={shortDescription}

@@ -22,6 +22,18 @@ export async function uploadProductImage(file: File, productId: string, index = 
   return publicUrl(path);
 }
 
+export async function uploadBrandImage(file: File, brandId: string, kind: "logo" | "banner") {
+  const webp = await compressToWebp(file);
+  const supabase = createSupabaseAdmin();
+  const path = `brands/${brandId}/${kind}-${Date.now()}.webp`;
+  const { error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, webp, {
+    contentType: "image/webp",
+    upsert: false,
+  });
+  if (error) throw new Error(`Upload ${kind} marque : ${error.message}`);
+  return publicUrl(path);
+}
+
 export async function uploadProductVideo(file: File, productId: string) {
   if (!file.size) throw new Error("Fichier vidéo vide");
   if (file.size > VIDEO_MAX_BYTES) throw new Error("Vidéo trop lourde (max 3,5 Mo / 40 s)");
