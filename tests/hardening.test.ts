@@ -109,4 +109,11 @@ describe("pool Prisma", () => {
       /Promise\.all\(\[\s*prisma\.product\.findMany/,
     );
   });
+
+  it("réessaie migrate deploy hors pooler saturé", () => {
+    const script = readFileSync("scripts/migrate-deploy.ts", "utf8");
+    expect(script).toContain("DIRECT_URL");
+    expect(script).toContain("EMAXCONNSESSION");
+    expect(readFileSync("vercel.json", "utf8")).toContain("scripts/migrate-deploy.ts");
+  });
 });
