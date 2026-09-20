@@ -21,19 +21,26 @@ export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin");
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: { role: { include: { permissions: { include: { permission: true } } } } },
-  });
-  if (!user || !user.isActive || user.deletedAt) {
-    redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
+  const fail = (code: "1" | "busy") =>
+    redirect(`/login?error=${code}&next=${encodeURIComponent(next)}`);
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { email },
+      include: { role: { include: { permissions: { include: { permission: true } } } } },
+    });
+  } catch (err) {
+    console.error("loginStaff", err);
+    fail("busy");
   }
+  if (!user || !user.isActive || user.deletedAt) fail("1");
   const ok = await verifyPassword(password, user.passwordHash);
-  if (!ok) redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
+  if (!ok) fail("1");
   try {
     await createStaffSession(user.id);
-  } catch {
-    redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
+  } catch (err) {
+    console.error("loginStaff session", err);
+    fail("busy");
   }
   const sessionLike = {
     isSuperAdmin: user.role.isSuperAdmin,
@@ -57,19 +64,36 @@ export async function loginCustomer(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/compte");
   const fail = `/compte/connexion?error=1&next=${encodeURIComponent(next)}`;
-  const customer = await prisma.customer.findUnique({ where: { email } });
+  const busy = `/compte/connexion?error=busy&next=${encodeURIComponent(next)}`;
+  let customer;
+  try {
+    customer = await prisma.customer.findUnique({ where: { email } });
+  } catch (err) {
+    console.error("loginCustomer", err);
+    redirect(busy);
+  }
   if (!customer?.passwordHash || !customer.isActive || customer.deletedAt) {
-    const staff = await prisma.user.findFirst({
-      where: { email, isActive: true, deletedAt: null },
-      select: { id: true },
-    });
-    if (staff) redirect("/login?hint=staff");
+    try {
+      const staff = await prisma.user.findFirst({
+        where: { email, isActive: true, deletedAt: null },
+        select: { id: true },
+      });
+      if (staff) redirect("/login?hint=staff");
+    } catch (err) {
+      console.error("loginCustomer staff lookup", err);
+      redirect(busy);
+    }
     redirect(fail);
   }
   const ok = await verifyPassword(password, customer.passwordHash);
   if (!ok) redirect(fail);
-  await createCustomerSession(customer.id);
-  if (customer.phone) await attachGuestOrdersByPhone(customer.id, customer.phone);
+  try {
+    await createCustomerSession(customer.id);
+    if (customer.phone) await attachGuestOrdersByPhone(customer.id, customer.phone);
+  } catch (err) {
+    console.error("loginCustomer session", err);
+    redirect(busy);
+  }
   const dest = safeNextPath(next, "/compte");
   redirect(dest.startsWith("/admin") || dest.startsWith("/pos") || dest.startsWith("/login") ? "/compte" : dest);
 }

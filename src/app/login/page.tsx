@@ -41,7 +41,13 @@ export default async function LoginPage({
             Ce compte appartient à l’équipe. Connectez-vous ici.
           </p>
         ) : null}
-        {error ? <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p> : null}
+        {error === "busy" ? (
+          <p className="mt-3 text-sm text-red-700">
+            La boutique est saturée un instant. Réessayez dans quelques secondes.
+          </p>
+        ) : error ? (
+          <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p>
+        ) : null}
         <input type="hidden" name="next" value={safeNextPath(next ?? "", "/admin")} />
         <input name="email" type="email" required placeholder="Email" className="mt-6 w-full rounded-xl border border-[#eee0e6] px-4 py-3" />
         <div className="mt-3">

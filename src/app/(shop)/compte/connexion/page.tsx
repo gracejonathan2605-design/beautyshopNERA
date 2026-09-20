@@ -18,7 +18,11 @@ export default async function CustomerLoginPage({
       </div>
       <p className="text-xs uppercase tracking-[0.28em] text-gold">Espace cliente</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Connexion</h1>
-      {error ? <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p> : null}
+      {error === "busy" ? (
+        <p className="mt-3 text-sm text-red-700">La boutique est saturée un instant. Réessayez dans quelques secondes.</p>
+      ) : error ? (
+        <p className="mt-3 text-sm text-red-700">Identifiants incorrects.</p>
+      ) : null}
       <form action={loginCustomer} className="mt-8 space-y-3 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
         <input type="hidden" name="next" value={dest} />
         <input name="email" type="email" required placeholder="Email" className="w-full rounded-xl border px-4 py-3" />
