@@ -9,7 +9,7 @@ import { FlashCountdown } from "@/components/shop/flash-countdown";
 import { ProductBadges } from "@/components/shop/product-badges";
 import { formatCfa } from "@/lib/money";
 import { promoPercent, unitPrice } from "@/lib/pricing";
-import { catalogPhotoFor } from "@/lib/product-photos";
+import { catalogPhotoAlt, catalogPhotoFor } from "@/lib/product-photos";
 import { displayVariant, productInStock } from "@/lib/stock-display";
 import { isFlashActive } from "@/lib/flash";
 import { FLASH_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
@@ -45,12 +45,12 @@ export function FlashProductCard({ product }: { product: FlashCardProduct }) {
   const onPromo = percent > 0;
   const inStock = productInStock(product.variants);
   const photo = product.images?.[0]?.url ?? catalogPhotoFor(product.slug, product.name);
-  const photoAlt = product.images?.[0]?.alt ?? product.name;
+  const photoAlt = product.images?.[0]?.alt ?? catalogPhotoAlt(product.name, photo);
   const variantId = variant?.id;
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)]">
-      <Link href={`/produit/${product.slug}`} prefetch={false} className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
+      <Link href={`/produit/${product.slug}`} className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
         <Image
           src={photo}
           alt={photoAlt}
@@ -65,7 +65,7 @@ export function FlashProductCard({ product }: { product: FlashCardProduct }) {
         </div>
       </Link>
       <div className="flex flex-1 flex-col p-4">
-        <Link href={`/produit/${product.slug}`} prefetch={false}>
+        <Link href={`/produit/${product.slug}`}>
           <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
         </Link>
         <p className="mt-3 text-sm font-medium text-wine">
@@ -87,7 +87,6 @@ export function FlashProductCard({ product }: { product: FlashCardProduct }) {
           )}
           <Link
             href={`/produit/${product.slug}`}
-            prefetch={false}
             className="rounded-full border border-[#eee0e6] py-2.5 text-center text-sm text-wine"
           >
             Voir le produit

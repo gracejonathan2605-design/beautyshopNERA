@@ -94,6 +94,7 @@ export function HeroProducts({ className = "" }: { className?: string }) {
         className="h-full w-full object-cover"
         sizes="(max-width: 768px) 100vw, 50vw"
         quality={SHOP_IMAGE_QUALITY}
+        priority
       />
     </div>
   );

@@ -8,7 +8,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="fr">
+    <html lang="fr-CM">
       <body style={{ fontFamily: "serif", background: "#fffcfb", color: "#2a1f24", padding: "4rem 1.5rem", textAlign: "center" }}>
         <h1>NERA Beauté & Shop</h1>
         <p>Cette page n’a pas pu s’afficher. Réessayez, ou contactez-nous au 676 93 51 95.</p>

@@ -7,8 +7,9 @@ import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-toolbar";
 import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
 import { JsonLd } from "@/components/seo/json-ld";
-import { browseShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
+import { browseShopProducts, countShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
 import { breadcrumbJsonLd, categoryIntro, collectionJsonLd, pageMetadata } from "@/lib/seo";
+import { categoryPageTitle } from "@/lib/category-seo";
 import { PRODUCT_GRID_CLASS } from "@/lib/image-limits";
 
 export const runtime = "nodejs";
@@ -22,16 +23,22 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const [{ slug }, raw] = await Promise.all([params, searchParams]);
   const data = await getCachedCategoryPage(slug);
   const query = parseBrowseQuery({ ...raw, rayon: slug });
-  const indexable = !query.q && query.vue === "all" && query.page <= 1;
   if (!data) {
-    return pageMetadata({ title: "Catégorie", description: "Rayon NERA Beauté & Shop.", path: `/categorie/${slug}`, index: false });
+    return pageMetadata({ title: "Catégorie", description: "Rayon NERA Beauté & Shop.", path: `/categorie/${slug}`, index: false, follow: true });
   }
-  const intro = categoryIntro(data.category.name, data.category.description);
+  const intro = categoryIntro(data.category.name, data.category.description, {
+    slug: data.category.slug,
+    parentName: data.category.parent?.name,
+  });
+  const categoryIds = await descendantCategoryIds(data.category.id);
+  const total = await countShopProducts(categoryIds);
+  const indexable = !query.q && query.vue === "all" && query.page <= 1 && total > 0;
   return pageMetadata({
-    title: data.category.name,
+    title: categoryPageTitle(data.category.name, data.category.slug, !data.category.parent),
     description: intro,
     path: `/categorie/${data.category.slug}`,
     index: indexable,
+    follow: true,
   });
 }
 
@@ -43,7 +50,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const query = parseBrowseQuery({ ...raw, rayon: slug });
   const categoryIds = await descendantCategoryIds(category.id);
   const result = await browseShopProducts(query, categoryIds);
-  const intro = categoryIntro(category.name, category.description);
+  const intro = categoryIntro(category.name, category.description, {
+    slug: category.slug,
+    parentName: category.parent?.name,
+  });
+  const indexable = !query.q && query.vue === "all" && query.page <= 1 && result.total > 0;
   const crumbs = [
     { name: "Accueil", path: "/" },
     { name: "Boutique", path: "/boutique" },
@@ -54,14 +65,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
-      <JsonLd
-        data={collectionJsonLd({
-          path: `/categorie/${category.slug}`,
-          name: category.name,
-          description: intro,
-          items: result.items.map((product) => ({ name: product.name, path: `/produit/${product.slug}` })),
-        })}
-      />
+      {indexable ? (
+        <JsonLd
+          data={collectionJsonLd({
+            path: `/categorie/${category.slug}`,
+            name: category.name,
+            description: intro,
+            items: result.items.map((product) => ({ name: product.name, path: `/produit/${product.slug}` })),
+          })}
+        />
+      ) : null}
       <ShopBreadcrumbs
         items={[
           { name: "Accueil", href: "/" },
@@ -82,7 +95,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             <Link
               key={child.id}
               href={`/categorie/${child.slug}`}
-              prefetch={false}
               className="max-w-full rounded-full border border-black/10 bg-cream px-3 py-1.5 text-xs hover:border-brown sm:text-sm"
             >
               {child.name}
@@ -103,11 +115,14 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           Aucun produit dans cette catégorie pour le moment.
         </p>
       ) : (
-        <div className={`mt-8 ${PRODUCT_GRID_CLASS}`}>
-          {result.items.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <>
+          <h2 className="mt-10 font-serif text-3xl text-wine">Dans ce rayon</h2>
+          <div className={`mt-6 ${PRODUCT_GRID_CLASS}`}>
+            {result.items.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </>
       )}
       <CatalogPagination
         query={{ ...query, rayon: "" }}

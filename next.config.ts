@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { LEGACY_CATEGORY_REDIRECTS } from "./src/lib/category-seo";
 
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
@@ -38,6 +39,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4.5mb",
     },
   },
+  async redirects() {
+    return Object.entries(LEGACY_CATEGORY_REDIRECTS).map(([from, to]) => ({
+      source: `/categorie/${from}`,
+      destination: `/categorie/${to}`,
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {
@@ -50,7 +58,7 @@ const nextConfig: NextConfig = {
           { key: "Content-Type", value: "application/xml; charset=utf-8" },
           {
             key: "Cache-Control",
-            value: "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
+            value: "public, max-age=300, s-maxage=600, stale-while-revalidate=3600",
           },
         ],
       },

@@ -54,7 +54,6 @@ export function HomeIdentity({ categories }: { categories: { name: string; slug:
                 <li key={category.slug}>
                   <Link
                     href={`/categorie/${category.slug}`}
-                    prefetch={false}
                     className="inline-block rounded-full border border-[#eee0e6] bg-blush/40 px-3 py-1.5 text-sm text-wine hover:border-gold"
                   >
                     {category.name}

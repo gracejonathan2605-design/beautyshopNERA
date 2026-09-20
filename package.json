@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && prisma generate && tsx scripts/sync-catalog.ts --soft && tsx scripts/write-sitemap.ts && next build",
-    "sitemap": "tsx scripts/write-sitemap.ts",
+    "build": "prisma migrate deploy && prisma generate && tsx scripts/sync-catalog.ts --soft && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

@@ -6,6 +6,7 @@ import { BrandLogo, HeroProducts } from "@/components/brand/logo";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { FlashSection } from "@/components/shop/flash-section";
 import { HomeIdentity } from "@/components/shop/home-identity";
+import { ShopFaq } from "@/components/shop/shop-faq";
 import { JsonLd } from "@/components/seo/json-ld";
 import { pageMetadata, webPageJsonLd } from "@/lib/seo";
 import { NERA_IDENTITY, NERA_PITCH } from "@/lib/nera-identity";
@@ -59,9 +60,13 @@ export default async function HomePage() {
       </section>
     );
   }
-  const { featured, news, promos, categories } = catalog;
+  const { featured: featuredRaw, news, promos: promosRaw, categories } = catalog;
   const flashIds = new Set(flash.map((p) => p.id));
-  const newsWithoutFlash = news.filter((p) => !flashIds.has(p.id));
+  const featured = featuredRaw.filter((p) => !flashIds.has(p.id));
+  const taken = new Set([...flashIds, ...featured.map((p) => p.id)]);
+  const newsWithoutFlash = news.filter((p) => !taken.has(p.id));
+  for (const item of newsWithoutFlash) taken.add(item.id);
+  const promos = promosRaw.filter((p) => !taken.has(p.id));
 
   return (
     <div>
@@ -131,7 +136,6 @@ export default async function HomePage() {
             <Link
               key={c.id}
               href={`/categorie/${c.slug}`}
-              prefetch={false}
               className="group rounded-[1.6rem] border border-[#eee0e6] bg-white/85 p-6 transition hover:-translate-y-0.5 hover:border-gold hover:shadow-lg"
             >
               <p className="font-serif text-2xl text-wine group-hover:text-brown">{c.name}</p>
@@ -159,7 +163,7 @@ export default async function HomePage() {
       )}
 
       <HomeIdentity categories={categories} />
-      <section className="mx-auto max-w-3xl px-4 pb-16">
+      <section className="mx-auto max-w-3xl px-4 pb-8">
         <h2 className="font-serif text-3xl text-wine">NERA, en bref</h2>
         <dl className="mt-6 space-y-4 text-black/65">
           <div>
@@ -188,6 +192,7 @@ export default async function HomePage() {
           </div>
         </dl>
       </section>
+      <ShopFaq />
     </div>
   );
 }

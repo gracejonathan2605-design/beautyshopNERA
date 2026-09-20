@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   applicationName: NERA_IDENTITY.name,
   openGraph: {
-    locale: "fr_FR",
+    locale: "fr_CM",
     siteName: NERA_IDENTITY.name,
     title: "NERA Beauté & Shop | Boutique beauté à Yaoundé",
     description:
@@ -73,7 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     mediaOrigin = "";
   }
   return (
-    <html lang="fr" className={`${outfit.variable} ${cormorant.variable} h-full`}>
+    <html lang="fr-CM" className={`${outfit.variable} ${cormorant.variable} h-full`}>
       <head>
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
         <script

@@ -6,29 +6,11 @@ const PRIVATE = ["/login", "/admin", "/pos", "/compte", "/checkout", "/panier", 
 export default function robots(): MetadataRoute.Robots {
   const base = getSiteUrl();
   return {
-    rules: [
-      {
-        userAgent: "*",
-        allow: ["/", "/sitemap.xml", "/llms.txt"],
-        disallow: PRIVATE,
-      },
-      {
-        userAgent: [
-          "Googlebot",
-          "Googlebot-Image",
-          "Bingbot",
-          "GPTBot",
-          "ChatGPT-User",
-          "ClaudeBot",
-          "PerplexityBot",
-          "Google-Extended",
-          "Applebot-Extended",
-        ],
-        allow: ["/", "/sitemap.xml", "/llms.txt"],
-        disallow: PRIVATE,
-      },
-    ],
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: PRIVATE,
+    },
     sitemap: `${base}/sitemap.xml`,
-    host: base.replace(/^https?:\/\//, ""),
   };
 }

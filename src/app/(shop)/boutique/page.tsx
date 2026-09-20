@@ -21,6 +21,7 @@ export async function generateMetadata({
       "Parcourez le catalogue NERA Beauté & Shop à Yaoundé : soins, cheveux, mèches, perruques, maquillage, parfums et accessoires. Commande en ligne, retrait en magasin.",
     path: "/boutique",
     index: indexable,
+    follow: true,
   });
 }
 
@@ -32,6 +33,7 @@ export default async function BoutiquePage({
   const raw = await searchParams;
   const query = parseBrowseQuery(raw);
   const [rayons, result] = await Promise.all([shopRayons(), browseShopProducts(query)]);
+  const indexable = !query.q && !query.rayon && query.vue === "all" && query.page <= 1;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -41,15 +43,17 @@ export default async function BoutiquePage({
           { name: "Boutique", path: "/boutique" },
         ])}
       />
-      <JsonLd
-        data={collectionJsonLd({
-          path: "/boutique",
-          name: "Boutique NERA Beauté & Shop",
-          description:
-            "Catalogue NERA Beauté & Shop à Yaoundé : soins, cheveux, mèches, perruques, maquillage, parfums et accessoires.",
-          items: result.items.map((p) => ({ name: p.name, path: `/produit/${p.slug}` })),
-        })}
-      />
+      {indexable ? (
+        <JsonLd
+          data={collectionJsonLd({
+            path: "/boutique",
+            name: "Boutique NERA Beauté & Shop",
+            description:
+              "Catalogue NERA Beauté & Shop à Yaoundé : soins, cheveux, mèches, perruques, maquillage, parfums et accessoires.",
+            items: result.items.map((p) => ({ name: p.name, path: `/produit/${p.slug}` })),
+          })}
+        />
+      ) : null}
       <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "Boutique" }]} />
       <p className="mt-3 text-xs uppercase tracking-[0.28em] text-gold">Maison NERA</p>
       <h1 className="mt-2 font-serif text-5xl text-wine">Boutique</h1>
@@ -67,11 +71,14 @@ export default async function BoutiquePage({
         </p>
       ) : null}
       {result.items.length ? (
-        <div className={`mt-8 ${PRODUCT_GRID_CLASS}`}>
-          {result.items.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        <>
+          <h2 className="mt-10 font-serif text-3xl text-wine">Catalogue</h2>
+          <div className={`mt-6 ${PRODUCT_GRID_CLASS}`}>
+            {result.items.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </>
       ) : (
         <p className="mt-10 rounded-[1.7rem] border border-dashed border-[#eee0e6] bg-white/70 p-10 text-center text-black/50">
           Aucun produit pour le moment{query.q ? " avec cette recherche" : ""}.
