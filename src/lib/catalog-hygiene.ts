@@ -80,7 +80,7 @@ export function catalogDuplicateKey(name: string) {
 const BRAND_FROM_NAME: { pattern: RegExp; name: string }[] = [
   { pattern: /\bla roche[\s-]*posay\b/i, name: "La Roche-Posay" },
   { pattern: /\bcerave\b/i, name: "CeraVe" },
-  { pattern: /\bnakae\b/i, name: "Nakae" },
+  { pattern: /\bnakae\b/i, name: "Nakae Beauté" },
   { pattern: /\bxuping\b/i, name: "Xuping" },
   { pattern: /\bstanle[yt]\b/i, name: "Stanley" },
   { pattern: /\bcolgate\b/i, name: "Colgate" },

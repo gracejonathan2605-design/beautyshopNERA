@@ -29,6 +29,7 @@ export function ProductEditForm({
   barcode,
   brandId,
   supplierId,
+  stockOwner = "NERA",
   photoCount,
   hasVideo,
   categoryGroups,
@@ -49,6 +50,7 @@ export function ProductEditForm({
   barcode: string;
   brandId: string;
   supplierId: string;
+  stockOwner?: "NERA" | "PARTNER";
   photoCount: number;
   hasVideo: boolean;
   categoryGroups: CategoryOptionGroup[];
@@ -165,6 +167,10 @@ export function ProductEditForm({
           ))}
         </select>
       ) : null}
+      <select name="stockOwner" defaultValue={stockOwner} className="rounded-xl border px-3 py-2">
+        <option value="NERA">Stock NERA</option>
+        <option value="PARTNER">Stock partenaire</option>
+      </select>
       <input
         name="shortDescription"
         value={shortText}

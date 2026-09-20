@@ -25,7 +25,7 @@ export default async function ProductsAdminPage({
   const [products, categories, brands, suppliers] = await Promise.all([
     prisma.product.findMany({
       where: { deletedAt: null },
-      include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
+      include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, brand: { select: { name: true, isPartner: true } }, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
@@ -103,6 +103,7 @@ export default async function ProductsAdminPage({
                     )}
                     <span className="ml-2 text-xs text-black/40">
                       {p.onlineVisible ? "en ligne" : "dépublié"}
+                      {p.brand?.isPartner ? ` · ${p.brand.name}` : p.brand?.name ? ` · ${p.brand.name}` : ""}
                     </span>
                   </div>
                 </td>

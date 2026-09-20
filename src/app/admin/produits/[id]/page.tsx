@@ -73,6 +73,7 @@ export default async function ProductEditPage({
         barcode={variant?.barcode ?? ""}
         brandId={product.brandId ?? ""}
         supplierId={product.supplierId ?? ""}
+        stockOwner={product.stockOwner}
         photoCount={photos.length}
         hasVideo={Boolean(video)}
         categoryGroups={groupCategoriesForSelect(categories)}

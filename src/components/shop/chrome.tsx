@@ -89,6 +89,9 @@ export function ShopHeader() {
           <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
             À propos
           </Link>
+          <Link href="/marques" className="hidden text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:inline sm:text-sm sm:normal-case sm:tracking-normal">
+            Marques
+          </Link>
           <Link href="/boutique" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
             Boutique
           </Link>
@@ -162,6 +165,11 @@ export function ShopFooter() {
             <p>
               <Link href="/a-propos" className="text-wine underline-offset-2 hover:underline">
                 À propos
+              </Link>
+            </p>
+            <p>
+              <Link href="/marques" className="text-wine underline-offset-2 hover:underline">
+                Marques partenaires
               </Link>
             </p>
             <p>

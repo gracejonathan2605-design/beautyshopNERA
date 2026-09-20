@@ -97,7 +97,9 @@ export async function applyCatalogHygiene(userId?: string) {
       if (!brandId) {
         const slug = slugify(row.brandName) || "marque";
         const existing = await tx.brand.findFirst({
-          where: { OR: [{ slug }, { name: row.brandName }] },
+          where: {
+            OR: [{ slug }, { name: row.brandName }, ...(slug === "nakae-beaute" ? [{ slug: "nakae" }] : [])],
+          },
           select: { id: true },
         });
         if (existing) {

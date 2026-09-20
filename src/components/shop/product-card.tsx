@@ -29,6 +29,7 @@ export function ProductCard({
       inventories?: { onHand: number; reserved: number }[];
     }[];
     images?: { url: string; alt: string | null }[];
+    brand?: { name: string; slug: string; isPartner?: boolean; showOnSite?: boolean } | null;
   };
 }) {
   const variant = displayVariant(product.variants);
@@ -69,6 +70,9 @@ export function ProductCard({
       </div>
       <div className="p-4">
         <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
+        {product.brand?.name ? (
+          <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/40">{product.brand.name}</p>
+        ) : null}
         <p className="mt-1 line-clamp-2 text-sm text-black/50">{product.shortDescription}</p>
         <p className="mt-3 text-sm font-medium text-wine">
           {onPromo && variant ? (

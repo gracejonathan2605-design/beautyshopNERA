@@ -163,7 +163,17 @@ export default async function ProductPage({ params }: Props) {
             isNew={product.isNew}
           />
           <h1 className="mt-2 font-serif text-5xl text-wine">{heading}</h1>
-          {product.brand?.name ? <p className="mt-2 text-sm text-black/50">{product.brand.name}</p> : null}
+          {product.brand?.name ? (
+            product.brand.isPartner && product.brand.showOnSite ? (
+              <p className="mt-2 text-sm text-black/50">
+                <Link href={`/marques/${product.brand.slug}`} className="hover:underline">
+                  {product.brand.name}
+                </Link>
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-black/50">{product.brand.name}</p>
+            )
+          ) : null}
           <ProductCopy description={product.description} shortDescription={product.shortDescription} />
           <h2 className="mt-8 font-serif text-2xl text-wine">Détails</h2>
           <ProductFacts

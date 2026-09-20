@@ -16,7 +16,7 @@ const LINKS: { href: string; label: string; permission?: PermissionCode }[] = [
   { href: "/admin/ventes", label: "Ventes POS", permission: "sales.view" },
   { href: "/admin/clients", label: "Clients", permission: "customers.view" },
   { href: "/admin/promos", label: "Promos & livraison", permission: "promotions.manage" },
-  { href: "/admin/marques", label: "Marques", permission: "brands.view" },
+  { href: "/admin/marques", label: "Marques partenaires", permission: "brands.view" },
   { href: "/admin/fournisseurs", label: "Fournisseurs", permission: "suppliers.view" },
   { href: "/admin/depenses", label: "Dépenses", permission: "expenses.view" },
   { href: "/admin/rapports", label: "Rapports", permission: "reports.view" },

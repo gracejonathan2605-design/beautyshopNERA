@@ -195,7 +195,9 @@ async function uniqueSku(name: string) {
 function refreshCatalog(slug?: string) {
   updateTag("catalog");
   revalidatePath("/admin/produits");
+  revalidatePath("/admin/marques");
   revalidatePath("/boutique");
+  revalidatePath("/marques");
   revalidatePath("/");
   revalidatePath("/flash");
   revalidatePath("/pos");
@@ -358,6 +360,7 @@ export async function saveProduct(
     if (emptyPublish) return { ok: false, error: emptyPublish };
     const brandId = String(formData.get("brandId") ?? "").trim() || null;
     const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
+    const stockOwner = formData.get("stockOwner") === "PARTNER" ? "PARTNER" : "NERA";
     const status = "ACTIVE";
     const requestedSku = String(formData.get("sku") ?? "").trim().toUpperCase();
     if (requestedSku) {
@@ -392,6 +395,7 @@ export async function saveProduct(
         categoryId,
         brandId,
         supplierId,
+        stockOwner,
         isFeatured: formData.get("isFeatured") === "on",
         isNew,
         isPromo,
@@ -534,6 +538,7 @@ export async function updateProduct(
     const onlineVisible = formData.get("onlineVisible") === "on";
     const brandId = String(formData.get("brandId") ?? "").trim() || null;
     const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
+    const stockOwner = formData.get("stockOwner") === "PARTNER" ? "PARTNER" : "NERA";
     const shortDescription = String(formData.get("shortDescription") ?? "").trim() || null;
     if (!productId || !name) return { ok: false, error: "Nom requis" };
     if (!categoryId) return { ok: false, error: "Catégorie obligatoire" };
@@ -591,6 +596,7 @@ export async function updateProduct(
         status: nextStatus,
         brandId,
         supplierId,
+        stockOwner,
         flashStartAt: flash.flashStartAt,
         flashEndAt: flash.flashEndAt,
       },
