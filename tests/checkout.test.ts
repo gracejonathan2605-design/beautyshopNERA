@@ -10,7 +10,8 @@ describe("photos catalogue", () => {
   it("associe chaque produit seed à une photo réelle", () => {
     expect(PRODUCT_PHOTOS["parfum-femme-nera-or"]).toContain("/products/");
     expect(catalogPhotoFor("meche-bresilienne-body-wave")).toBe("/products/hair-body-wave.jpg");
-    expect(catalogPhotoFor("nouveau-gloss", "Gloss rose")).toBe("/products/gloss.jpg");
+    expect(catalogPhotoFor("nouveau-gloss", "Gloss rose")).toBeNull();
+    expect(catalogPhotoFor("savon-karite", "Savon")).toBeNull();
   });
 });
 

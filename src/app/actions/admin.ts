@@ -889,7 +889,7 @@ export async function cleanupLiveCatalog() {
     revalidatePath("/flash");
     bounceProducts(
       "ok",
-      `Catalogue nettoyé : ${result.renamed} nom(s), ${result.unpublished} doublon(s) ou fiche(s) vide(s) retirés de la boutique, ${result.sheets} fiches phares.`,
+      `Catalogue nettoyé : ${result.renamed} nom(s), ${result.unpublished} doublon(s) ou fiche(s) vide(s) retirés de la boutique, ${result.merged} fusion(s) de variantes, ${result.brands} marque(s), ${result.barcodes} code(s)-barres, ${result.sheets} fiches phares.`,
     );
   } catch (err) {
     unstable_rethrow(err);

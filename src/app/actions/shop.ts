@@ -29,10 +29,9 @@ export async function addToCart(variantId: string, quantity = 1) {
   if (available <= 0) return { ok: false as const };
   const cart = await getCart();
   const current = cart.find((i) => i.variantId === variantId)?.quantity ?? 0;
-  await saveCart(upsertCartItem(cart, variantId, Math.min(current + quantity, available)));
+  const count = await saveCart(upsertCartItem(cart, variantId, Math.min(current + quantity, available)));
   revalidatePath("/panier");
-  revalidatePath("/");
-  return { ok: true as const };
+  return { ok: true as const, count };
 }
 
 export async function setCartQty(variantId: string, quantity: number) {
@@ -44,7 +43,6 @@ export async function setCartQty(variantId: string, quantity: number) {
     await saveCart(upsertCartItem(cart, variantId, Math.min(quantity, available)));
   }
   revalidatePath("/panier");
-  revalidatePath("/");
 }
 
 export async function setCartQtyForm(formData: FormData) {

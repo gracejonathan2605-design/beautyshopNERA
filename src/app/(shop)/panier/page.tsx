@@ -8,6 +8,8 @@ import { variantAvailable } from "@/lib/stock-display";
 import Link from "next/link";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
+export const dynamic = "force-dynamic";
+
 export default async function CartPage({
   searchParams,
 }: {

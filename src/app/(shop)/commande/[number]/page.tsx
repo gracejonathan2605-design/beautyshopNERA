@@ -11,6 +11,8 @@ import { getCustomerSession, getStaffSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { isValidOrderAccessToken } from "@/lib/order-access";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrderPage({
   params,
   searchParams,

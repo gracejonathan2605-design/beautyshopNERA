@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { notifyCartCount } from "@/components/shop/cart-badge";
 
 export function AddToCartButton({
   action,
   label = "Ajouter au panier",
   className = "mt-8 rounded-full bg-brown px-8 py-3 text-cream disabled:opacity-60",
 }: {
-  action: () => Promise<{ ok?: boolean } | void>;
+  action: () => Promise<{ ok?: boolean; count?: number } | void>;
   label?: string;
   className?: string;
 }) {
@@ -29,6 +30,7 @@ export function AddToCartButton({
               setBlocked(true);
               return;
             }
+            if (result && typeof result.count === "number") notifyCartCount(result.count);
             setAdded(true);
             window.setTimeout(() => setAdded(false), 5000);
           });

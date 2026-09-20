@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { ShopFooter, ShopHeader, ShopHeaderFallback } from "@/components/shop/chrome";
 
 export const runtime = "nodejs";
+export const revalidate = 60;
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
   return (

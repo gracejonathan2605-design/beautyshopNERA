@@ -239,7 +239,7 @@ export function productJsonLd(input: {
   const url = absoluteUrl(input.path);
   const image = absolutizeMediaUrl(input.image);
   const sku = input.sku?.trim() || undefined;
-  const gtin = gtinFromBarcode(input.barcode);
+  const gtin = gtinFromBarcode(input.barcode) ?? gtinFromBarcode(sku);
   const offer =
     input.price != null && input.price > 0
       ? {

@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { formatCfa } from "@/lib/money";
 import { promoPercent, unitPrice } from "@/lib/pricing";
-import { catalogPhotoAlt, catalogPhotoFor } from "@/lib/product-photos";
+import { ProductPhoto } from "@/components/shop/product-photo";
+import { shopProductImage } from "@/lib/product-photos";
 import { displayVariant, productInStock } from "@/lib/stock-display";
 import { isFlashActive } from "@/lib/flash";
 import { PRODUCT_CARD_SIZES, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
@@ -36,8 +36,8 @@ export function ProductCard({
   const percent = variant ? promoPercent(variant.salePrice, variant.promoPrice) : 0;
   const onPromo = percent > 0;
   const inStock = productInStock(product.variants);
-  const photo = product.images?.[0]?.url ?? catalogPhotoFor(product.slug, product.name);
-  const photoAlt = product.images?.[0]?.alt ?? catalogPhotoAlt(product.name, photo);
+  const photo = shopProductImage(product.slug, product.images?.[0]?.url, product.name);
+  const photoAlt = product.images?.[0]?.alt ?? product.name;
   const flash = isFlashActive({
     status: product.status ?? "ACTIVE",
     onlineVisible: product.onlineVisible ?? true,
@@ -51,14 +51,12 @@ export function ProductCard({
       className="group overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)] transition hover:-translate-y-0.5 hover:border-gold/50"
     >
       <div className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
-        <Image
+        <ProductPhoto
           src={photo}
           alt={photoAlt}
-          fill
           className={`object-cover transition duration-500 group-hover:scale-105 ${inStock ? "" : "grayscale-[0.35]"}`}
           sizes={PRODUCT_CARD_SIZES}
           quality={SHOP_IMAGE_QUALITY}
-          loading="lazy"
         />
         <div className="absolute left-3 top-3">
           <ProductBadges flash={flash} promoPercent={percent} isPromo={product.isPromo} isNew={product.isNew} />

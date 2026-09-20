@@ -1,4 +1,4 @@
-/** Photos locales pour le catalogue NERA — visibles même sans upload Supabase. */
+/** Photos locales des fiches seed NERA — uniquement pour ces slugs exacts. */
 export const PRODUCT_PHOTOS: Record<string, string> = {
   "meche-bresilienne-body-wave": "/products/hair-body-wave.jpg",
   "meche-bresilienne-straight": "/products/hair-straight.jpg",
@@ -12,24 +12,24 @@ export const PRODUCT_PHOTOS: Record<string, string> = {
   "gloss-hydratant": "/products/gloss.jpg",
 };
 
-export function catalogPhotoFor(slug: string, name = "") {
-  if (PRODUCT_PHOTOS[slug]) return PRODUCT_PHOTOS[slug];
-  const hay = `${slug} ${name}`.toLowerCase();
-  if (/(meche|perruque|extension|wig|cheveu)/.test(hay)) return "/products/hair-body-wave.jpg";
-  if (/(parfum|perfume)/.test(hay)) return "/products/perfume.jpg";
-  if (/(lait|creme|beurre|huile|soin|lotion)/.test(hay)) return "/products/body-lotion.jpg";
-  if (/(sac|handbag)/.test(hay)) return "/products/handbag.jpg";
-  if (/(sandale|chaussure|talon)/.test(hay)) return "/products/sandals.jpg";
-  if (/(bijou|boucle|ceinture|accessoire)/.test(hay)) return "/products/jewelry.jpg";
-  if (/(gloss|maquillage|lipstick)/.test(hay)) return "/products/gloss.jpg";
-  return "/products/perfume.jpg";
+export function catalogPhotoFor(slug: string, _name = "") {
+  return PRODUCT_PHOTOS[slug] ?? null;
 }
 
 export function isCatalogFallbackPhoto(url?: string | null) {
   return Boolean(url?.startsWith("/products/"));
 }
 
-export function catalogPhotoAlt(name: string, url?: string | null, category?: string | null) {
-  if (!isCatalogFallbackPhoto(url)) return name;
-  return category ? `Photo illustrative — ${category}` : "Photo illustrative — sélection NERA";
+export function catalogPhotoAlt(name: string, url?: string | null, _category?: string | null) {
+  if (!url) return name;
+  if (isCatalogFallbackPhoto(url) && !Object.values(PRODUCT_PHOTOS).includes(url)) {
+    return name;
+  }
+  return name;
+}
+
+export function shopProductImage(slug: string, uploaded?: string | null, name = "") {
+  const real = uploaded?.trim();
+  if (real) return real;
+  return catalogPhotoFor(slug, name);
 }

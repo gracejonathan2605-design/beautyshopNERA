@@ -9,6 +9,8 @@ import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { sellableOnlineWhere } from "@/lib/product-query";
 import { getCustomerSession } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function CheckoutPage() {
   const cart = await getCart();
   if (!cart.length) redirect("/panier");

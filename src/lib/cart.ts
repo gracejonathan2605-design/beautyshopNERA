@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { CART_COUNT_COOKIE } from "./cart-count";
 
 export type CartItem = {
   variantId: string;
@@ -6,6 +7,11 @@ export type CartItem = {
 };
 
 const CART_COOKIE = "nera_cart";
+export { CART_COUNT_COOKIE };
+
+export function cartQuantity(items: CartItem[]) {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}
 
 export function normalizeCartItems(items: CartItem[]): CartItem[] {
   const byId = new Map<string, number>();
@@ -32,18 +38,33 @@ export async function getCart(): Promise<CartItem[]> {
 
 export async function saveCart(items: CartItem[]) {
   const jar = await cookies();
-  jar.set(CART_COOKIE, JSON.stringify(normalizeCartItems(items)), {
+  const normalized = normalizeCartItems(items);
+  jar.set(CART_COOKIE, JSON.stringify(normalized), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
+  const count = cartQuantity(normalized);
+  if (count > 0) {
+    jar.set(CART_COUNT_COOKIE, String(count), {
+      httpOnly: false,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  } else {
+    jar.delete({ name: CART_COUNT_COOKIE, path: "/" });
+  }
+  return count;
 }
 
 export async function clearCart() {
   const jar = await cookies();
   jar.delete({ name: CART_COOKIE, path: "/" });
+  jar.delete({ name: CART_COUNT_COOKIE, path: "/" });
 }
 
 export function upsertCartItem(items: CartItem[], variantId: string, quantity: number) {

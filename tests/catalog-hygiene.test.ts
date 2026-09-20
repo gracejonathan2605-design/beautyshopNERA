@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyUniquePublicTitles,
   catalogDuplicateKey,
   cleanProductTitle,
+  gtinFromSkuOrBarcode,
+  inferBrandFromName,
   planCatalogHygiene,
   publishOnlineBlocker,
 } from "../src/lib/catalog-hygiene";
@@ -77,6 +80,8 @@ describe("hygiène catalogue", () => {
     ];
     const plan = planCatalogHygiene(products, 20);
     expect(plan.unpublish.length).toBe(5);
+    expect(plan.merge.length).toBe(5);
+    expect(plan.merge.every((row) => row.toId === "ling-0")).toBe(true);
     expect(plan.rename.some((row) => row.id === "chanel" && row.to === "Sac à main")).toBe(true);
     expect(plan.feature).toContain("meche");
     expect(plan.sheets.some((row) => row.id === "meche")).toBe(true);
@@ -98,5 +103,46 @@ describe("hygiène catalogue", () => {
     expect(plan.unpublish.length).toBe(5);
     expect(plan.unpublish.every((row) => /description/i.test(row.reason))).toBe(true);
     expect(plan.sheets.length).toBeGreaterThan(0);
+  });
+
+  it("lit une marque et un GTIN seulement s’ils sont déjà dans la fiche", () => {
+    expect(inferBrandFromName("Crème CeraVe hydratante")).toBe("CeraVe");
+    expect(inferBrandFromName("Gourde Stanley inoxydable")).toBe("Stanley");
+    expect(inferBrandFromName("Savon")).toBeNull();
+    expect(inferBrandFromName("Parfum")).toBeNull();
+    expect(gtinFromSkuOrBarcode(null, "6131234567890")).toBe("6131234567890");
+    expect(gtinFromSkuOrBarcode(null, "GLOSS-01")).toBeUndefined();
+    const now = new Date("2026-01-01");
+    const plan = planCatalogHygiene(
+      [
+        {
+          id: "cerave",
+          name: "Lait CeraVe",
+          sku: "6131234567890",
+          brandId: null,
+          shortDescription: "Lait corporel.",
+          description: "Lait corporel CeraVe.",
+          onlineVisible: true,
+          isFeatured: false,
+          photoCount: 1,
+          createdAt: now,
+          variants: [{ id: "v1", sku: "6131234567890", barcode: null, name: "Default" }],
+        },
+      ],
+      20,
+    );
+    expect(plan.brands).toEqual([{ id: "cerave", brandName: "CeraVe" }]);
+    expect(plan.barcodes).toEqual([{ variantId: "v1", barcode: "6131234567890" }]);
+  });
+
+  it("distingue les H1 tant que des fiches identiques restent séparées", () => {
+    const titles = applyUniquePublicTitles([
+      { id: "a", name: "Lingerie féminine", sku: "LIN-1", slug: "lingerie-feminine" },
+      { id: "b", name: "Lingerie féminine", sku: "LIN-2", slug: "lingerie-feminine-2" },
+      { id: "c", name: "Savon", sku: null, slug: "savon" },
+    ]);
+    expect(titles[0].name).toBe("Lingerie féminine · LIN-1");
+    expect(titles[1].name).toBe("Lingerie féminine · LIN-2");
+    expect(titles[2].name).toBe("Savon");
   });
 });

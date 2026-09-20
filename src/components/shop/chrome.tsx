@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getShopSettings, DEFAULT_SETTINGS } from "@/lib/settings";
-import { getCart } from "@/lib/cart";
 import { neraParentRayons } from "@/lib/catalog";
 import { getNavCategories } from "@/lib/catalog-cache";
-import { StaffToolbar } from "@/components/staff/toolbar";
+import { StaffToolbarClient } from "@/components/staff/toolbar-client";
+import { CartLink, ShopCartBadge } from "@/components/shop/cart-badge";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { BrandLockup, BrandLogo } from "@/components/brand/logo";
 import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
@@ -38,25 +38,6 @@ function RayonChips({ categories }: { categories: { id?: string; name: string; s
       ))}
     </nav>
   );
-}
-
-function CartLink({ count }: { count: number }) {
-  return (
-    <Link href="/panier" className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
-      Panier ({count})
-    </Link>
-  );
-}
-
-async function ShopCartBadge() {
-  let cart: Awaited<ReturnType<typeof getCart>> = [];
-  try {
-    cart = await getCart();
-  } catch {
-    cart = [];
-  }
-  const count = cart.reduce((s, i) => s + i.quantity, 0);
-  return <CartLink count={count} />;
 }
 
 export function ShopHeaderFallback() {
@@ -98,7 +79,7 @@ export async function ShopHeader() {
 
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
-      <StaffToolbar />
+      <StaffToolbarClient />
       <p className="bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-wine">
         Yaoundé · OM & MoMo · Livraison rapide sous 24h
       </p>

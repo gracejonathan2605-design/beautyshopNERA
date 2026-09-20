@@ -9,6 +9,8 @@ import { ORDER_STATUS_LABELS } from "@/lib/status-labels";
 import { orderConfirmationPath } from "@/lib/order-access";
 import { AccountProfileForm } from "@/components/shop/account-profile-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function AccountPage({
   searchParams,
 }: {
