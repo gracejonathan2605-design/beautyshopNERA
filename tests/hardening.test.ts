@@ -98,13 +98,13 @@ describe("téléphone suffixe", () => {
 describe("pool Prisma", () => {
   it("limite le pool Prisma sous le plafond session Supabase (15)", () => {
     const url = prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?schema=public");
-    expect(url).toContain("connection_limit=2");
+    expect(url).toContain("connection_limit=1");
     expect(url).toContain("pool_timeout=20");
-    expect(url).not.toMatch(/connection_limit=1(?!\d)/);
+    expect(url).not.toMatch(/connection_limit=2/);
     expect(
       prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?connection_limit=8"),
     ).toContain("connection_limit=8");
-    expect(readFileSync("src/lib/prisma.ts", "utf8")).not.toMatch(/connection_limit=1"/);
+    expect(readFileSync("src/lib/prisma.ts", "utf8")).toContain("PRISMA_DEFAULT_CONNECTION_LIMIT = 1");
     expect(readFileSync("src/lib/catalog-cache.ts", "utf8")).not.toMatch(
       /Promise\.all\(\[\s*prisma\.product\.findMany/,
     );

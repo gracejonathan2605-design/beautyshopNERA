@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-/** Session pooler Supabase = 15 clients. Fluid Compute ouvre plusieurs instances : 2 / instance. */
-export const PRISMA_DEFAULT_CONNECTION_LIMIT = 2;
+/** Session pooler Supabase = 15 clients. Une connexion par instance, sinon l’admin sature le pool. */
+export const PRISMA_DEFAULT_CONNECTION_LIMIT = 1;
 export const PRISMA_DEFAULT_POOL_TIMEOUT = 20;
 
 export function prismaDatasourceUrl(databaseUrl?: string | null) {
@@ -27,6 +27,4 @@ export const prisma =
     ...(datasourceUrl ? { datasources: { db: { url: datasourceUrl } } } : {}),
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+globalForPrisma.prisma = prisma;
