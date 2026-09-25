@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+
+const hasDatabase = Boolean(process.env.DATABASE_URL);
 import { prisma } from "../src/lib/prisma";
 import { applyStockChange, availableQty } from "../src/services/inventory.service";
 import { createPosSale } from "../src/services/sale.service";
@@ -6,7 +8,7 @@ import { unitPrice } from "../src/lib/pricing";
 import { hasPermission, defaultStaffPath } from "../src/lib/permissions";
 
 describe("stock", () => {
-  it("diminue le stock après une vente POS", async () => {
+  it.skipIf(!hasDatabase)("diminue le stock après une vente POS", async () => {
     const variant = await prisma.productVariant.findFirstOrThrow({
       where: { sku: "MEC-BW-18" },
       include: { inventories: true },
@@ -26,7 +28,7 @@ describe("stock", () => {
     expect(after.onHand).toBe(before - 1);
   });
 
-  it("refuse un stock disponible négatif", async () => {
+  it.skipIf(!hasDatabase)("refuse un stock disponible négatif", async () => {
     const variant = await prisma.productVariant.findFirstOrThrow({ include: { inventories: true } });
     const inv = variant.inventories[0];
     await expect(
@@ -47,7 +49,7 @@ describe("stock", () => {
 });
 
 describe("permissions", () => {
-  it("un caissier n'a pas les paramètres", async () => {
+  it.skipIf(!hasDatabase)("un caissier n'a pas les paramètres", async () => {
     const cashier = await prisma.user.findFirstOrThrow({
       where: { email: "caisse@nerabeaute.cm" },
       include: { role: { include: { permissions: { include: { permission: true } } } } },
@@ -62,7 +64,7 @@ describe("permissions", () => {
     expect(defaultStaffPath(session)).toBe("/pos");
   });
 
-  it("le super admin a tout", async () => {
+  it.skipIf(!hasDatabase)("le super admin a tout", async () => {
     const admin = await prisma.user.findFirstOrThrow({
       where: { email: process.env.SEED_ADMIN_EMAIL ?? "raisaodin1@gmail.com" },
       include: { role: true },
