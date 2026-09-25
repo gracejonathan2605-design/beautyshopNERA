@@ -119,13 +119,16 @@ export async function receivePurchase(input: {
   reference?: string;
 }) {
   if (input.quantity <= 0) throw new Error("La quantité doit être positive");
-  return prisma.$transaction((tx) =>
+  const result = await prisma.$transaction((tx) =>
     applyStockChange(tx, {
       ...input,
       type: "PURCHASE",
       quantity: input.quantity,
     }),
   );
+  const { notifyRestocksForVariant } = await import("@/services/restock.service");
+  void notifyRestocksForVariant(input.variantId).catch(() => undefined);
+  return result;
 }
 
 export async function adjustStock(input: {

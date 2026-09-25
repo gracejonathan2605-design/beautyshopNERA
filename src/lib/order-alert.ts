@@ -266,6 +266,93 @@ async function postJson(url: string, body: unknown, extraHeaders: Record<string,
   return res;
 }
 
+export function parseCustomerWhatsApp(raw?: string | null) {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.startsWith("237") && digits.length === 12 && digits[3] === "6") return digits;
+  if (digits.startsWith("0") && digits.length === 10 && digits[1] === "6") return `237${digits.slice(1)}`;
+  if (digits.length === 9 && digits.startsWith("6")) return `237${digits}`;
+  return "";
+}
+
+export function formatCustomerOrderWhatsApp(input: {
+  number: string;
+  totalLabel: string;
+  sentence: string;
+  payCode?: string;
+}) {
+  const lines = [
+    "NERA Beauté & Shop",
+    "",
+    input.number.startsWith("NERA") || input.number.startsWith("CMD") ? `Commande ${input.number}` : input.number,
+    input.sentence,
+  ];
+  if (input.totalLabel && input.totalLabel !== "0 FCFA") lines.push(`Montant : ${input.totalLabel}`);
+  if (input.payCode) {
+    lines.push("");
+    lines.push(`Paiement : ${input.payCode}`);
+    lines.push("Après le transfert, envoyez la référence depuis la page de commande.");
+  }
+  return lines.join("\n");
+}
+
+export async function sendCustomerWhatsApp(phone: string, text: string, stored?: Partial<OrderAlertStored> | null) {
+  const customer = parseCustomerWhatsApp(phone);
+  if (!customer) return { sent: false, reason: "invalid-phone" as const, detail: "" };
+  const channels = resolveOrderAlertChannels(stored);
+  const tasks: Promise<unknown>[] = [];
+  if (channels.greenApiId && channels.greenApiToken) {
+    tasks.push(
+      sendViaGreenApi({
+        apiUrl: channels.greenApiUrl ?? "",
+        id: channels.greenApiId,
+        token: channels.greenApiToken,
+        chatId: `${customer}@c.us`,
+        text,
+      }),
+    );
+  }
+  if (channels.whatsappToken && channels.whatsappPhoneNumberId) {
+    tasks.push(
+      postJson(
+        `https://graph.facebook.com/v21.0/${channels.whatsappPhoneNumberId}/messages`,
+        {
+          messaging_product: "whatsapp",
+          to: customer,
+          type: "text",
+          text: { body: text, preview_url: false },
+        },
+        { Authorization: `Bearer ${channels.whatsappToken}` },
+      ),
+    );
+  }
+  if (!tasks.length) return { sent: false, reason: "not-configured" as const, detail: "" };
+  const results = await Promise.allSettled(tasks);
+  const sent = results.some((row) => row.status === "fulfilled");
+  return { sent, reason: sent ? ("ok" as const) : ("failed" as const), detail: "" };
+}
+
+export async function notifyCustomerAboutOrder(input: {
+  phone?: string | null;
+  number: string;
+  total: number;
+  sentence: string;
+  payCode?: string;
+}) {
+  if (!input.phone?.trim()) return;
+  const text = formatCustomerOrderWhatsApp({
+    number: input.number,
+    totalLabel: formatCfa(input.total),
+    sentence: input.sentence,
+    payCode: input.payCode,
+  });
+  try {
+    const settings = await getShopSettings().catch(() => null);
+    await sendCustomerWhatsApp(input.phone, text, settings);
+  } catch {
+    /* le parcours boutique continue si WhatsApp est indisponible */
+  }
+}
+
 export async function notifyStaffNewOnlineOrder(order: StaffOrderAlert) {
   const text = formatStaffOrderWhatsApp(order);
   try {

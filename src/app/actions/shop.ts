@@ -13,6 +13,9 @@ import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import { shopPublicError } from "@/lib/shop-public-error";
+import { rateLimit } from "@/lib/rate-limit";
+import { reportError } from "@/lib/monitor";
+import { uploadProductImage } from "@/lib/storage";
 import { attachGuestOrdersByPhone, findCustomerByPhone } from "@/services/customer.service";
 
 async function availableForVariant(variantId: string) {
@@ -83,6 +86,9 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     const name = String(formData.get("shippingName") ?? "").trim();
     const phone = String(formData.get("shippingPhone") ?? "").trim();
     if (!name || !phone) return { ok: false, error: "Indiquez votre nom et votre téléphone." };
+    if (!rateLimit(`checkout:${phone}`, 5, 10 * 60 * 1000)) {
+      return { ok: false, error: "Trop de commandes sur ce numéro. Réessayez dans quelques minutes." };
+    }
 
     const fulfillment = String(formData.get("fulfillment") ?? "PICKUP") === "DELIVERY" ? "DELIVERY" : "PICKUP";
     const deliveryZoneId = String(formData.get("deliveryZoneId") ?? "").trim() || null;
@@ -139,8 +145,67 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     }
   } catch (err) {
     unstable_rethrow(err);
+    reportError("checkout", err);
     return { ok: false, error: shopPublicError(err) };
   }
+}
+
+export async function submitPaymentProof(formData: FormData) {
+  const number = String(formData.get("number") ?? "").trim();
+  const token = String(formData.get("token") ?? "").trim();
+  const reference = String(formData.get("reference") ?? "").trim();
+  if (!number || !reference) redirect(`/commande/${encodeURIComponent(number)}?erreur=preuve`);
+  const { isValidOrderAccessToken, orderConfirmationPath } = await import("@/lib/order-access");
+  const session = await getCustomerSession();
+  const order = await prisma.order.findUnique({
+    where: { number },
+    include: { payments: true },
+  });
+  const allowed =
+    order &&
+    (isValidOrderAccessToken(number, token) || (session && order.customerId === session.customerId));
+  if (!order || !allowed) redirect("/panier");
+  const pending = order.payments.find((p) => p.status === "PENDING") ?? order.payments[0];
+  const back = token ? `${orderConfirmationPath(number)}` : `/commande/${encodeURIComponent(number)}`;
+  if (!pending) redirect(back);
+  let proofUrl: string | null = null;
+  const file = formData.get("proof");
+  if (file instanceof File && file.size > 0) {
+    try {
+      proofUrl = await uploadProductImage(file, `payments/${order.id}`, 0);
+    } catch (err) {
+      reportError("payment-proof", err);
+    }
+  }
+  await prisma.payment.update({
+    where: { id: pending.id },
+    data: {
+      reference,
+      proofUrl: proofUrl ?? pending.proofUrl,
+      note: pending.note,
+    },
+  });
+  revalidatePath(`/commande/${number}`);
+  revalidatePath(`/admin/commandes/${order.id}`);
+  redirect(`${back}${back.includes("?") ? "&" : "?"}ok=preuve`);
+}
+
+export async function requestRestock(formData: FormData) {
+  const productId = String(formData.get("productId") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim();
+  if (!productId || !phone) redirect(slug ? `/produit/${slug}` : "/boutique");
+  if (!rateLimit(`restock:${phone}`, 6, 60 * 60 * 1000)) {
+    redirect(slug ? `/produit/${slug}?erreur=relance` : "/boutique");
+  }
+  const existing = await prisma.restockRequest.findFirst({
+    where: { productId, phone, notifiedAt: null },
+    select: { id: true },
+  });
+  if (!existing) {
+    await prisma.restockRequest.create({ data: { productId, phone } });
+  }
+  redirect(slug ? `/produit/${slug}?ok=relance` : "/boutique");
 }
 
 export type ProfileState = { ok: boolean; error?: string };

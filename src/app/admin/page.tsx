@@ -37,6 +37,20 @@ export default async function AdminHomePage() {
     : [];
   const orderIds = new Map(relatedOrders.map((o) => [o.number, o.id]));
   const low = lowStock.filter((row) => availableQty(row.onHand, row.reserved) <= row.minQuantity).slice(0, 6);
+  const [toPay, toPrepare] = await Promise.all([
+    prisma.order.findMany({
+      where: { payments: { some: { status: "PENDING" } }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
+      orderBy: { createdAt: "asc" },
+      take: 8,
+      select: { id: true, number: true, total: true, shippingName: true },
+    }),
+    prisma.order.findMany({
+      where: { status: { in: ["CONFIRMED", "PREPARING", "READY"] } },
+      orderBy: { createdAt: "asc" },
+      take: 8,
+      select: { id: true, number: true, status: true, fulfillment: true, total: true },
+    }),
+  ]);
   const cards = [
     ["CA du jour", formatCfa(m.revenue)],
     ["POS", formatCfa(m.posRevenue)],
@@ -48,6 +62,42 @@ export default async function AdminHomePage() {
   return (
     <div>
       <h1 className="font-serif text-4xl">Tableau de bord</h1>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <section className="rounded-2xl border border-[#eee0e6] bg-white p-5">
+          <h2 className="font-serif text-2xl">À payer</h2>
+          {toPay.length ? (
+            <ul className="mt-3 space-y-2 text-sm">
+              {toPay.map((order) => (
+                <li key={order.id}>
+                  <Link href={`/admin/commandes/${order.id}`} className="underline">
+                    {order.number}
+                  </Link>
+                  <span className="text-black/50"> · {order.shippingName || "Invité"} · {formatCfa(order.total)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-black/50">Aucun paiement en attente.</p>
+          )}
+        </section>
+        <section className="rounded-2xl border border-[#eee0e6] bg-white p-5">
+          <h2 className="font-serif text-2xl">À préparer</h2>
+          {toPrepare.length ? (
+            <ul className="mt-3 space-y-2 text-sm">
+              {toPrepare.map((order) => (
+                <li key={order.id}>
+                  <Link href={`/admin/commandes/${order.id}`} className="underline">
+                    {order.number}
+                  </Link>
+                  <span className="text-black/50"> · {order.status} · {order.fulfillment === "DELIVERY" ? "livraison" : "retrait"}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-black/50">Rien à préparer.</p>
+          )}
+        </section>
+      </div>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {cards.map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-[#eee0e6] bg-white p-5 shadow-sm">

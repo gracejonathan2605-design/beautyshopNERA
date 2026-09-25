@@ -117,10 +117,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       <section className="mt-6 rounded-2xl bg-cream p-5">
         <h2 className="font-serif text-2xl">Paiement</h2>
         {order.payments.map((p) => (
-          <p key={p.id} className="mt-2 text-sm">
-            {PAYMENT_LABELS[p.method] ?? p.method} · {formatCfa(p.amount)} · {p.status}
-            {p.reference ? ` · ${p.reference}` : ""}
-          </p>
+          <div key={p.id} className="mt-2 text-sm">
+            <p>
+              {PAYMENT_LABELS[p.method] ?? p.method} · {formatCfa(p.amount)} · {p.status}
+              {p.reference ? ` · réf. ${p.reference}` : ""}
+            </p>
+            {p.proofUrl ? (
+              <a href={p.proofUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block underline">
+                Voir le reçu
+              </a>
+            ) : null}
+          </div>
         ))}
         {!order.payments.length ? <p className="mt-2 text-sm text-black/50">Aucun paiement.</p> : null}
         {paid ? <p className="mt-2 text-sm text-emerald-800">Encaissé.</p> : null}

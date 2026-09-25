@@ -1,23 +1,6 @@
-export const PAYMENT_INSTRUCTIONS = {
-  ORANGE: {
-    id: "ORANGE" as const,
-    label: "Orange Money",
-    title: "Payer sans frais avec Orange Money",
-    code: "#150*47*1059897#",
-    name: "YORIX DIGITAL GROUP CM",
-    detail:
-      "Composez le code marchand Orange Money. Le paiement par code marchand se fait sans frais. Indiquez le numéro de commande dans le motif si demandé.",
-  },
-  MTN: {
-    id: "MTN" as const,
-    label: "MTN Mobile Money",
-    title: "Transfert MTN Money",
-    code: "676935195",
-    name: "Kouekam Raisa",
-    detail:
-      "Effectuez un transfert MTN normal vers ce numéro. Précisez le numéro de commande dans le motif. Les frais d’opérateur MTN restent à votre charge.",
-  },
-};
+import { paymentInstructions } from "./payments/mobile-money";
+
+export const PAYMENT_INSTRUCTIONS = paymentInstructions();
 
 export type PaymentNetwork = keyof typeof PAYMENT_INSTRUCTIONS;
 

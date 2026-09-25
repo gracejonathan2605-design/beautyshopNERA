@@ -102,6 +102,16 @@ enum BrandCollectionKind {
   MANUAL
 }
 
+enum SettlementStatus {
+  DRAFT
+  PAID
+}
+
+enum IntakeKind {
+  PURCHASE
+  CONSIGNMENT
+}
+
 enum CashSessionStatus {
   OPEN
   CLOSED
@@ -260,11 +270,18 @@ model Brand {
   isActive         Boolean           @default(true)
   sortOrder        Int               @default(0)
   partnershipType  PartnershipType   @default(UNSET)
+  commissionBps    Int               @default(0)
+  settlementDays   Int               @default(7)
+  contactName      String?
+  contactPhone     String?
+  contactEmail     String?
   deletedAt        DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   products         Product[]
   collections      BrandCollection[]
+  intakes          BrandIntake[]
+  settlements      BrandSettlement[]
 
   @@index([isPartner, showOnSite, isActive, sortOrder])
 }
@@ -365,6 +382,7 @@ model Product {
   images           ProductImage[]
   promotions       Promotion[]
   collectionItems  BrandCollectionProduct[]
+  restockRequests  RestockRequest[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -396,6 +414,7 @@ model ProductVariant {
   movements   StockMovement[]
   orderItems  OrderItem[]
   saleItems   SaleItem[]
+  intakeLines BrandIntakeLine[]
 
   @@index([barcode])
   @@index([productId])
@@ -572,6 +591,7 @@ model Payment {
   provider  String?
   reference String?
   note      String?
+  proofUrl  String?
   orderId   String?
   order     Order?        @relation(fields: [orderId], references: [id])
   saleId    String?
@@ -581,6 +601,58 @@ model Payment {
   @@index([createdAt])
   @@index([orderId])
   @@index([saleId])
+}
+
+model BrandIntake {
+  id          String           @id @default(cuid())
+  brandId     String
+  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  kind        IntakeKind
+  note        String?
+  createdAt   DateTime         @default(now())
+  lines       BrandIntakeLine[]
+
+  @@index([brandId, createdAt])
+}
+
+model BrandIntakeLine {
+  id        String         @id @default(cuid())
+  intakeId  String
+  intake    BrandIntake   @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitCost  Int
+}
+
+model BrandSettlement {
+  id          String           @id @default(cuid())
+  brandId     String
+  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  periodFrom  DateTime
+  periodTo    DateTime
+  gross       Int
+  cost        Int
+  neraShare   Int
+  brandShare  Int
+  status      SettlementStatus @default(DRAFT)
+  paidAt      DateTime?
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([brandId, periodFrom])
+}
+
+model RestockRequest {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  phone      String
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+
+  @@index([productId, notifiedAt])
+  @@index([phone])
 }
 
 model ExpenseCategory {

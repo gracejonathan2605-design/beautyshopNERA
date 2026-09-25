@@ -11,6 +11,7 @@ const LINKS: { href: string; label: string; permission?: PermissionCode }[] = [
   { href: "/admin/produits", label: "Produits", permission: "products.view" },
   { href: "/admin/produits/lot", label: "Publier un lot", permission: "products.create" },
   { href: "/admin/categories", label: "Rayons", permission: "categories.view" },
+  { href: "/admin/attributs", label: "Teintes & tailles", permission: "attributes.view" },
   { href: "/admin/stocks", label: "Stocks", permission: "stock.view" },
   { href: "/admin/commandes", label: "Commandes", permission: "orders.view" },
   { href: "/admin/ventes", label: "Ventes POS", permission: "sales.view" },

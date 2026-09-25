@@ -22,9 +22,10 @@ import { productInStock } from "@/lib/stock-display";
 import { ProductCopy, ProductFacts } from "@/components/shop/product-copy";
 import { ProductHeroImage } from "@/components/shop/product-hero-image";
 import { ProductPhotoPlaceholder } from "@/components/shop/product-photo";
+import { requestRestock } from "@/app/actions/shop";
 import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ ok?: string; erreur?: string }> };
 
 async function loadSellableProduct(slug: string) {
   const [product, identity] = await Promise.all([
@@ -72,8 +73,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function ProductPage({ params }: Props) {
+export default async function ProductPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const query = (await searchParams) ?? {};
   const loaded = await loadSellableProduct(slug);
   if (!loaded) notFound();
   const { product, heading } = loaded;
@@ -196,6 +198,16 @@ export default async function ProductPage({ params }: Props) {
             }))}
             whatsappUrl={wa}
           />
+          {!inStock ? (
+            <form action={requestRestock} className="mt-4 space-y-2 rounded-2xl border border-[#eee0e6] p-4">
+              <p className="text-sm text-black/60">Prévenez-moi sur WhatsApp dès le retour en stock.</p>
+              <input type="hidden" name="productId" value={product.id} />
+              <input type="hidden" name="slug" value={product.slug} />
+              <input name="phone" required placeholder="Téléphone" className="w-full rounded-xl border px-3 py-2" />
+              <button className="rounded-full bg-brown px-4 py-2 text-sm text-cream">Me prévenir</button>
+              {query.ok === "relance" ? <p className="text-sm text-emerald-800">C’est noté. Nous écrirons sur ce numéro.</p> : null}
+            </form>
+          ) : null}
         </div>
       </div>
       {related.length ? (

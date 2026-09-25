@@ -5,7 +5,10 @@ import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
-import { notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
+import { notifyCustomerAboutOrder, notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
+import { customerStatusSentence } from "@/lib/order-timeline";
+import { paymentInstructions } from "@/lib/payments/mobile-money";
+import { reportError } from "@/lib/monitor";
 import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
 import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
@@ -181,6 +184,23 @@ export async function createOnlineOrder(input: {
     void notifyStaffNewOnlineOrder(alert);
   }
 
+  const network = order.payments[0]?.provider === "MTN" ? "MTN" : "ORANGE";
+  try {
+    const settings = await getShopSettings().catch(() => null);
+    const pay = paymentInstructions(settings)[network];
+    after(() =>
+      notifyCustomerAboutOrder({
+        phone: order.shippingPhone,
+        number: order.number,
+        total: Number(order.total),
+        sentence: "Nous avons reçu votre commande.",
+        payCode: `${pay.code} (${pay.name})`,
+      }),
+    );
+  } catch (err) {
+    reportError("customer-whatsapp", err);
+  }
+
   return order;
 }
 
@@ -192,7 +212,7 @@ export async function updateOrderStatus(input: {
   unpaidOnly?: boolean;
 }) {
   const locationId = await getDefaultLocationId();
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${input.orderId} FOR UPDATE`;
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
@@ -207,6 +227,22 @@ export async function updateOrderStatus(input: {
     }
     return applyLockedOrderStatus(tx, order, input.status, input.userId, locationId);
   });
+  if (!input.unpaidOnly && updated.shippingPhone) {
+    const paid = updated.payments.some((p) => p.status === "COMPLETED") && updated.status !== "CANCELLED" && updated.status !== "REFUNDED";
+    try {
+      after(() =>
+        notifyCustomerAboutOrder({
+          phone: updated.shippingPhone,
+          number: updated.number,
+          total: Number(updated.total),
+          sentence: customerStatusSentence(updated.status, paid),
+        }),
+      );
+    } catch (err) {
+      reportError("customer-whatsapp-status", err);
+    }
+  }
+  return updated;
 }
 
 type LockedOrder = Prisma.OrderGetPayload<{ include: { items: true; payments: true } }>;
@@ -322,14 +358,14 @@ export async function collectCompletedOrderPayment(input: {
   cashierName: string;
 }) {
   const locationId = await getDefaultLocationId();
-  return prisma.$transaction(async (tx) => {
+  const order = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${input.orderId} FOR UPDATE`;
-    const order = await tx.order.findUnique({
+    const current = await tx.order.findUnique({
       where: { id: input.orderId },
       include: { items: true, payments: true },
     });
-    if (!order) throw new Error("Commande introuvable");
-    const pending = order.payments.find((p) => p.status === "PENDING");
+    if (!current) throw new Error("Commande introuvable");
+    const pending = current.payments.find((p) => p.status === "PENDING");
     if (!pending) throw new Error("Aucun paiement en attente sur cette commande");
     const claimedPay = await tx.payment.updateMany({
       where: { id: pending.id, status: "PENDING" },
@@ -339,11 +375,24 @@ export async function collectCompletedOrderPayment(input: {
       },
     });
     if (claimedPay.count !== 1) throw new Error("Ce paiement a déjà été encaissé.");
-    if (order.status === "PENDING") {
-      await applyLockedOrderStatus(tx, order, "CONFIRMED", input.userId, locationId);
+    if (current.status === "PENDING") {
+      await applyLockedOrderStatus(tx, current, "CONFIRMED", input.userId, locationId);
     }
-    return order;
+    return current;
   });
+  try {
+    after(() =>
+      notifyCustomerAboutOrder({
+        phone: order.shippingPhone,
+        number: order.number,
+        total: Number(order.total),
+        sentence: "Paiement reçu. Nous préparons votre commande.",
+      }),
+    );
+  } catch (err) {
+    reportError("customer-whatsapp-paid", err);
+  }
+  return order;
 }
 
 export async function releaseExpiredUnpaidOrders(now = new Date()) {

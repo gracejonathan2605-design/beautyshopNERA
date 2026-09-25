@@ -3,7 +3,8 @@
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { checkoutOrder, previewCheckoutCoupon, type CheckoutState } from "@/app/actions/shop";
 import { formatCfa } from "@/lib/money";
-import { PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor } from "@/lib/checkout";
+import { PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor, type PaymentNetwork } from "@/lib/checkout";
+import type { PaymentInstruction } from "@/lib/payments/mobile-money";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
@@ -13,9 +14,11 @@ export function CheckoutForm({
   subtotal,
   zones,
   customer,
+  instructions = PAYMENT_INSTRUCTIONS,
 }: {
   subtotal: number;
   zones: { id: string; name: string; fee: number }[];
+  instructions?: Record<PaymentNetwork, PaymentInstruction>;
   customer?: {
     shippingName: string;
     shippingPhone: string;
@@ -194,14 +197,14 @@ export function CheckoutForm({
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="ORANGE" defaultChecked className="mt-1" />
           <span>
-            <strong>Orange Money — sans frais.</strong> {PAYMENT_INSTRUCTIONS.ORANGE.code} ·{" "}
-            {PAYMENT_INSTRUCTIONS.ORANGE.name}.
+            <strong>Orange Money — sans frais.</strong> {instructions.ORANGE.code} ·{" "}
+            {instructions.ORANGE.name}.
           </span>
         </label>
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="MTN" className="mt-1" />
           <span>
-            <strong>MTN MoMo.</strong> {PAYMENT_INSTRUCTIONS.MTN.code} · {PAYMENT_INSTRUCTIONS.MTN.name}.
+            <strong>MTN MoMo.</strong> {instructions.MTN.code} · {instructions.MTN.name}.
           </span>
         </label>
       </fieldset>

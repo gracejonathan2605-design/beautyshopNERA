@@ -44,6 +44,18 @@ export default async function SettingsPage({
           <input name="mtnPhone" defaultValue={s.mtnPhone} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
         </label>
         <label className="text-sm text-black/50">
+          Nom du compte MTN
+          <input name="mtnAccountName" defaultValue={s.mtnAccountName} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
+        </label>
+        <label className="text-sm text-black/50">
+          Code marchand Orange Money
+          <input name="orangeMerchantCode" defaultValue={s.orangeMerchantCode} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
+        </label>
+        <label className="text-sm text-black/50">
+          Nom du compte Orange
+          <input name="orangeMerchantName" defaultValue={s.orangeMerchantName} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
+        </label>
+        <label className="text-sm text-black/50">
           RCCM
           <input name="rccm" defaultValue={s.rccm} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
         </label>

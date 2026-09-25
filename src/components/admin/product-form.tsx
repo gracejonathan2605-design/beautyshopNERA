@@ -20,10 +20,14 @@ export function ProductForm({
   categoryGroups,
   brands = [],
   suppliers = [],
+  defaultBrandId = "",
+  defaultStockOwner = "NERA",
 }: {
   categoryGroups: CategoryOptionGroup[];
   brands?: { id: string; name: string }[];
   suppliers?: { id: string; name: string }[];
+  defaultBrandId?: string;
+  defaultStockOwner?: "NERA" | "PARTNER";
 }) {
   const [state, action, pending] = useActionState(saveProductSafe, INITIAL);
   const [, startTransition] = useTransition();
@@ -144,7 +148,7 @@ export function ProductForm({
       />
       <CategorySelect groups={categoryGroups} className="rounded-xl border px-3 py-2 md:col-span-2" />
       {brands.length ? (
-        <select name="brandId" className="rounded-xl border px-3 py-2">
+        <select name="brandId" defaultValue={defaultBrandId} className="rounded-xl border px-3 py-2">
           <option value="">Marque (optionnel)</option>
           {brands.map((b) => (
             <option key={b.id} value={b.id}>
@@ -163,7 +167,7 @@ export function ProductForm({
           ))}
         </select>
       ) : null}
-      <select name="stockOwner" defaultValue="NERA" className="rounded-xl border px-3 py-2">
+      <select name="stockOwner" defaultValue={defaultStockOwner} className="rounded-xl border px-3 py-2">
         <option value="NERA">Stock NERA</option>
         <option value="PARTNER">Stock partenaire</option>
       </select>

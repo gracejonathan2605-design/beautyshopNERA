@@ -182,6 +182,21 @@ export function ShopFooter() {
                 FLASH NERA
               </Link>
             </p>
+            <p>
+              <Link href="/cgv" className="text-wine underline-offset-2 hover:underline">
+                Conditions de vente
+              </Link>
+            </p>
+            <p>
+              <Link href="/retours" className="text-wine underline-offset-2 hover:underline">
+                Retours
+              </Link>
+            </p>
+            <p>
+              <Link href="/confidentialite" className="text-wine underline-offset-2 hover:underline">
+                Confidentialité
+              </Link>
+            </p>
             <p className="mt-2">Retrait en boutique</p>
             <p>Livraison rapide sous 24h à Yaoundé</p>
             <p>Paiement OM, MoMo et espèces</p>

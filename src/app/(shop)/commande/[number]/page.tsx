@@ -4,7 +4,10 @@ import { formatCfa } from "@/lib/money";
 import { getShopSettings, toReceiptShop } from "@/lib/settings";
 import { saleToReceipt } from "@/lib/receipt";
 import { OrderTicketButton } from "@/components/shop/order-ticket";
-import { isPaymentNetwork, PAYMENT_INSTRUCTIONS } from "@/lib/checkout";
+import { isPaymentNetwork } from "@/lib/checkout";
+import { paymentInstructions } from "@/lib/payments/mobile-money";
+import { customerStatusSentence, customerStepIndex, CUSTOMER_STEPS } from "@/lib/order-timeline";
+import { submitPaymentProof } from "@/app/actions/shop";
 import { BrandLogo } from "@/components/brand/logo";
 import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
 import { getCustomerSession, getStaffSession } from "@/lib/auth";
@@ -18,9 +21,9 @@ export default async function OrderPage({
   searchParams,
 }: {
   params: Promise<{ number: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; ok?: string; erreur?: string }>;
 }) {
-  const [{ number }, { t }] = await Promise.all([params, searchParams]);
+  const [{ number }, { t, ok, erreur }] = await Promise.all([params, searchParams]);
   const [order, settings, staff, customer] = await Promise.all([
     prisma.order.findUnique({
       where: { number },
@@ -38,10 +41,13 @@ export default async function OrderPage({
   if (!allowed) notFound();
   const paid = order.payments.some((p) => p.status === "COMPLETED");
 
-  const networkRaw = order.payments[0]?.provider ?? order.payments[0]?.reference ?? "ORANGE";
+  const instructions = paymentInstructions(settings);
+  const networkRaw = order.payments[0]?.provider ?? "ORANGE";
   const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
-  const pay = PAYMENT_INSTRUCTIONS[network];
-  const other = PAYMENT_INSTRUCTIONS[network === "ORANGE" ? "MTN" : "ORANGE"];
+  const pay = instructions[network];
+  const other = instructions[network === "ORANGE" ? "MTN" : "ORANGE"];
+  const step = customerStepIndex(order.status, paid);
+  const proof = order.payments.find((p) => p.proofUrl || (p.reference && p.reference !== "ORANGE" && p.reference !== "MTN"));
 
   const receipt = saleToReceipt(
     {
@@ -81,6 +87,24 @@ export default async function OrderPage({
       <div className="mt-5 flex justify-center">
         <PayDeliveryBadges />
       </div>
+      <p className="mt-4 text-center text-sm text-black/60">{customerStatusSentence(order.status, paid)}</p>
+      {step >= 0 ? (
+        <ol className="mt-4 grid grid-cols-5 gap-1 text-center text-[10px] uppercase tracking-wide text-black/45">
+          {CUSTOMER_STEPS.map((label, index) => (
+            <li key={label} className={index <= step ? "font-medium text-wine" : ""}>
+              {label}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {ok === "preuve" ? (
+        <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Référence reçue. L’équipe confirme le paiement dès qu’elle la voit.
+        </p>
+      ) : null}
+      {erreur === "preuve" ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">Indiquez la référence du transfert.</p>
+      ) : null}
 
       {paid ? (
         <section className="mt-8 rounded-[1.7rem] border border-emerald-200 bg-emerald-50 p-6">
@@ -106,8 +130,22 @@ export default async function OrderPage({
           <p className="mt-5 rounded-2xl bg-white px-4 py-3 text-sm text-black/55">
             Autre réseau : {other.label} — {other.code} ({other.name}). {other.detail}
           </p>
+          <form action={submitPaymentProof} className="mt-6 space-y-3 rounded-2xl border border-[#eee0e6] bg-white p-5">
+            <p className="font-medium text-wine">J’ai payé</p>
+            <p className="text-sm text-black/55">
+              Indiquez la référence du transfert. Une photo du reçu aide l’équipe à valider plus vite.
+            </p>
+            <input type="hidden" name="number" value={order.number} />
+            <input type="hidden" name="token" value={t ?? ""} />
+            <input name="reference" required placeholder="Référence du transfert" className="w-full rounded-xl border px-4 py-3" />
+            <input name="proof" type="file" accept="image/*" className="w-full text-sm" />
+            <button className="rounded-full bg-brown px-5 py-2 text-sm text-cream">Envoyer la preuve</button>
+          </form>
         </>
       )}
+      {proof?.reference && proof.reference !== "ORANGE" && proof.reference !== "MTN" ? (
+        <p className="mt-4 text-sm text-black/55">Référence envoyée : {proof.reference}</p>
+      ) : null}
 
       <ul className="mt-8 space-y-2">
         {order.items.map((i) => (
