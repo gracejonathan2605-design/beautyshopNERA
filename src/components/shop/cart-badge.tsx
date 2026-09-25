@@ -19,7 +19,15 @@ function readCount() {
   return readCartCountCookie(match?.split("=")[1]);
 }
 
-export function CartLink({ count }: { count: number }) {
+export function CartLink({ count, compact = false }: { count: number; compact?: boolean }) {
+  if (compact) {
+    return (
+      <Link href="/panier" className="flex min-h-14 flex-col items-center justify-center px-1 text-[11px] text-wine/70">
+        <span className={count > 0 ? "font-medium text-brown" : ""}>Panier</span>
+        {count > 0 ? <span className="text-[10px] text-brown">{count}</span> : null}
+      </Link>
+    );
+  }
   return (
     <Link href="/panier" className="rounded-full bg-brown px-3 py-2 text-cream sm:px-4">
       Panier{count > 0 ? ` (${count})` : ""}
@@ -27,7 +35,7 @@ export function CartLink({ count }: { count: number }) {
   );
 }
 
-export function ShopCartBadge() {
+export function ShopCartBadge({ compact = false }: { compact?: boolean }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -52,5 +60,5 @@ export function ShopCartBadge() {
     };
   }, []);
 
-  return <CartLink count={count} />;
+  return <CartLink count={count} compact={compact} />;
 }

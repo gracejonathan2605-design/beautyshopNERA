@@ -60,7 +60,7 @@ export function CheckoutForm({
   }
 
   return (
-    <form action={action} className="relative mt-8 space-y-4 rounded-[1.7rem] border border-[#eee0e6] bg-white p-6">
+    <form action={action} className="relative mt-6 space-y-4 rounded-[1.7rem] border border-[#eee0e6] bg-white p-4 max-md:pb-28 sm:p-6">
       <FormBusyOverlay
         active={pending}
         title="Enregistrement de la commande"
@@ -229,7 +229,7 @@ export function CheckoutForm({
         </p>
       </div>
 
-      <button disabled={pending} className="w-full rounded-full bg-brown py-3 text-cream disabled:opacity-60">
+      <button disabled={pending} className="w-full rounded-full bg-brown py-3.5 text-cream disabled:opacity-60 max-md:fixed max-md:inset-x-3 max-md:bottom-[calc(4.4rem+env(safe-area-inset-bottom))] max-md:z-30 max-md:w-auto max-md:shadow-lg">
         {pending ? "Confirmation…" : `Confirmer la commande — ${formatCfa(total)}`}
       </button>
     </form>

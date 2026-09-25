@@ -25,7 +25,10 @@ function WhatsAppIcon() {
 export function ShopHeaderFallback() {
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
-      <p className="bg-champagne/80 py-1.5 text-center text-[11px] text-wine">{SHOP_TRUST_LINE}</p>
+      <p className="bg-champagne/80 px-3 py-1.5 text-center text-[11px] leading-snug text-wine">
+        <span className="md:hidden">OM sans frais · Livraison 24h · Retrait magasin</span>
+        <span className="hidden md:inline">{SHOP_TRUST_LINE}</span>
+      </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <BrandLockup size="sm" priority />
         <CartLink count={0} />
@@ -45,7 +48,10 @@ export function ShopHeader() {
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
       <StaffToolbarClient />
-      <p className="bg-champagne/80 py-1.5 text-center text-[11px] text-wine">{SHOP_TRUST_LINE}</p>
+      <p className="bg-champagne/80 px-3 py-1.5 text-center text-[11px] leading-snug text-wine">
+        <span className="md:hidden">OM sans frais · Livraison 24h · Retrait magasin</span>
+        <span className="hidden md:inline">{SHOP_TRUST_LINE}</span>
+      </p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <Link href="/" className="min-w-0 shrink" aria-label={NERA_IDENTITY.name}>
           <BrandLockup size="sm" priority />
@@ -86,7 +92,7 @@ export function ShopFooter() {
   return (
     <>
       <JsonLd data={neraOrganizationGraph()} />
-      <footer className="mt-20 border-t border-[#eee0e6] bg-white/75">
+      <footer className="mt-16 border-t border-[#eee0e6] bg-white/75 pb-24 md:mt-20 md:pb-0">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
             <BrandLogo size="lg" />

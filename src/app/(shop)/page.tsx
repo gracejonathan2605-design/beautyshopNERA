@@ -85,12 +85,12 @@ export default async function HomePage() {
           <HeroProducts />
           <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-linear-to-t from-wine/80 via-wine/15 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-5 md:p-10">
-            <h1 className="max-w-xl font-serif text-4xl leading-[1.05] text-white md:text-6xl">{SHOP_HERO_LINE}</h1>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={MECHES_HREF} className="rounded-full bg-brown px-6 py-3 text-cream">
+            <h1 className="max-w-xl font-serif text-3xl leading-[1.05] text-white sm:text-5xl md:text-6xl">{SHOP_HERO_LINE}</h1>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+              <Link href={MECHES_HREF} className="rounded-full bg-brown px-6 py-3 text-center text-cream">
                 Voir les mèches
               </Link>
-              <Link href="/boutique" className="rounded-full bg-white px-6 py-3 text-wine">
+              <Link href="/boutique" className="rounded-full bg-white px-6 py-3 text-center text-wine">
                 Entrer dans la boutique
               </Link>
             </div>
@@ -126,23 +126,23 @@ export default async function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 py-8">
         <h2 className="font-serif text-4xl text-wine">Univers NERA</h2>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible lg:grid-cols-3">
           {catalog.categories.map((category) => {
             const cover = covers.get(category.slug);
             return (
               <Link
                 key={category.id}
                 href={`/categorie/${category.slug}`}
-                className="group relative aspect-[4/5] overflow-hidden rounded-[1.6rem] bg-blush sm:aspect-[5/4]"
+                className="group relative aspect-[3/4] w-[68%] shrink-0 snap-start overflow-hidden rounded-[1.6rem] bg-blush md:aspect-[5/4] md:w-auto"
               >
                 <ProductPhoto
                   src={cover?.src}
                   alt={cover?.alt || category.name}
-                  sizes="(max-width: 640px) 100vw, 33vw"
+                  sizes="(max-width: 768px) 70vw, 33vw"
                   quality={SHOP_IMAGE_QUALITY}
                   className="object-cover transition duration-500 group-hover:scale-105"
                 />
-                <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-wine/80 to-transparent p-4 font-serif text-3xl text-white">
+                <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-wine/80 to-transparent p-4 font-serif text-2xl text-white sm:text-3xl">
                   {category.name}
                 </span>
               </Link>

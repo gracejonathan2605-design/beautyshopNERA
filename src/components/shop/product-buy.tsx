@@ -79,7 +79,7 @@ export function ProductBuy({
           Je veux un conseil sur cette pièce
         </a>
       ) : null}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#eee0e6] bg-white/95 p-3 md:hidden">
+      <div className="product-buy-bar fixed inset-x-0 z-30 border-t border-[#eee0e6] bg-white/95 p-3 md:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <p className="font-serif text-2xl text-brown">{price}</p>
           {inStock ? (

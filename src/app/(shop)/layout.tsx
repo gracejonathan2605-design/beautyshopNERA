@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { ShopFooter, ShopHeader, ShopHeaderFallback } from "@/components/shop/chrome";
+import { ShopTabBar } from "@/components/shop/shop-tab-bar";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
@@ -16,12 +17,13 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
       <Suspense fallback={<ShopHeaderFallback />}>
         <ShopHeader />
       </Suspense>
-      <main id="contenu" className="flex-1">
+      <main id="contenu" className="flex-1 pb-20 md:pb-0">
         {children}
       </main>
       <Suspense fallback={null}>
         <ShopFooter />
       </Suspense>
+      <ShopTabBar />
     </div>
   );
 }
