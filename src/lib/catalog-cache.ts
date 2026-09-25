@@ -97,32 +97,46 @@ const loadHomeCatalog = unstable_cache(
         orderBy: { sortOrder: "asc" },
         select: navCategorySelect,
       });
-      const looks = await prisma.product.findMany({
-        where: { status: "ACTIVE", onlineVisible: true, deletedAt: null },
-        select: {
-          ...select,
-          category: { select: { slug: true, parent: { select: { slug: true } } } },
-        },
-        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-        take: 48,
-      });
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const sold = await prisma.orderItem.findMany({
-        where: {
-          order: { createdAt: { gte: weekAgo }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
-        },
-        select: { quantity: true, variant: { select: { productId: true } } },
-        take: 300,
-      });
-      const counts = new Map<string, number>();
-      for (const row of sold) {
-        const id = row.variant.productId;
-        counts.set(id, (counts.get(id) ?? 0) + row.quantity);
+      let looks: Array<
+        Awaited<ReturnType<typeof prisma.product.findMany<{ select: typeof select }>>>[number] & {
+          category: { slug: string; parent: { slug: string } | null } | null;
+        }
+      > = [];
+      try {
+        looks = await prisma.product.findMany({
+          where: { status: "ACTIVE", onlineVisible: true, deletedAt: null },
+          select: {
+            ...select,
+            category: { select: { slug: true, parent: { select: { slug: true } } } },
+          },
+          orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+          take: 48,
+        });
+      } catch {
+        looks = [];
       }
-      const popularIds = [...counts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12)
-        .map(([id]) => id);
+      let popularIds: string[] = [];
+      try {
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const sold = await prisma.orderItem.findMany({
+          where: {
+            order: { createdAt: { gte: weekAgo }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
+          },
+          select: { quantity: true, variant: { select: { productId: true } } },
+          take: 300,
+        });
+        const counts = new Map<string, number>();
+        for (const row of sold) {
+          const id = row.variant.productId;
+          counts.set(id, (counts.get(id) ?? 0) + row.quantity);
+        }
+        popularIds = [...counts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 12)
+          .map(([id]) => id);
+      } catch {
+        popularIds = [];
+      }
       return { featured, news, promos, categories, looks, popularIds };
     });
   },
