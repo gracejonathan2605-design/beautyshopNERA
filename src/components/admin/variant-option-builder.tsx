@@ -38,14 +38,6 @@ export function VariantOptionBuilder({
   }, [family, picked, custom]);
   const capped = labels.length >= 80;
 
-  function toggle(dimensionId: string, value: string) {
-    setPicked((current) => {
-      const list = current[dimensionId] ?? [];
-      const next = list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-      return { ...current, [dimensionId]: next };
-    });
-  }
-
   return (
     <div className="rounded-2xl border border-[#eee0e6] bg-[#fffcfb] p-3">
       <label className="block text-sm text-black/70">
@@ -83,22 +75,23 @@ export function VariantOptionBuilder({
                 Tout cocher
               </button>
             </div>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {dimension.values.map((value) => {
-                const active = (picked[dimension.id] ?? []).includes(value);
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => toggle(dimension.id, value)}
-                    className={`rounded-full border px-3 py-1 text-xs ${active ? "border-wine bg-wine text-white" : "border-[#eee0e6] bg-white text-wine"}`}
-                  >
-                    {value}
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              multiple
+              size={Math.min(8, dimension.values.length)}
+              value={picked[dimension.id] ?? []}
+              aria-label={dimension.label}
+              onChange={(event) => {
+                const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                setPicked((current) => ({ ...current, [dimension.id]: values }));
+              }}
+              className="mt-1 w-full rounded-xl border bg-white px-2 py-1 text-sm"
+            >
+              {dimension.values.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
           </div>
         ))}
       </div>
