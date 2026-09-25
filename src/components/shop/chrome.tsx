@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
-import { neraParentRayons } from "@/lib/catalog";
 import { StaffToolbarClient } from "@/components/staff/toolbar-client";
 import { CartLink, ShopCartBadge } from "@/components/shop/cart-badge";
 import { whatsappChatUrl } from "@/lib/receipt";
@@ -10,6 +9,7 @@ import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badge
 import { JsonLd } from "@/components/seo/json-ld";
 import { neraOrganizationGraph } from "@/lib/seo";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
+import { SHOP_TRUST_LINE } from "@/lib/shop-faces";
 
 function WhatsAppIcon() {
   return (
@@ -22,29 +22,10 @@ function WhatsAppIcon() {
   );
 }
 
-function RayonChips({ categories }: { categories: { id?: string; name: string; slug: string }[] }) {
-  if (!categories.length) return null;
-  return (
-    <nav aria-label="Rayons NERA" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-1.5 px-4 pb-3">
-      {categories.map((c) => (
-        <Link
-          key={c.id ?? c.slug}
-          href={`/categorie/${c.slug}`}
-          className="max-w-full rounded-full border border-[#eee0e6] bg-white px-2.5 py-1 text-center text-[11px] leading-snug text-wine hover:border-gold hover:bg-blush sm:px-3 sm:text-xs"
-        >
-          {c.name}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
 export function ShopHeaderFallback() {
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
-      <p className="bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-wine">
-        Yaoundé · OM & MoMo · Livraison rapide sous 24h
-      </p>
+      <p className="bg-champagne/80 py-1.5 text-center text-[11px] text-wine">{SHOP_TRUST_LINE}</p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <BrandLockup size="sm" priority />
         <CartLink count={0} />
@@ -56,20 +37,15 @@ export function ShopHeaderFallback() {
           className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
         />
       </form>
-      <RayonChips categories={neraParentRayons()} />
     </header>
   );
 }
 
 export function ShopHeader() {
-  const categories = neraParentRayons();
-
   return (
     <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
       <StaffToolbarClient />
-      <p className="bg-champagne/80 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-wine">
-        Yaoundé · OM & MoMo · Livraison rapide sous 24h
-      </p>
+      <p className="bg-champagne/80 py-1.5 text-center text-[11px] text-wine">{SHOP_TRUST_LINE}</p>
       <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
         <Link href="/" className="min-w-0 shrink" aria-label={NERA_IDENTITY.name}>
           <BrandLockup size="sm" priority />
@@ -81,21 +57,11 @@ export function ShopHeader() {
             className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-5 py-2.5 text-sm"
           />
         </form>
-        <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1 text-sm sm:gap-x-3">
-          <Link href="/flash" className="text-xs uppercase tracking-[0.14em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
-            <span className="sm:hidden">Flash</span>
-            <span className="hidden sm:inline">Flash NERA</span>
-          </Link>
-          <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
-            À propos
-          </Link>
-          <Link href="/marques" className="hidden text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:inline sm:text-sm sm:normal-case sm:tracking-normal">
-            Marques
-          </Link>
-          <Link href="/boutique" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+        <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
+          <Link href="/boutique" className="text-wine/80 hover:text-wine">
             Boutique
           </Link>
-          <Link href="/compte" className="text-xs uppercase tracking-[0.08em] text-wine/80 hover:text-wine sm:text-sm sm:normal-case sm:tracking-normal">
+          <Link href="/compte" className="text-wine/80 hover:text-wine">
             Compte
           </Link>
           <Suspense fallback={<CartLink count={0} />}>
@@ -110,7 +76,6 @@ export function ShopHeader() {
           className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
         />
       </form>
-      <RayonChips categories={categories} />
     </header>
   );
 }
@@ -150,7 +115,7 @@ export function ShopFooter() {
             <p>{settings.email}</p>
             {settings.mtnPhone ? <p>MoMo / MTN : {settings.mtnPhone}</p> : null}
             {wa ? (
-              <a href={wa} className="mt-2 inline-block text-brown underline" target="_blank" rel="noreferrer">
+              <a href={wa} className="mt-2 inline-block text-wine underline decoration-wine/30" target="_blank" rel="noreferrer">
                 Écrire sur WhatsApp
               </a>
             ) : null}

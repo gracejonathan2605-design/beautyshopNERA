@@ -93,10 +93,11 @@ describe("catalogue NERA", () => {
     expect(mergeShopRayons([{ slug: "mode", name: "Mode" }]).some((row) => row.slug === "homme")).toBe(true);
   });
 
-  it("garde les pastilles rayons visibles même pendant le chargement du header", () => {
+  it("garde les rayons sur l’accueil, et le header sans requête base", () => {
     const chrome = readFileSync("src/components/shop/chrome.tsx", "utf8");
-    expect(chrome).toContain("neraParentRayons");
-    expect(chrome).toContain('aria-label="Rayons NERA"');
+    const home = readFileSync("src/app/(shop)/page.tsx", "utf8");
+    expect(home).toContain("Univers NERA");
+    expect(home).toContain("/categorie/");
     expect(chrome).not.toContain("getCart");
     expect(chrome).not.toContain("getShopSettings");
     expect(chrome).not.toContain("getNavCategories");

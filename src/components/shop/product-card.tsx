@@ -11,7 +11,9 @@ import { ProductCardFlash } from "@/components/shop/product-card-flash";
 
 export function ProductCard({
   product,
+  oftenChosen = false,
 }: {
+  oftenChosen?: boolean;
   product: {
     name: string;
     slug: string;
@@ -74,7 +76,10 @@ export function ProductCard({
           <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/40">{product.brand.name}</p>
         ) : null}
         <p className="mt-1 line-clamp-2 text-sm text-black/50">{product.shortDescription}</p>
-        <p className="mt-3 text-sm font-medium text-wine">
+        {oftenChosen ? (
+          <p className="mt-2 text-xs text-wine/70">Souvent choisi cette semaine</p>
+        ) : null}
+        <p className="mt-3 font-serif text-2xl text-brown">
           {onPromo && variant ? (
             <span className="mr-2 text-black/30 line-through">{formatCfa(variant.salePrice)}</span>
           ) : null}

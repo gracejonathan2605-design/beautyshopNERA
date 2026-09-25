@@ -42,12 +42,13 @@ describe("pages légères sans casser l’apparence", () => {
     expect(src("src/components/shop/flash-section.tsx")).toMatch(/snap-x/);
   });
 
-  it("affiche le hero, le logo, le texte et À propos aussi sur téléphone", () => {
+  it("affiche le hero, la phrase et À propos aussi sur téléphone", () => {
     const home = src("src/app/(shop)/page.tsx");
-    expect(home).toMatch(/BrandLogo size="lg" priority className="mb-6"/);
-    expect(home).toContain("{NERA_PITCH}");
+    expect(home).toContain("SHOP_HERO_LINE");
+    expect(home).toContain("Voir les mèches");
     expect(home).not.toMatch(/hidden md:block/);
-    expect(home).toMatch(/À propos/);
+    expect(src("src/components/shop/home-identity.tsx")).toContain("{NERA_PITCH}");
+    expect(src("src/components/shop/home-identity.tsx")).toMatch(/À propos/);
     const hero = src("src/components/brand/logo.tsx").slice(
       src("src/components/brand/logo.tsx").indexOf("export function HeroProducts"),
     );

@@ -18,9 +18,11 @@ type BuyVariant = {
 export function ProductBuy({
   variants,
   whatsappUrl,
+  oftenChosen = false,
 }: {
   variants: BuyVariant[];
   whatsappUrl?: string;
+  oftenChosen?: boolean;
 }) {
   const [id, setId] = useState(variants[0]?.id ?? "");
   const selected = variants.find((v) => v.id === id) ?? variants[0];
@@ -29,37 +31,42 @@ export function ProductBuy({
   const inStock = available > 0;
   const promo = selected.promoPrice;
   const onPromo = Boolean(promo && promo > 0 && promo < selected.salePrice);
+  const price = formatCfa(unitPrice(selected));
   return (
     <div>
-      {variants.length > 1 ? (
-        <label className="mt-6 block text-sm">
-          <span className="text-black/50">Variante</span>
-          <select
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2"
-          >
-            {variants.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name} · {formatCfa(unitPrice(v))}
-                {variantAvailable(v.inventories) <= 0 ? " — bientôt de retour" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <p className="mt-6 font-serif text-4xl">
+      <p className="mt-4 font-serif text-5xl text-brown">
         {onPromo ? (
           <span className="mr-3 font-sans text-xl text-black/30 line-through">{formatCfa(selected.salePrice)}</span>
         ) : null}
-        {formatCfa(unitPrice(selected))}
+        {price}
       </p>
+      {oftenChosen ? <p className="mt-2 text-sm text-wine/70">Souvent choisi cette semaine</p> : null}
+      {variants.length > 1 ? (
+        <div className="mt-5 flex flex-wrap gap-2" role="listbox" aria-label="Teinte ou taille">
+          {variants.map((variant) => {
+            const active = variant.id === selected.id;
+            const gone = variantAvailable(variant.inventories) <= 0;
+            return (
+              <button
+                key={variant.id}
+                type="button"
+                onClick={() => setId(variant.id)}
+                aria-pressed={active}
+                className={`rounded-full border px-4 py-2 text-sm ${
+                  active ? "border-wine bg-wine text-white" : "border-[#eee0e6] bg-white text-wine"
+                } ${gone ? "opacity-50" : ""}`}
+              >
+                {variant.name}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       {inStock ? (
-        <AddToCartButton action={() => addToCart(selected.id, 1)} />
+        <AddToCartButton action={() => addToCart(selected.id, 1)} className="mt-6 w-full rounded-full bg-brown px-8 py-3 text-cream md:w-auto" />
       ) : (
-        <p className="mt-8 rounded-2xl bg-blush px-4 py-3 text-sm text-wine">
-          Bientôt de retour. Cet article n’est plus en stock — il reste visible, vous pourrez le commander dès
-          réapprovisionnement.
+        <p className="mt-6 rounded-2xl bg-blush px-4 py-3 text-sm text-wine">
+          Bientôt de retour. Cet article reste visible, vous pourrez le commander dès réapprovisionnement.
         </p>
       )}
       {whatsappUrl ? (
@@ -67,11 +74,21 @@ export function ProductBuy({
           href={whatsappUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 block rounded-full border border-[#25D366] py-3 text-center text-sm text-[#128C46]"
+          className="mt-3 block text-sm text-wine underline decoration-wine/30 underline-offset-4"
         >
-          {inStock ? "Commander sur WhatsApp" : "Demander le retour en stock sur WhatsApp"}
+          Je veux un conseil sur cette pièce
         </a>
       ) : null}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#eee0e6] bg-white/95 p-3 md:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <p className="font-serif text-2xl text-brown">{price}</p>
+          {inStock ? (
+            <AddToCartButton action={() => addToCart(selected.id, 1)} className="rounded-full bg-brown px-5 py-3 text-sm text-cream" />
+          ) : (
+            <p className="text-sm text-wine">Bientôt de retour</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
