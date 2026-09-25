@@ -49,6 +49,14 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl">
           <HeroProducts />
           <h1 className="mt-6 font-serif text-5xl text-wine">{SHOP_HERO_LINE}</h1>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href={MECHES_HREF} className="rounded-full bg-brown px-6 py-3 text-cream">
+              Voir les mèches
+            </Link>
+            <Link href="/boutique" className="rounded-full border border-[#eee0e6] bg-white px-6 py-3 text-wine">
+              Entrer dans la boutique
+            </Link>
+          </div>
           <p className="mt-4 max-w-xl text-lg text-black/65">
             La boutique n’a pas pu charger le catalogue. Réessayez dans un instant, ou contactez-nous au{" "}
             {NERA_IDENTITY.phoneDisplay}.
