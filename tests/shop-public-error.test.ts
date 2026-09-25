@@ -15,6 +15,9 @@ describe("messages d’erreur grand public", () => {
     expect(shopPublicError(new Error("Timed out fetching a new connection from the connection pool"))).toMatch(
       /676 93 51 95/,
     );
+    expect(
+      shopPublicError(new Error("FATAL: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15")),
+    ).toMatch(/676 93 51 95/);
   });
 
   it("n’expose pas les variables d’environnement sur les pages boutique", () => {
