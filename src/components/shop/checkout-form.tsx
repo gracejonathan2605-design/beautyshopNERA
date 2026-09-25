@@ -6,7 +6,6 @@ import { formatCfa } from "@/lib/money";
 import { PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor, type PaymentNetwork } from "@/lib/checkout";
 import type { PaymentInstruction } from "@/lib/payments/mobile-money";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
-import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 const INITIAL: CheckoutState = { ok: false };
 
@@ -70,6 +69,9 @@ export function CheckoutForm({
       {state.error ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{state.error}</p>
       ) : null}
+
+      <p className="font-serif text-5xl text-brown">{formatCfa(total)}</p>
+      <p className="text-sm text-wine/70">Une demande arrive sur votre téléphone.</p>
 
       <label className="block text-sm">
         Mode
@@ -186,16 +188,11 @@ export function CheckoutForm({
         )}
       </div>
 
-      <PayDeliveryBadges compact />
-      <p className="text-sm text-black/55">Livraison rapide sous 24h à Yaoundé. Paiement OM ou MoMo.</p>
+      <p className="text-sm text-wine/70">Orange Money sans frais · Livraison 24h à Yaoundé · Retrait en magasin</p>
 
-      <fieldset className="space-y-2 rounded-2xl bg-blush/60 p-4">
-        <legend className="text-sm font-medium text-wine">Paiement Mobile Money</legend>
-        <p className="text-sm text-black/60">
-          {instructions.ORANGE.mode === "api"
-            ? "Avec Orange Money, un message arrive sur votre téléphone : saisissez votre code secret. Le code marchand reste disponible si le message n’arrive pas."
-            : `Après confirmation, envoyez ${formatCfa(total)} puis gardez le reçu.`}
-        </p>
+      <fieldset className="space-y-3">
+        <legend className="text-sm text-wine">Paiement</legend>
+        <p className="text-sm text-black/65">Une demande arrive sur votre téléphone.</p>
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="ORANGE" defaultChecked className="mt-1" />
           <span>
@@ -226,7 +223,7 @@ export function CheckoutForm({
           <span>{delivery ? "Livraison 24h (payée en une fois avec la commande)" : "Livraison"}</span>
           <span>{delivery ? formatCfa(shipping) : "Offerte (retrait)"}</span>
         </p>
-        <p className="mt-3 flex justify-between font-serif text-2xl text-wine">
+        <p className="mt-3 flex justify-between font-serif text-3xl text-brown">
           <span>Total à payer</span>
           <span>{formatCfa(total)}</span>
         </p>

@@ -106,10 +106,13 @@ export default async function OrderPage({
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">Indiquez la référence du transfert.</p>
       ) : null}
 
+      <p className="mt-6 text-center font-serif text-5xl text-brown">{formatCfa(order.total)}</p>
       {paid ? (
-        <section className="mt-8 rounded-[1.7rem] border border-emerald-200 bg-emerald-50 p-6">
-          <p className="font-medium text-emerald-900">Paiement confirmé</p>
-          <p className="mt-2 text-sm text-emerald-800">Montant : {formatCfa(order.total)}</p>
+        <section className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Paiement confirmé
+          {proof?.reference && proof.reference !== "ORANGE" && proof.reference !== "MTN"
+            ? ` · Réf. ${proof.reference}`
+            : ""}
         </section>
       ) : (
         <>
@@ -123,7 +126,7 @@ export default async function OrderPage({
                 Une demande Orange Money a été envoyée sur votre téléphone. Saisissez votre code secret pour valider.
               </p>
             ) : null}
-            <p className="mt-4 font-serif text-2xl text-wine">Montant : {formatCfa(order.total)}</p>
+            <p className="mt-3 text-sm text-wine">Une demande arrive sur votre téléphone.</p>
             {order.fulfillment === "DELIVERY" ? (
               <p className="mt-2 text-sm text-black/55">
                 Livraison {order.deliveryZone?.name ?? ""} incluse ({formatCfa(order.shippingFee)}) — un seul paiement.
@@ -135,7 +138,7 @@ export default async function OrderPage({
           <p className="mt-5 rounded-2xl bg-white px-4 py-3 text-sm text-black/55">
             Autre réseau : {other.label} — {other.code} ({other.name}). {other.detail}
           </p>
-          <form action={submitPaymentProof} className="mt-6 space-y-3 rounded-2xl border border-[#eee0e6] bg-white p-5">
+          <form action={submitPaymentProof} className="mt-4 space-y-2 rounded-xl border border-[#eee0e6] bg-white p-3 text-sm">
             <p className="font-medium text-wine">J’ai payé</p>
             <p className="text-sm text-black/55">
               Indiquez la référence du transfert. Une photo du reçu aide l’équipe à valider plus vite.

@@ -97,10 +97,36 @@ const loadHomeCatalog = unstable_cache(
         orderBy: { sortOrder: "asc" },
         select: navCategorySelect,
       });
-      return { featured, news, promos, categories };
+      const looks = await prisma.product.findMany({
+        where: { status: "ACTIVE", onlineVisible: true, deletedAt: null },
+        select: {
+          ...select,
+          category: { select: { slug: true, parent: { select: { slug: true } } } },
+        },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        take: 48,
+      });
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const sold = await prisma.orderItem.findMany({
+        where: {
+          order: { createdAt: { gte: weekAgo }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
+        },
+        select: { quantity: true, variant: { select: { productId: true } } },
+        take: 300,
+      });
+      const counts = new Map<string, number>();
+      for (const row of sold) {
+        const id = row.variant.productId;
+        counts.set(id, (counts.get(id) ?? 0) + row.quantity);
+      }
+      const popularIds = [...counts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([id]) => id);
+      return { featured, news, promos, categories, looks, popularIds };
     });
   },
-  ["home-catalog", "nera-v2"],
+  ["home-catalog", "nera-v3"],
   { revalidate: 45, tags: ["catalog"] },
 );
 
@@ -112,6 +138,8 @@ export async function getHomeCatalog() {
     news: applyUniquePublicTitles(catalog.news),
     promos: applyUniquePublicTitles(catalog.promos),
     categories: mergeNavCategories(catalog.categories),
+    looks: applyUniquePublicTitles(catalog.looks),
+    popularIds: catalog.popularIds,
   };
 }
 
