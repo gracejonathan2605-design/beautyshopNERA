@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { catalogHommeShelfHint, catalogParentsAreInstalled, catalogShelfHint, catalogSlugs, CLOSURES_SLUG, hommeTargetFromOldCategory, LINGERIE_SLUG, mergeNavCategories, mergeShopRayons, neraParentRayons, NERA_CATALOG } from "../src/lib/catalog";
+import { pickForParents, POUR_MOI } from "../src/lib/shop-faces";
 
 describe("catalogue NERA", () => {
   it("a des slugs uniques", () => {
@@ -91,6 +92,17 @@ describe("catalogue NERA", () => {
     expect(merged.map((row) => row.slug)).toContain("hygiene-intimes-8901");
     expect(neraParentRayons().map((row) => row.slug)).toEqual(NERA_CATALOG.map((g) => g.slug));
     expect(mergeShopRayons([{ slug: "mode", name: "Mode" }]).some((row) => row.slug === "homme")).toBe(true);
+  });
+
+  it("range les pièces dans les trois sélections sans mélanger les rayons", () => {
+    const products = [
+      { id: "1", category: { slug: "perruques", parent: { slug: "meches-perruques-extensions" } } },
+      { id: "2", category: { slug: "parfums-femme", parent: { slug: "parfumerie" } } },
+      { id: "3", category: null },
+    ];
+    expect(pickForParents(products, POUR_MOI[0].parents).map((row) => row.id)).toEqual(["1"]);
+    expect(pickForParents(products, POUR_MOI[2].parents).map((row) => row.id)).toEqual(["2"]);
+    expect(POUR_MOI[0].href).toBe("/categorie/meches-perruques-extensions");
   });
 
   it("garde les rayons sur l’accueil, et le header sans requête base", () => {
