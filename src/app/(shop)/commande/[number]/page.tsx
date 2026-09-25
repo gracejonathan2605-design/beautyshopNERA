@@ -118,6 +118,11 @@ export default async function OrderPage({
             <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>
             <p className="mt-1 text-sm text-black/70">{pay.name}</p>
             <p className="mt-3 text-sm leading-relaxed text-black/65">{pay.detail}</p>
+            {order.payments.some((p) => p.reference?.startsWith("MP")) ? (
+              <p className="mt-3 text-sm text-wine">
+                Une demande Orange Money a été envoyée sur votre téléphone. Saisissez votre code secret pour valider.
+              </p>
+            ) : null}
             <p className="mt-4 font-serif text-2xl text-wine">Montant : {formatCfa(order.total)}</p>
             {order.fulfillment === "DELIVERY" ? (
               <p className="mt-2 text-sm text-black/55">

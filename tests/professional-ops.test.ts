@@ -3,6 +3,7 @@ import { splitPartnerAmounts } from "../src/lib/partner-settlement";
 import { customerStepIndex } from "../src/lib/order-timeline";
 import { rateLimit, resetRateLimit } from "../src/lib/rate-limit";
 import { paymentInstructions } from "../src/lib/payments/mobile-money";
+import { orangePaymentSucceeded, orangeSubscriberMsisdn } from "../src/lib/payments/orange-money";
 
 describe("relevé partenaire", () => {
   it("calcule la commission sur le chiffre encaissé", () => {
@@ -64,5 +65,18 @@ describe("instructions Mobile Money", () => {
     expect(rows.ORANGE.code).toBe("#150*1#");
     expect(rows.MTN.name).toBe("Boutique");
     expect(rows.ORANGE.mode).toBe("manual");
+  });
+});
+
+describe("Orange Money", () => {
+  it("garde le numéro local à 9 chiffres", () => {
+    expect(orangeSubscriberMsisdn("+237 6 98 54 92 70")).toBe("698549270");
+    expect(orangeSubscriberMsisdn("0698549270")).toBe("698549270");
+    expect(orangeSubscriberMsisdn("123")).toBe("");
+  });
+
+  it("reconnaît le statut succès renvoyé par Orange", () => {
+    expect(orangePaymentSucceeded("SUCCESSFULL")).toBe(true);
+    expect(orangePaymentSucceeded("PENDING")).toBe(false);
   });
 });
