@@ -14,7 +14,7 @@ type Row = {
 
 const EMPTY: Row = { name: "Standard", salePrice: "", promoPrice: "", costPrice: "", barcode: "", stock: "" };
 
-export function VariantEditor() {
+export function VariantEditor({ hint = "" }: { hint?: string }) {
   const [rows, setRows] = useState<Row[]>([{ ...EMPTY }]);
 
   function update(index: number, key: keyof Row, value: string) {
@@ -27,6 +27,7 @@ export function VariantEditor() {
         Variantes (teinte, taille, longueur). La première est la variante par défaut. SKU automatique.
       </p>
       <VariantOptionBuilder
+        hint={hint}
         onApply={(labels) =>
           setRows((current) => {
             const base = current[0] ?? EMPTY;

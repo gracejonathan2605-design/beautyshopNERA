@@ -5,7 +5,7 @@ import { saveProduct } from "@/app/actions/admin";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 import { fillBulkProductFormData, type BulkFieldValues } from "@/lib/bulk-form";
-import { formatVariantLabels } from "@/lib/variant-options";
+import { categoryVariantHint, formatVariantLabels } from "@/lib/variant-options";
 import { VariantOptionBuilder } from "@/components/admin/variant-option-builder";
 import { PhotoDescriptionSuggestion } from "@/components/admin/photo-description-suggestion";
 import {
@@ -333,6 +333,7 @@ export function BulkProductPublisher({
             ) : null}
             <div className="md:col-span-2">
               <VariantOptionBuilder
+                hint={categoryVariantHint(categoryGroups, defaults.categoryId)}
                 buttonLabel="Appliquer au lot"
                 onApply={(labels) => {
                   const variantLabels = formatVariantLabels(labels);

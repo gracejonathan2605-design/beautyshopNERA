@@ -12,6 +12,7 @@ import { MAX_PRODUCT_PHOTOS } from "@/lib/product-media";
 import { PRODUCT_IMAGE_ACCEPT } from "@/lib/product-images";
 import { prepareProductFormData, wrapProductAction } from "@/lib/product-form-submit";
 import type { CategoryOptionGroup } from "@/lib/catalog";
+import { categoryVariantHint } from "@/lib/variant-options";
 
 const INITIAL: ProductFormState = { ok: false };
 const saveProductSafe = wrapProductAction(saveProduct);
@@ -37,6 +38,8 @@ export function ProductForm({
   const [shortDescription, setShortDescription] = useState("");
   const [longDescription, setLongDescription] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [productName, setProductName] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const noCategories = categoryGroups.length === 0;
   const busy = pending || publishing;
   const message = clientError || state.error;
@@ -143,10 +146,17 @@ export function ProductForm({
       <input
         name="name"
         required
+        value={productName}
+        onChange={(event) => setProductName(event.target.value)}
         placeholder="Nom du produit"
         className="rounded-xl border px-3 py-2 md:col-span-2"
       />
-      <CategorySelect groups={categoryGroups} className="rounded-xl border px-3 py-2 md:col-span-2" />
+      <CategorySelect
+        groups={categoryGroups}
+        value={categoryId}
+        onChange={(event) => setCategoryId(event.target.value)}
+        className="rounded-xl border px-3 py-2 md:col-span-2"
+      />
       {brands.length ? (
         <select name="brandId" defaultValue={defaultBrandId} className="rounded-xl border px-3 py-2">
           <option value="">Marque (optionnel)</option>
@@ -179,7 +189,7 @@ export function ProductForm({
         className="rounded-xl border px-3 py-2 md:col-span-2"
       />
       <input type="hidden" name="description" value={longDescription} />
-      <VariantEditor />
+      <VariantEditor hint={categoryVariantHint(categoryGroups, categoryId, productName)} />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="isFeatured" /> Vedette
       </label>
