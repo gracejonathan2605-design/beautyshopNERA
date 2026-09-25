@@ -1,4 +1,5 @@
 import type { ShopSettings } from "@/lib/settings";
+import { orangeConfig } from "./orange-money";
 
 export type PaymentNetwork = "ORANGE" | "MTN";
 
@@ -32,7 +33,7 @@ export function paymentInstructions(settings?: Partial<ShopSettings> | null): Re
   const orangeName = settings?.orangeMerchantName?.trim() || FALLBACK.ORANGE.name;
   const mtnCode = settings?.mtnPhone?.replace(/\s/g, "") || FALLBACK.MTN.code;
   const mtnName = settings?.mtnAccountName?.trim() || FALLBACK.MTN.name;
-  const orangeApi = Boolean(process.env.ORANGE_MONEY_API_URL?.trim() && process.env.ORANGE_MONEY_API_KEY?.trim());
+  const orangeApi = Boolean(orangeConfig());
   const mtnApi = Boolean(process.env.MTN_MOMO_API_URL?.trim() && process.env.MTN_MOMO_API_KEY?.trim());
   return {
     ORANGE: {
@@ -62,11 +63,22 @@ export async function startMobileMoneyCharge(input: {
   orderNumber: string;
   phone: string;
 }) {
-  const apiUrl =
-    input.network === "ORANGE" ? process.env.ORANGE_MONEY_API_URL?.trim() : process.env.MTN_MOMO_API_URL?.trim();
-  const apiKey =
-    input.network === "ORANGE" ? process.env.ORANGE_MONEY_API_KEY?.trim() : process.env.MTN_MOMO_API_KEY?.trim();
-  if (!apiUrl || !apiKey) {
+  if (input.network === "ORANGE" && orangeConfig()) {
+    const { requestOrangeCashIn } = await import("./orange-money");
+    const { absoluteUrl } = await import("@/lib/site-url");
+    const result = await requestOrangeCashIn({
+      amount: input.amount,
+      phone: input.phone,
+      orderId: input.orderNumber,
+      description: `Commande ${input.orderNumber}`,
+      notifUrl: absoluteUrl("/api/payments/orange"),
+    });
+    if (result.ok) return { mode: "api" as const, providerReference: result.payToken };
+    return { mode: "manual" as const, providerReference: input.network };
+  }
+  const apiUrl = process.env.MTN_MOMO_API_URL?.trim();
+  const apiKey = process.env.MTN_MOMO_API_KEY?.trim();
+  if (!apiUrl || !apiKey || input.network !== "MTN") {
     return { mode: "manual" as const, providerReference: input.network };
   }
   const res = await fetch(apiUrl, {
@@ -81,9 +93,7 @@ export async function startMobileMoneyCharge(input: {
     }),
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) {
-    return { mode: "manual" as const, providerReference: input.network };
-  }
+  if (!res.ok) return { mode: "manual" as const, providerReference: input.network };
   const body = (await res.json().catch(() => null)) as { reference?: string } | null;
   return { mode: "api" as const, providerReference: body?.reference?.trim() || input.network };
 }

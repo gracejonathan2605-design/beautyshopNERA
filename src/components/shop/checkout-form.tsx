@@ -192,7 +192,9 @@ export function CheckoutForm({
       <fieldset className="space-y-2 rounded-2xl bg-blush/60 p-4">
         <legend className="text-sm font-medium text-wine">Paiement Mobile Money</legend>
         <p className="text-sm text-black/60">
-          Après confirmation, envoyez <strong>{formatCfa(total)}</strong> puis gardez le reçu.
+          {instructions.ORANGE.mode === "api"
+            ? "Avec Orange Money, un message arrive sur votre téléphone : saisissez votre code secret. Le code marchand reste disponible si le message n’arrive pas."
+            : `Après confirmation, envoyez ${formatCfa(total)} puis gardez le reçu.`}
         </p>
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="ORANGE" defaultChecked className="mt-1" />

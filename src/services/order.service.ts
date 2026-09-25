@@ -7,7 +7,7 @@ import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
 import { notifyCustomerAboutOrder, notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
 import { customerStatusSentence } from "@/lib/order-timeline";
-import { paymentInstructions } from "@/lib/payments/mobile-money";
+import { paymentInstructions, startMobileMoneyCharge } from "@/lib/payments/mobile-money";
 import { reportError } from "@/lib/monitor";
 import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
@@ -185,6 +185,25 @@ export async function createOnlineOrder(input: {
   }
 
   const network = order.payments[0]?.provider === "MTN" ? "MTN" : "ORANGE";
+  if (order.payments[0] && order.total > 0) {
+    try {
+      const charge = await startMobileMoneyCharge({
+        network,
+        amount: Number(order.total),
+        orderNumber: order.number,
+        phone: order.shippingPhone ?? "",
+      });
+      if (charge.mode === "api" && charge.providerReference !== network) {
+        await prisma.payment.update({
+          where: { id: order.payments[0].id },
+          data: { reference: charge.providerReference, note: "Demande Orange Money envoyée sur le téléphone" },
+        });
+        order.payments[0].reference = charge.providerReference;
+      }
+    } catch (err) {
+      reportError("orange-money", err);
+    }
+  }
   try {
     const settings = await getShopSettings().catch(() => null);
     const pay = paymentInstructions(settings)[network];
