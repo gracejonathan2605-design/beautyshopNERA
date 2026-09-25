@@ -4,6 +4,9 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { receivePurchase } from "@/services/inventory.service";
+import { getDefaultLocationId } from "@/lib/settings";
+import { saveBrandSettlement } from "@/services/partner-settlement.service";
 import { requireStaff } from "@/lib/guard";
 import { writeAudit } from "@/lib/audit";
 import { uploadBrandImage } from "@/lib/storage";
@@ -225,5 +228,112 @@ export async function deleteBrandCollection(formData: FormData) {
     unstable_rethrow(err);
     const brandId = String(formData.get("brandId") ?? "").trim();
     bounce(`/admin/marques/${brandId}`, "erreur", err instanceof Error ? err.message : "Suppression impossible.");
+  }
+}
+
+export async function saveBrandTerms(formData: FormData) {
+  try {
+    await requireStaff("brands.manage");
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    const commissionBps = Math.max(0, Math.min(10000, Math.round(Number(formData.get("commissionPercent") ?? 0) * 100)));
+    const settlementDays = Math.max(0, Number.parseInt(String(formData.get("settlementDays") ?? "7"), 10) || 7);
+    await prisma.brand.update({
+      where: { id: brandId },
+      data: {
+        commissionBps,
+        settlementDays,
+        contactName: String(formData.get("contactName") ?? "").trim() || null,
+        contactPhone: String(formData.get("contactPhone") ?? "").trim() || null,
+        contactEmail: String(formData.get("contactEmail") ?? "").trim() || null,
+      },
+    });
+    bounce(`/admin/marques/${brandId}`, "ok", "Conditions commerciales enregistrées.");
+  } catch (err) {
+    unstable_rethrow(err);
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    bounce(`/admin/marques/${brandId}`, "erreur", err instanceof Error ? err.message : "Conditions impossibles.");
+  }
+}
+
+export async function saveBrandIntake(formData: FormData) {
+  try {
+    const session = await requireStaff("brands.manage");
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    const variantId = String(formData.get("variantId") ?? "").trim();
+    const quantity = Math.max(0, Number.parseInt(String(formData.get("quantity") ?? "0"), 10) || 0);
+    const unitCost = Math.max(0, Number.parseInt(String(formData.get("unitCost") ?? "0"), 10) || 0);
+    const kind = String(formData.get("kind") ?? "") === "CONSIGNMENT" ? "CONSIGNMENT" : "PURCHASE";
+    if (!variantId || quantity <= 0) bounce(`/admin/marques/${brandId}`, "erreur", "Choisissez une variante et une quantité.");
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, product: { brandId, deletedAt: null } },
+      select: { id: true },
+    });
+    if (!variant) bounce(`/admin/marques/${brandId}`, "erreur", "Cette variante n’appartient pas à la marque.");
+    const locationId = await getDefaultLocationId();
+    await prisma.brandIntake.create({
+      data: {
+        brandId,
+        kind,
+        note: String(formData.get("note") ?? "").trim() || null,
+        lines: { create: { variantId, quantity, unitCost } },
+      },
+    });
+    await prisma.productVariant.update({ where: { id: variantId }, data: { costPrice: unitCost } });
+    await receivePurchase({
+      variantId,
+      locationId,
+      quantity,
+      userId: session.userId,
+      comment: kind === "CONSIGNMENT" ? "Dépôt partenaire" : "Achat partenaire",
+      reference: brandId,
+    });
+    bounce(`/admin/marques/${brandId}`, "ok", "Entrée de marchandise enregistrée.");
+  } catch (err) {
+    unstable_rethrow(err);
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    bounce(`/admin/marques/${brandId}`, "erreur", err instanceof Error ? err.message : "Entrée impossible.");
+  }
+}
+
+export async function recordBrandSettlement(formData: FormData) {
+  try {
+    await requireStaff("brands.manage");
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    const from = new Date(`${String(formData.get("from") ?? "")}T00:00:00`);
+    const to = new Date(`${String(formData.get("to") ?? "")}T23:59:59`);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      bounce(`/admin/marques/${brandId}`, "erreur", "Période invalide.");
+    }
+    const brand = await prisma.brand.findUnique({ where: { id: brandId } });
+    if (!brand) bounce("/admin/marques", "erreur", "Marque introuvable.");
+    await saveBrandSettlement({
+      brandId,
+      from,
+      to,
+      partnershipType: brand.partnershipType,
+      commissionBps: brand.commissionBps,
+    });
+    bounce(`/admin/marques/${brandId}`, "ok", "Relevé enregistré.");
+  } catch (err) {
+    unstable_rethrow(err);
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    bounce(`/admin/marques/${brandId}`, "erreur", err instanceof Error ? err.message : "Relevé impossible.");
+  }
+}
+
+export async function markSettlementPaid(formData: FormData) {
+  try {
+    await requireStaff("brands.manage");
+    const id = String(formData.get("id") ?? "").trim();
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    await prisma.brandSettlement.update({
+      where: { id },
+      data: { status: "PAID", paidAt: new Date() },
+    });
+    bounce(`/admin/marques/${brandId}`, "ok", "Reversement marqué payé.");
+  } catch (err) {
+    unstable_rethrow(err);
+    const brandId = String(formData.get("brandId") ?? "").trim();
+    bounce(`/admin/marques/${brandId}`, "erreur", err instanceof Error ? err.message : "Paiement impossible.");
   }
 }

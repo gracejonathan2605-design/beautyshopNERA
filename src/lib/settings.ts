@@ -12,6 +12,9 @@ export type ShopSettings = {
   phone: string;
   email: string;
   mtnPhone: string;
+  mtnAccountName: string;
+  orangeMerchantCode: string;
+  orangeMerchantName: string;
   rccm: string;
   nui: string;
   address: string;
@@ -45,6 +48,9 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   phone: "676 93 51 95",
   email: "nerabeaute-shop@gmail.com",
   mtnPhone: "676935195",
+  mtnAccountName: "Kouekam Raisa",
+  orangeMerchantCode: "#150*47*1059897#",
+  orangeMerchantName: "YORIX DIGITAL GROUP CM",
   rccm: "CM-NSI-02-2026-B12-00534",
   nui: "M062618760084L",
   address: "Marché Neptune Ahala, face Skymotors",

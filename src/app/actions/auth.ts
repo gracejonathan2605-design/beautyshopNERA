@@ -16,6 +16,7 @@ import { getShopSettings } from "@/lib/settings";
 import { defaultStaffPath } from "@/lib/permissions";
 import { safeNextPath } from "@/lib/safe-path";
 import { attachGuestOrdersByPhone, findCustomerByPhone } from "@/services/customer.service";
+import { rateLimit } from "@/lib/rate-limit";
 
 function failStaffLogin(next: string, code: "1" | "busy"): never {
   redirect(`/login?error=${code}&next=${encodeURIComponent(next)}`);
@@ -25,6 +26,7 @@ export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin");
+  if (!rateLimit(`staff-login:${email || "anon"}`, 8, 15 * 60 * 1000)) failStaffLogin(next, "busy");
   let user;
   try {
     user = await prisma.user.findUnique({

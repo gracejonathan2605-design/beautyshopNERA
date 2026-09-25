@@ -8,6 +8,8 @@ import { CheckoutForm } from "@/components/shop/checkout-form";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { sellableOnlineWhere } from "@/lib/product-query";
 import { getCustomerSession } from "@/lib/auth";
+import { getShopSettings } from "@/lib/settings";
+import { paymentInstructions } from "@/lib/payments/mobile-money";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,7 @@ export default async function CheckoutPage() {
   if (!cart.length) redirect("/panier");
 
   try {
-    const [variants, zones, session] = await Promise.all([
+    const [variants, zones, session, settings] = await Promise.all([
       prisma.productVariant.findMany({
         where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
         select: { id: true, salePrice: true, promoPrice: true },
@@ -27,6 +29,7 @@ export default async function CheckoutPage() {
         select: { id: true, name: true, fee: true },
       }),
       getCustomerSession().catch(() => null),
+      getShopSettings().catch(() => null),
     ]);
     const profile = session
       ? await prisma.customer.findUnique({
@@ -77,6 +80,7 @@ export default async function CheckoutPage() {
                 }
               : null
           }
+          instructions={paymentInstructions(settings)}
         />
       </div>
     );

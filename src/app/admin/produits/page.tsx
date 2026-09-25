@@ -12,23 +12,39 @@ import { CatalogHygieneButton } from "@/components/admin/catalog-hygiene-button"
 import Image from "next/image";
 import Link from "next/link";
 
+const PAGE_SIZE = 40;
+
 export default async function ProductsAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; q?: string; marque?: string; rayon?: string; vue?: string; page?: string }>;
 }) {
   const session = await requireStaff("products.view");
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, q, marque, rayon, vue, page } = await searchParams;
+  const query = (q ?? "").trim();
+  const pageNumber = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
   const canCreate = hasPermission(session, "products.create");
   const canUpdate = hasPermission(session, "products.update");
   const canDelete = hasPermission(session, "products.delete");
-  const [products, categories, brands, suppliers] = await Promise.all([
+  const where = {
+    deletedAt: null,
+    ...(query ? { name: { contains: query, mode: "insensitive" as const } } : {}),
+    ...(marque ? { brandId: marque } : {}),
+    ...(rayon ? { categoryId: rayon } : {}),
+    ...(vue === "ligne" ? { onlineVisible: true } : {}),
+    ...(vue === "hors" ? { onlineVisible: false } : {}),
+    ...(vue === "vedette" ? { isFeatured: true } : {}),
+    ...(vue === "partenaire" ? { brand: { isPartner: true } } : {}),
+  };
+  const [products, total, categories, brands, suppliers] = await Promise.all([
     prisma.product.findMany({
-      where: { deletedAt: null },
+      where,
       include: { variants: { where: { deletedAt: null }, take: 1 }, category: true, brand: { select: { name: true, isPartner: true } }, images: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
-      take: 200,
+      skip: (pageNumber - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
+    prisma.product.count({ where }),
     prisma.category.findMany({
       where: { isActive: true, deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -40,6 +56,30 @@ export default async function ProductsAdminPage({
     <div>
       <h1 className="font-serif text-4xl">Produits</h1>
       <AdminFlash ok={ok} erreur={erreur} />
+      <form className="mt-4 flex flex-wrap gap-2">
+        <input name="q" defaultValue={query} placeholder="Rechercher un produit" className="rounded-xl border px-3 py-2" />
+        <select name="marque" defaultValue={marque ?? ""} className="rounded-xl border px-3 py-2">
+          <option value="">Toutes les marques</option>
+          {brands.map((brand) => (
+            <option key={brand.id} value={brand.id}>{brand.name}</option>
+          ))}
+        </select>
+        <select name="rayon" defaultValue={rayon ?? ""} className="rounded-xl border px-3 py-2">
+          <option value="">Tous les rayons</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>{category.name}</option>
+          ))}
+        </select>
+        <select name="vue" defaultValue={vue ?? ""} className="rounded-xl border px-3 py-2">
+          <option value="">Tous</option>
+          <option value="ligne">En ligne</option>
+          <option value="hors">Hors ligne</option>
+          <option value="vedette">Vedettes</option>
+          <option value="partenaire">Marques partenaires</option>
+        </select>
+        <button className="rounded-full bg-brown px-4 py-2 text-sm text-cream">Filtrer</button>
+      </form>
+      <p className="mt-2 text-xs text-black/45">{total} produit(s)</p>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Pour la boutique : nom, rayon, prix, <strong>photo</strong> et courte description. Une suggestion apparaît après le choix d’une photo — à utiliser, modifier ou ignorer. Sans ça, ne publiez pas en ligne.
         Lot :{" "}
@@ -137,6 +177,21 @@ export default async function ProductsAdminPage({
           </tbody>
         </table>
       </div>
+      {total > PAGE_SIZE ? (
+        <p className="mt-4 flex gap-4 text-sm">
+          {pageNumber > 1 ? (
+            <Link href={`/admin/produits?${new URLSearchParams({ q: query, marque: marque ?? "", rayon: rayon ?? "", vue: vue ?? "", page: String(pageNumber - 1) })}`} className="underline">
+              Page précédente
+            </Link>
+          ) : null}
+          <span>Page {pageNumber}</span>
+          {pageNumber * PAGE_SIZE < total ? (
+            <Link href={`/admin/produits?${new URLSearchParams({ q: query, marque: marque ?? "", rayon: rayon ?? "", vue: vue ?? "", page: String(pageNumber + 1) })}`} className="underline">
+              Page suivante
+            </Link>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }

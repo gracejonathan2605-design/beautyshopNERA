@@ -23,15 +23,21 @@ export function VariantEditor() {
   return (
     <div className="space-y-3 md:col-span-4">
       <p className="text-sm text-black/55">
-        Variantes (couleur, longueur, pointure…). La première est la variante par défaut. SKU automatique.
+        Variantes (teinte, taille, longueur). La première est la variante par défaut. SKU automatique.
       </p>
+      <datalist id="nera-shades">
+        {["1B", "2", "4", "27", "30", "99J", "XS", "S", "M", "L", "XL", "2XL"].map((value) => (
+          <option key={value} value={value} />
+        ))}
+      </datalist>
       {rows.map((row, index) => (
         <div key={index} className="grid gap-2 rounded-2xl border border-[#eee0e6] bg-white p-3 md:grid-cols-6">
           <input
             name="variantName"
             value={row.name}
             onChange={(e) => update(index, "name", e.target.value)}
-            placeholder={index === 0 ? "Standard" : "ex. Noir / 30 cm"}
+            placeholder={index === 0 ? "Standard" : "Teinte ou taille, ex. 4 ou M"}
+            list="nera-shades"
             className="rounded-xl border px-3 py-2"
           />
           <input
