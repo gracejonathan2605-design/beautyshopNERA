@@ -15,7 +15,12 @@ export type BulkFieldValues = {
   isPromo: boolean;
   isNew: boolean;
   onlineVisible: boolean;
+  variantLabels?: string;
 };
+
+import { formatVariantLabels, parseVariantLabels } from "@/lib/variant-options";
+
+export { formatVariantLabels };
 
 export function fillBulkProductFormData(fd: FormData, row: BulkFieldValues) {
   fd.set("name", row.name.trim());
@@ -24,12 +29,16 @@ export function fillBulkProductFormData(fd: FormData, row: BulkFieldValues) {
   fd.set("categoryId", row.categoryId);
   if (row.brandId) fd.set("brandId", row.brandId);
   if (row.supplierId) fd.set("supplierId", row.supplierId);
-  fd.set("variantName", "Standard");
-  fd.set("variantSalePrice", row.salePrice.trim());
-  fd.set("variantPromoPrice", row.promoPrice.trim());
-  fd.set("variantCostPrice", row.costPrice.trim());
-  fd.set("variantBarcode", row.barcode.trim());
-  fd.set("variantStock", row.stock.trim());
+  const labels = parseVariantLabels(row.variantLabels);
+  const names = labels.length ? labels : ["Standard"];
+  names.forEach((name, index) => {
+    fd.append("variantName", name);
+    fd.append("variantSalePrice", row.salePrice.trim());
+    fd.append("variantPromoPrice", row.promoPrice.trim());
+    fd.append("variantCostPrice", row.costPrice.trim());
+    fd.append("variantBarcode", index === 0 ? row.barcode.trim() : "");
+    fd.append("variantStock", row.stock.trim());
+  });
   if (row.sku.trim()) fd.set("sku", row.sku.trim());
   if (row.isFeatured) fd.set("isFeatured", "on");
   if (row.isPromo || row.promoPrice.trim()) fd.set("isPromo", "on");

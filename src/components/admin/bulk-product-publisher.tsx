@@ -5,6 +5,8 @@ import { saveProduct } from "@/app/actions/admin";
 import { CategorySelect } from "@/components/admin/category-select";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 import { fillBulkProductFormData, type BulkFieldValues } from "@/lib/bulk-form";
+import { formatVariantLabels } from "@/lib/variant-options";
+import { VariantOptionBuilder } from "@/components/admin/variant-option-builder";
 import { PhotoDescriptionSuggestion } from "@/components/admin/photo-description-suggestion";
 import {
   BULK_IMAGE_ACCEPT,
@@ -48,6 +50,7 @@ const EMPTY_FIELDS: BulkFieldValues = {
   isPromo: false,
   isNew: true,
   onlineVisible: true,
+  variantLabels: "",
 };
 
 function newId() {
@@ -74,6 +77,7 @@ export function BulkProductPublisher({
     stock: "",
     isNew: true,
     onlineVisible: true,
+    variantLabels: "",
   });
   const [publishing, setPublishing] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -131,6 +135,7 @@ export function BulkProductPublisher({
         brandId: defaults.brandId,
         supplierId: defaults.supplierId,
         stock: defaults.stock,
+        variantLabels: defaults.variantLabels,
         isNew: defaults.isNew,
         onlineVisible: defaults.onlineVisible,
         status: "draft" as const,
@@ -194,6 +199,7 @@ export function BulkProductPublisher({
               brandId: defaults.brandId || row.brandId,
               supplierId: defaults.supplierId || row.supplierId,
               stock: defaults.stock || row.stock,
+              variantLabels: defaults.variantLabels || row.variantLabels,
               isNew: defaults.isNew,
               onlineVisible: defaults.onlineVisible,
             },
@@ -325,6 +331,19 @@ export function BulkProductPublisher({
                 ))}
               </select>
             ) : null}
+            <div className="md:col-span-2">
+              <VariantOptionBuilder
+                buttonLabel="Appliquer au lot"
+                onApply={(labels) => {
+                  const variantLabels = formatVariantLabels(labels);
+                  setDefaults((current) => ({ ...current, variantLabels }));
+                  setRows((current) => current.map((row) => (row.status === "ok" ? row : { ...row, variantLabels })));
+                }}
+              />
+              {defaults.variantLabels ? (
+                <p className="mt-2 text-xs text-black/50">Ces variantes seront créées pour chaque photo du lot.</p>
+              ) : null}
+            </div>
             <input
               value={defaults.stock}
               onChange={(event) => setDefaults((current) => ({ ...current, stock: event.target.value }))}
@@ -500,6 +519,13 @@ export function BulkProductPublisher({
                     placeholder="Prix achat"
                     inputMode="numeric"
                     className="rounded-xl border px-3 py-2"
+                  />
+                  <textarea
+                    value={row.variantLabels}
+                    onChange={(event) => patch(row.id, { variantLabels: event.target.value })}
+                    placeholder="Variantes : une par ligne, ou 4, 27, M"
+                    rows={2}
+                    className="rounded-xl border px-3 py-2 md:col-span-2"
                   />
                   <input
                     value={row.stock}

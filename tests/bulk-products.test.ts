@@ -81,6 +81,7 @@ describe("bulk product drafts", () => {
     expect(fd.get("brandId")).toBe("br_1");
     expect(fd.get("sku")).toBe("SKU-1");
     expect(fd.get("variantName")).toBe("Standard");
+    expect(fd.getAll("variantName")).toEqual(["Standard"]);
     expect(fd.get("variantSalePrice")).toBe("8500");
     expect(fd.get("variantPromoPrice")).toBe("7000");
     expect(fd.get("variantCostPrice")).toBe("3000");
@@ -90,5 +91,32 @@ describe("bulk product drafts", () => {
     expect(fd.get("isPromo")).toBe("on");
     expect(fd.get("onlineVisible")).toBe("on");
     expect(fd.get("isNew")).toBe("on");
+  });
+
+  it("crée une variante par couleur, taille ou pointure", () => {
+    const fd = new FormData();
+    fillBulkProductFormData(fd, {
+      name: "Sandale",
+      shortDescription: "Cuir",
+      description: "",
+      categoryId: "cat",
+      brandId: "",
+      supplierId: "",
+      sku: "",
+      salePrice: "12000",
+      promoPrice: "",
+      costPrice: "",
+      barcode: "999",
+      stock: "2",
+      isFeatured: false,
+      isPromo: false,
+      isNew: false,
+      onlineVisible: true,
+      variantLabels: "Noir · 38\nNoir · 39",
+    });
+    expect(fd.getAll("variantName")).toEqual(["Noir · 38", "Noir · 39"]);
+    expect(fd.getAll("variantSalePrice")).toEqual(["12000", "12000"]);
+    expect(fd.getAll("variantBarcode")).toEqual(["999", ""]);
+    expect(fd.getAll("variantStock")).toEqual(["2", "2"]);
   });
 });

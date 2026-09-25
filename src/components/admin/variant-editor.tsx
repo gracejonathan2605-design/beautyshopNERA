@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { VariantOptionBuilder } from "@/components/admin/variant-option-builder";
 
 type Row = {
   name: string;
@@ -25,6 +26,14 @@ export function VariantEditor() {
       <p className="text-sm text-black/55">
         Variantes (teinte, taille, longueur). La première est la variante par défaut. SKU automatique.
       </p>
+      <VariantOptionBuilder
+        onApply={(labels) =>
+          setRows((current) => {
+            const base = current[0] ?? EMPTY;
+            return labels.map((name) => ({ ...base, name, barcode: "" }));
+          })
+        }
+      />
       <datalist id="nera-shades">
         {["1B", "2", "4", "27", "30", "99J", "XS", "S", "M", "L", "XL", "2XL"].map((value) => (
           <option key={value} value={value} />
