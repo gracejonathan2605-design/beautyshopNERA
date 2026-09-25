@@ -5,6 +5,9 @@ import { unstable_rethrow } from "next/navigation";
 
 export function uploadActionError(err: unknown) {
   const message = err instanceof Error ? err.message : String(err ?? "");
+  if (/EMAXCONNSESSION|max clients reached|P2024|connection pool/i.test(message)) {
+    return "La boutique est très sollicitée. Attendez quelques secondes, puis republiez le produit.";
+  }
   if (!message || /failed to fetch|networkerror|load failed/i.test(message)) {
     return "L’envoi du fichier a été coupé. Les photos du téléphone sont souvent trop lourdes. Essayez 1 photo, sans vidéo.";
   }
