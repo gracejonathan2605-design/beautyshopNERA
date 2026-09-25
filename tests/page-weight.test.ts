@@ -36,10 +36,13 @@ describe("pages légères sans casser l’apparence", () => {
     expect(card.trimStart().startsWith('"use client"')).toBe(false);
   });
 
-  it("reste sur la grille d’origine : 1 colonne téléphone, 2 dès sm", () => {
-    expect(src("src/lib/image-limits.ts")).toMatch(/sm:grid-cols-2/);
-    expect(src("src/lib/image-limits.ts")).not.toMatch(/grid grid-cols-2/);
+  it("affiche deux colonnes légères sur téléphone", () => {
+    const limits = src("src/lib/image-limits.ts");
+    expect(limits).toMatch(/grid-cols-2/);
+    expect(limits).toMatch(/50vw/);
     expect(src("src/components/shop/flash-section.tsx")).toMatch(/snap-x/);
+    expect(src("src/components/shop/shop-tab-bar.tsx")).toContain("Navigation mobile");
+    expect(src("src/app/manifest.ts")).toContain('display: "standalone"');
   });
 
   it("affiche le hero, la phrase et À propos aussi sur téléphone", () => {

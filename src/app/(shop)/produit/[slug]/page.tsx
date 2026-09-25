@@ -115,7 +115,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 pb-28 md:pb-12">
+    <div className="mx-auto max-w-6xl px-4 py-6 pb-36 md:py-8 md:pb-12">
       <ProductOpenGraphTags price={price} inStock={inStock} brand={product.brand?.name} />
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
       <JsonLd

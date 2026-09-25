@@ -12,6 +12,13 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#fffcfb",
     theme_color: "#3a2430",
     lang: "fr-CM",
+    id: "/",
+    categories: ["shopping", "lifestyle"],
+    shortcuts: [
+      { name: "Boutique", short_name: "Boutique", url: "/boutique" },
+      { name: "Panier", short_name: "Panier", url: "/panier" },
+      { name: "Compte", short_name: "Compte", url: "/compte" },
+    ],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

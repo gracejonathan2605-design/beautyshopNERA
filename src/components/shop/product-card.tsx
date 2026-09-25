@@ -70,16 +70,16 @@ export function ProductCard({
           </span>
         ) : null}
       </div>
-      <div className="p-4">
-        <h3 className="font-serif text-xl leading-snug text-wine">{product.name}</h3>
+      <div className="p-3 sm:p-4">
+        <h3 className="line-clamp-2 font-serif text-base leading-snug text-wine sm:text-xl">{product.name}</h3>
         {product.brand?.name ? (
           <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/40">{product.brand.name}</p>
         ) : null}
-        <p className="mt-1 line-clamp-2 text-sm text-black/50">{product.shortDescription}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-black/50 sm:text-sm max-sm:hidden">{product.shortDescription}</p>
         {oftenChosen ? (
           <p className="mt-2 text-xs text-wine/70">Souvent choisi cette semaine</p>
         ) : null}
-        <p className="mt-3 font-serif text-2xl text-brown">
+        <p className="mt-2 font-serif text-lg text-brown sm:mt-3 sm:text-2xl">
           {onPromo && variant ? (
             <span className="mr-2 text-black/30 line-through">{formatCfa(variant.salePrice)}</span>
           ) : null}
