@@ -48,8 +48,11 @@ describe("total commande", () => {
     expect(checkout).toContain("MANUAL_PAYMENT_HINT");
     expect(checkout).not.toContain("Une demande arrive sur votre téléphone");
     expect(confirmation).not.toContain("Une demande arrive sur votre téléphone");
-    expect(confirmation).toContain("Une demande Orange Money a été envoyée");
-    expect(confirmation).toContain('startsWith("MP")');
+    expect(confirmation).toContain("OrangePayLaunch");
+    expect(confirmation).toContain("orangePushWasSent");
+    expect(readFileSync("src/components/shop/orange-pay-launch.tsx", "utf8")).toContain("Lancer Orange Money");
+    expect(readFileSync("src/lib/payments/orange-money.ts", "utf8")).toContain('startsWith("MP")');
+    expect(readFileSync("src/app/actions/shop.ts", "utf8")).toContain("lancer=1");
   });
 });
 

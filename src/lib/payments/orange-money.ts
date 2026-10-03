@@ -29,6 +29,19 @@ export function orangeSubscriberMsisdn(raw: string) {
   return cameroonMobileLocal(raw);
 }
 
+/** `#150*47*1059897#` devient un lien qui ouvre le composeur. */
+export function orangeUssdHref(code: string) {
+  const compact = code.replace(/\s/g, "");
+  if (!/^[#*][\d*]+#$/.test(compact)) return null;
+  return `tel:${compact.replace(/^#/, "*").replace(/#$/, "%23")}`;
+}
+
+export function orangePushWasSent(payment?: { reference?: string | null; note?: string | null } | null) {
+  if (!payment) return false;
+  if (payment.note?.includes("Demande Orange Money")) return true;
+  return Boolean(payment.reference?.startsWith("MP"));
+}
+
 export function orangePaymentSucceeded(status?: string | null) {
   const value = (status ?? "").replace(/\s/g, "").toUpperCase();
   return value === "SUCCESSFULL" || value === "SUCCESSFUL" || value === "SUCCESS";
