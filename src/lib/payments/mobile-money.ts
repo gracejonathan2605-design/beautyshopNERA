@@ -1,5 +1,6 @@
 import type { ShopSettings } from "@/lib/settings";
-import { orangeConfig } from "./orange-money";
+import { reportError } from "@/lib/monitor";
+import { orangeConfig, orangeConfigIssue } from "./orange-money";
 
 export type PaymentNetwork = "ORANGE" | "MTN";
 
@@ -63,7 +64,12 @@ export async function startMobileMoneyCharge(input: {
   orderNumber: string;
   phone: string;
 }) {
-  if (input.network === "ORANGE" && orangeConfig()) {
+  if (input.network === "ORANGE") {
+    const issue = orangeConfigIssue();
+    if (issue) {
+      reportError("orange-money", new Error(issue));
+      return { mode: "manual" as const, providerReference: input.network };
+    }
     const { requestOrangeCashIn } = await import("./orange-money");
     const { absoluteUrl } = await import("@/lib/site-url");
     const result = await requestOrangeCashIn({
@@ -74,6 +80,7 @@ export async function startMobileMoneyCharge(input: {
       notifUrl: absoluteUrl("/api/payments/orange"),
     });
     if (result.ok) return { mode: "api" as const, providerReference: result.payToken };
+    reportError("orange-money", new Error(result.reason));
     return { mode: "manual" as const, providerReference: input.network };
   }
   const apiUrl = process.env.MTN_MOMO_API_URL?.trim();

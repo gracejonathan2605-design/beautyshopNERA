@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { orangePaymentStatus, orangePaymentSucceeded } from "@/lib/payments/orange-money";
+import { orangePaymentStatus, orangePaymentSucceeded, readOrangeReference } from "@/lib/payments/orange-money";
 import { collectCompletedOrderPayment } from "@/services/order.service";
 import { reportError } from "@/lib/monitor";
 
 export const dynamic = "force-dynamic";
 
 function readPayToken(body: unknown) {
-  if (!body || typeof body !== "object") return "";
-  const row = body as { payToken?: string; data?: { payToken?: string } };
-  return (row.payToken || row.data?.payToken || "").trim();
+  return readOrangeReference(body);
 }
 
 export async function POST(request: Request) {
