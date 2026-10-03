@@ -51,7 +51,7 @@ export function ProductCard({
   return (
     <Link
       href={`/produit/${product.slug}`}
-      className="group overflow-hidden rounded-[1.7rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-32px_rgba(58,36,48,0.28)] transition hover:-translate-y-0.5 hover:border-gold/50"
+      className="group overflow-hidden rounded-[1.5rem] border border-gold/25 bg-cream shadow-[0_22px_40px_-34px_rgba(36,20,28,0.45)] transition hover:-translate-y-0.5 hover:border-gold"
     >
       <div className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
         <ProductPhoto
@@ -79,12 +79,15 @@ export function ProductCard({
         {oftenChosen ? (
           <p className="mt-2 text-xs text-wine/70">Souvent choisi cette semaine</p>
         ) : null}
-        <p className="mt-2 font-serif text-lg text-brown sm:mt-3 sm:text-2xl">
+        <p className="mt-2 font-serif text-lg text-wine sm:mt-3 sm:text-2xl">
           {onPromo && variant ? (
-            <span className="mr-2 text-black/30 line-through">{formatCfa(variant.salePrice)}</span>
+            <span className="mr-2 font-sans text-sm text-black/35 line-through">{formatCfa(variant.salePrice)}</span>
           ) : null}
           {formatCfa(price)}
         </p>
+        {inStock ? (
+          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-gold">Découvrir</p>
+        ) : null}
         {flash && product.flashEndAt ? <ProductCardFlash endAt={product.flashEndAt} /> : null}
         {!inStock ? <p className="mt-1 text-xs text-black/45">Indisponible pour le moment</p> : null}
       </div>

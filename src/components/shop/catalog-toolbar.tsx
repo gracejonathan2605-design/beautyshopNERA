@@ -19,14 +19,14 @@ export function CatalogToolbar({
         name="q"
         defaultValue={query.q}
         placeholder="Rechercher un produit, une mèche, un parfum…"
-        className="w-full rounded-full border border-[#eee0e6] bg-white px-5 py-3"
+        className="w-full rounded-full border border-gold/30 bg-cream px-5 py-3"
       />
       <div className="flex flex-wrap gap-2">
         {!hideRayon ? (
           <select
             name="rayon"
             defaultValue={query.rayon}
-            className="rounded-full border border-[#eee0e6] bg-white px-3 py-2 text-sm"
+            className="rounded-full border border-gold/30 bg-cream px-3 py-2 text-sm"
             aria-label="Rayon"
           >
             <option value="">Tous les rayons</option>
@@ -40,7 +40,7 @@ export function CatalogToolbar({
         <select
           name="vue"
           defaultValue={query.vue === "new" ? "nouveautes" : query.vue === "promo" ? "promos" : ""}
-          className="rounded-full border border-[#eee0e6] bg-white px-3 py-2 text-sm"
+          className="rounded-full border border-gold/30 bg-cream px-3 py-2 text-sm"
           aria-label="Sélection"
         >
           <option value="">Tous les articles</option>
@@ -52,7 +52,7 @@ export function CatalogToolbar({
           defaultValue={
             query.tri === "price-asc" ? "prix-asc" : query.tri === "price-desc" ? "prix-desc" : query.tri === "newest" ? "recent" : ""
           }
-          className="rounded-full border border-[#eee0e6] bg-white px-3 py-2 text-sm"
+          className="rounded-full border border-gold/30 bg-cream px-3 py-2 text-sm"
           aria-label="Trier"
         >
           <option value="">Nom A → Z</option>

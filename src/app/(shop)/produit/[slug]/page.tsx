@@ -154,8 +154,8 @@ export default async function ProductPage({ params, searchParams }: Props) {
         )}
         <div>
           {product.category ? (
-            <p className="text-sm text-wine/70">
-              <Link href={`/categorie/${product.category.slug}`} className="underline decoration-wine/30 underline-offset-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-gold">
+              <Link href={`/categorie/${product.category.slug}`} className="hover:text-wine">
                 {product.category.name}
               </Link>
             </p>
@@ -167,7 +167,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             isPromo={product.isPromo}
             isNew={product.isNew}
           />
-          <h1 className="mt-2 font-serif text-5xl text-wine">{heading}</h1>
+          <h1 className="mt-2 font-serif text-5xl leading-[0.95] text-wine md:text-6xl">{heading}</h1>
           {product.brand?.name ? (
             product.brand.isPartner && product.brand.showOnSite ? (
               <p className="mt-2 text-sm text-wine/70">

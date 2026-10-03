@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  /* Perle, champagne, rose poudré — maison de beauté, plus de marron café */
-  --background: #fffcfb;
-  --foreground: #2a1f24;
-  --gold: #b8956c;
-  --brown: #c45c74;
-  --cream: #ffffff;
-  --blush: #f8eef2;
-  --champagne: #f6efe3;
-  --wine: #3a2430;
+  /* Ivoire, or et vin — maison de beauté, pas une vitrine discount */
+  --background: #f6f1ea;
+  --foreground: #1c1418;
+  --gold: #a68456;
+  --brown: #6b2438;
+  --cream: #fffdfb;
+  --blush: #f3e7eb;
+  --champagne: #f3ecdf;
+  --wine: #24141c;
 }
 
 @theme inline {
@@ -38,9 +38,8 @@ body {
 body {
   background-color: var(--background);
   background-image:
-    radial-gradient(1100px 520px at 6% -12%, rgba(248, 214, 224, 0.55), transparent 58%),
-    radial-gradient(900px 460px at 100% -4%, rgba(246, 239, 227, 0.7), transparent 54%),
-    radial-gradient(720px 360px at 50% 115%, rgba(245, 220, 228, 0.28), transparent 62%);
+    radial-gradient(900px 420px at 0% -8%, rgba(166, 132, 86, 0.16), transparent 56%),
+    radial-gradient(820px 380px at 100% 0%, rgba(107, 36, 56, 0.06), transparent 52%);
   color: var(--foreground);
   font-family: var(--font-outfit), sans-serif;
 }
@@ -54,8 +53,8 @@ h3,
 }
 
 ::selection {
-  background: #f3c5d0;
-  color: #2a1f24;
+  background: #e7d3b4;
+  color: #1c1418;
 }
 
 input,
@@ -74,9 +73,8 @@ textarea:focus {
 
 .hero-light {
   background:
-    radial-gradient(820px 380px at 88% 8%, rgba(184, 149, 108, 0.16), transparent 58%),
-    radial-gradient(640px 340px at 8% 88%, rgba(196, 92, 116, 0.12), transparent 52%),
-    linear-gradient(180deg, #fffdfc 0%, #fff7f4 46%, #f8eef2 100%);
+    radial-gradient(820px 380px at 88% 8%, rgba(166, 132, 86, 0.18), transparent 58%),
+    linear-gradient(180deg, #fffdfb 0%, #f6f1ea 100%);
 }
 
 .gold-rule {
@@ -95,9 +93,9 @@ textarea:focus {
 
 a.bg-brown,
 button.bg-brown {
-  background-image: linear-gradient(180deg, #d46e86 0%, #c45c74 100%);
-  box-shadow: 0 14px 28px -16px rgba(196, 92, 116, 0.75);
-  letter-spacing: 0.02em;
+  background-image: linear-gradient(180deg, #8a3a52 0%, #4c1c2e 100%);
+  box-shadow: 0 14px 28px -18px rgba(36, 20, 28, 0.8);
+  letter-spacing: 0.06em;
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 
@@ -142,12 +140,11 @@ button.bg-brown:hover {
   justify-content: center;
   gap: 0.35rem;
   border-radius: 999px;
-  padding: 0.4rem 0.75rem;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  padding: 0.35rem 0.7rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 6px 14px -10px rgba(42, 31, 36, 0.45);
 }
 
 .pay-om {
