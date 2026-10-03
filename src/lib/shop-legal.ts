@@ -239,7 +239,7 @@ export function privacySections(): LegalSection[] {
         "Paiement : réseau choisi (Orange Money, MTN Mobile Money ou espèces), référence de transaction et montant. Le code secret n’est ni demandé ni enregistré.",
         "Échanges : messages WhatsApp, appels ou e-mails liés à une commande, à une question, ou à une alerte de retour en stock que la personne a demandée.",
         "Technique : cookie de panier, cookie de connexion au compte, et journaux nécessaires à la sécurité du site.",
-        "Mesure d’audience : Google Analytics et Google Tag Manager peuvent recevoir des données de navigation (pages consultées, type d’appareil, indication approximative de localisation) et déposer un cookie.",
+        "Mesure d’audience : Google Analytics et Google Tag Manager ne reçoivent des données de navigation (pages consultées, type d’appareil, indication approximative de localisation) et ne déposent un cookie qu’après un accord exprès sur le bandeau du site. Refuser n’empêche pas de commander.",
       ],
     },
     {
@@ -250,7 +250,7 @@ export function privacySections(): LegalSection[] {
         "Conserver les tickets, commandes et preuves de paiement pour la comptabilité et le contrôle fiscal. Cette conservation repose sur une obligation légale. Elle ne tombe pas si la personne retire ensuite son accord pour l’avenir.",
         "Sécuriser le site et prévenir les paiements anormaux, dans la limite de ce qui est nécessaire au service demandé.",
         "Répondre sur WhatsApp lorsqu’une personne écrit, et envoyer le statut d’une commande qu’elle a passée. Un message de suivi de commande n’est pas une publicité.",
-        "Mesurer la fréquentation du site pour comprendre quelles pages sont utiles. Bloquer ces cookies dans le navigateur n’empêche pas de commander.",
+        "Mesurer la fréquentation du site pour comprendre quelles pages sont utiles, seulement après accord sur le bandeau. Refuser ou retirer cet accord n’empêche pas de commander. Le panier et la connexion au compte ne dépendent pas de cette mesure.",
         "La boutique ne prend pas de décision automatisée produisant un effet juridique. Elle ne constitue pas de fichier de santé, d’origine, d’opinions, de vie sexuelle ou de données judiciaires.",
       ],
     },
@@ -260,7 +260,7 @@ export function privacySections(): LegalSection[] {
       paragraphs: [
         "Le personnel habilité de la boutique, pour la caisse, la préparation et la livraison.",
         "Les prestataires techniques qui hébergent le site et la base de données, uniquement pour faire fonctionner la boutique, et selon les instructions de la boutique.",
-        "Google, pour la mesure d’audience. WhatsApp (Meta), lorsqu’un message est échangé sur ce canal. Orange et MTN, comme opérateurs que le client utilise lui-même pour payer : la boutique reçoit la référence, pas l’accès au compte mobile money.",
+        "Google, pour la mesure d’audience, uniquement si la personne a accepté le bandeau. WhatsApp (Meta), lorsqu’un message est échangé sur ce canal. Orange et MTN, comme opérateurs que le client utilise lui-même pour payer : la boutique reçoit la référence, pas l’accès au compte mobile money.",
         "Les autorités, lorsque la loi l’impose. Les données ne sont ni vendues, ni louées, ni cédées à des fichiers publicitaires.",
       ],
     },
@@ -277,7 +277,7 @@ export function privacySections(): LegalSection[] {
       paragraphs: [
         "Le compte est conservé jusqu’à la demande de suppression, puis effacé ou anonymisé, sous réserve des pièces qui doivent rester.",
         "Les commandes, tickets et preuves de paiement sont conservés le temps exigé par les obligations comptables et fiscales camerounaises, en pratique dix ans pour les pièces commerciales.",
-        "Le panier dure le temps de la visite, jusqu’à ce qu’il soit vidé ou que le cookie expire. Les messages liés à une commande suivent la durée du dossier de commande. La mesure d’audience suit les délais de l’outil, que le navigateur peut raccourcir.",
+        "Le panier dure le temps de la visite, jusqu’à ce qu’il soit vidé ou que le cookie expire. Les messages liés à une commande suivent la durée du dossier de commande. Le choix du bandeau est mémorisé six mois. La mesure d’audience, si elle a été acceptée, suit les délais de l’outil.",
       ],
     },
     {

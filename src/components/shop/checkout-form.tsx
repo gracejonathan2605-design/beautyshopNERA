@@ -121,9 +121,12 @@ export function CheckoutForm({
       />
       <input
         name="shippingPhone"
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel"
         required
         defaultValue={customer?.shippingPhone}
-        placeholder="Téléphone"
+        placeholder="Téléphone, ex. 6XX XX XX XX"
         className="w-full rounded-xl border px-4 py-3"
       />
       {!customer ? (

@@ -9,6 +9,7 @@ const KNOWN = new Set([
   "Un article n’est plus en vente. Revenez au panier pour le retirer.",
   "Stock insuffisant. Revenez au panier pour ajuster les quantités.",
   "Indiquez votre nom et votre téléphone.",
+  "Indiquez un numéro mobile camerounais, par exemple 6XX XX XX XX.",
   "Choisissez une zone de livraison pour calculer les frais.",
   "Indiquez l’adresse et la ville de livraison.",
   "Connectez-vous pour modifier votre profil.",

@@ -5,6 +5,7 @@ import { StaffToolbarClient } from "@/components/staff/toolbar-client";
 import { CartLink, ShopCartBadge } from "@/components/shop/cart-badge";
 import { whatsappChatUrl } from "@/lib/receipt";
 import { BrandLockup, BrandLogo } from "@/components/brand/logo";
+import { AnalyticsChoiceButton } from "@/components/shop/analytics-consent";
 import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
 import { JsonLd } from "@/components/seo/json-ld";
 import { neraOrganizationGraph } from "@/lib/seo";
@@ -167,6 +168,9 @@ export function ShopFooter() {
               <Link href="/confidentialite" className="text-wine underline-offset-2 hover:underline">
                 Confidentialité
               </Link>
+            </p>
+            <p>
+              <AnalyticsChoiceButton />
             </p>
             <p className="mt-2">Retrait en boutique</p>
             <p>Livraison rapide sous 24h à Yaoundé</p>

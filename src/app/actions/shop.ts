@@ -11,6 +11,7 @@ import { orderConfirmationPath } from "@/lib/order-access";
 import { quoteCoupon } from "@/lib/coupon";
 import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
+import { cameroonMobileLocal } from "@/lib/phone-match";
 import { variantAvailable } from "@/lib/stock-display";
 import { shopPublicError } from "@/lib/shop-public-error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -87,6 +88,9 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     const name = String(formData.get("shippingName") ?? "").trim();
     const phone = String(formData.get("shippingPhone") ?? "").trim();
     if (!name || !phone) return { ok: false, error: "Indiquez votre nom et votre téléphone." };
+    if (!cameroonMobileLocal(phone)) {
+      return { ok: false, error: "Indiquez un numéro mobile camerounais, par exemple 6XX XX XX XX." };
+    }
     if (!rateLimit(`checkout:${phone}`, 5, 10 * 60 * 1000)) {
       return { ok: false, error: "Trop de commandes sur ce numéro. Réessayez dans quelques minutes." };
     }

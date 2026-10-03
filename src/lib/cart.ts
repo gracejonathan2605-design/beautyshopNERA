@@ -9,6 +9,16 @@ export type CartItem = {
 const CART_COOKIE = "nera_cart";
 export { CART_COUNT_COOKIE };
 
+/** Quantité qui peut réellement être commandée. Zéro si la ligne est en rupture. */
+export function billableLineQuantity(quantity: number, available: number) {
+  if (available <= 0 || quantity <= 0) return 0;
+  return Math.min(quantity, available);
+}
+
+export function cartPayableTotal(lines: { unitPrice: number; quantity: number; available: number }[]) {
+  return lines.reduce((sum, line) => sum + line.unitPrice * billableLineQuantity(line.quantity, line.available), 0);
+}
+
 export function cartQuantity(items: CartItem[]) {
   return items.reduce((sum, item) => sum + item.quantity, 0);
 }

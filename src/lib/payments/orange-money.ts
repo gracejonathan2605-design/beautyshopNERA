@@ -1,3 +1,5 @@
+import { cameroonMobileLocal } from "@/lib/phone-match";
+
 const TOKEN_SKEW_MS = 30_000;
 
 export type OrangeConfig = {
@@ -24,10 +26,7 @@ export function orangeConfig(env: NodeJS.ProcessEnv = process.env): OrangeConfig
 
 /** Numéro Orange sans indicatif : 9 chiffres, commence par 6. */
 export function orangeSubscriberMsisdn(raw: string) {
-  const digits = raw.replace(/\D/g, "");
-  const local = digits.startsWith("237") ? digits.slice(3) : digits.startsWith("0") ? digits.slice(1) : digits;
-  if (local.length === 9 && local.startsWith("6")) return local;
-  return "";
+  return cameroonMobileLocal(raw);
 }
 
 export function orangePaymentSucceeded(status?: string | null) {

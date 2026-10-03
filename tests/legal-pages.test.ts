@@ -53,6 +53,8 @@ describe("confidentialité selon la loi camerounaise", () => {
     expect(privacy).toContain("code secret");
     expect(privacy).toContain("dix ans");
     expect(privacy).toMatch(/droit d’accès/);
+    expect(privacy).toContain("bandeau");
+    expect(privacy).toMatch(/accord exprès/);
   });
 
   it("affiche les trois pages avec un sommaire", () => {
