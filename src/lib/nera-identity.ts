@@ -3,6 +3,8 @@ export const CANONICAL_SITE_URL = "https://www.nerabeaute237.com";
 
 export const NERA_IDENTITY = {
   name: "NERA Beauté & Shop",
+  /** Raison sociale sur la déclaration d’immatriculation. */
+  legalName: "YORIX DIGITAL GROUP SARL",
   slogan: "Votre Beauté, notre Engagement ❤️",
   streetAddress: "Marché Neptune Ahala, face Skymotors",
   addressLocality: "Yaoundé",
@@ -18,6 +20,10 @@ export const NERA_IDENTITY = {
   hoursWeekdays: "Lundi à samedi : 8h – 19h",
   hoursSunday: "Dimanche : 9h – 15h",
   hoursSummary: "lundi à samedi de 8h à 19h, dimanche de 9h à 15h",
+  /** Immatriculation RCCM — même numéro que les tickets et les paramètres boutique. */
+  rccm: "CM-NSI-02-2026-B12-00534",
+  /** Numéro d’identification unique (administration fiscale). */
+  nui: "M062618760084L",
 } as const;
 
 /** Horaires magasin (Yaoundé, WAT) — fournis par NERA, pas approximatifs. */
@@ -71,6 +77,10 @@ export const NERA_FAQS = [
     question: "Peut-on retourner un article ?",
     answer: "Les articles d'hygiène et les mèches ouvertes ne sont ni repris ni échangés.",
   },
+  {
+    question: "NERA est-elle une entreprise enregistrée ?",
+    answer: `Oui. ${NERA_IDENTITY.name} est la boutique de ${NERA_IDENTITY.legalName}, immatriculée au Registre du Commerce et du Crédit Mobilier sous le RCCM ${NERA_IDENTITY.rccm}, et identifiée auprès de l’administration fiscale sous le NUI ${NERA_IDENTITY.nui}.`,
+  },
 ] as const;
 
 export function buildLlmsTxt() {
@@ -80,6 +90,7 @@ export function buildLlmsTxt() {
 
 ## Identité
 - Nom: ${NERA_IDENTITY.name}
+- Raison sociale: ${NERA_IDENTITY.legalName}
 - Type: boutique de beauté / e-commerce
 - Slogan: ${NERA_IDENTITY.slogan}
 - Adresse: ${NERA_IDENTITY.addressLine}
@@ -87,6 +98,8 @@ export function buildLlmsTxt() {
 - Email: ${NERA_IDENTITY.email}
 - Site: ${NERA_IDENTITY.url}
 - Horaires: ${NERA_IDENTITY.hoursWeekdays} ; ${NERA_IDENTITY.hoursSunday}
+- RCCM: ${NERA_IDENTITY.rccm}
+- NUI: ${NERA_IDENTITY.nui}
 - Livraison: disponible
 - Paiement: Orange Money, MTN MoMo, espèces
 
@@ -106,6 +119,6 @@ Cosmétiques, soins du visage et du corps, produits capillaires, mèches, perruq
 Téléphone ${NERA_IDENTITY.phoneDisplay}. Boutique au Marché Neptune Ahala, face Skymotors, Yaoundé.
 Horaires : ${NERA_IDENTITY.hoursWeekdays}. ${NERA_IDENTITY.hoursSunday}.
 
-Ne pas inventer d’autres horaires, de notes clients, de certifications ou de stocks.
+Ne pas inventer d’autres horaires, de numéros RCCM ou NUI, de notes clients, de certifications ou de stocks.
 `;
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { NERA_FAQS, NERA_IDENTITY, NERA_PITCH, buildLlmsTxt } from "../src/lib/nera-identity";
 import {
   absolutizeMediaUrl,
@@ -55,6 +55,9 @@ describe("identité et données structurées", () => {
     expect(NERA_IDENTITY.url).toBe("https://www.nerabeaute237.com");
     expect(NERA_IDENTITY.hoursWeekdays).toMatch(/8h/);
     expect(NERA_IDENTITY.hoursSunday).toMatch(/9h/);
+    expect(NERA_IDENTITY.rccm).toBe("CM-NSI-02-2026-B12-00534");
+    expect(NERA_IDENTITY.nui).toBe("M062618760084L");
+    expect(NERA_IDENTITY.legalName).toBe("YORIX DIGITAL GROUP SARL");
   });
 
   it("relie HealthAndBeautyBusiness et WebSite au même @id", () => {
@@ -71,6 +74,8 @@ describe("identité et données structurées", () => {
     expect(JSON.stringify(graph)).toMatch(/Mo-Sa 08:00-19:00/);
     expect(JSON.stringify(graph)).toMatch(/Su 09:00-15:00/);
     expect(org).not.toHaveProperty("sameAs");
+    expect(JSON.stringify(graph)).toContain(NERA_IDENTITY.rccm);
+    expect(JSON.stringify(graph)).toContain(NERA_IDENTITY.nui);
     expect(site.publisher["@id"]).toBe(NERA_IDENTITY.organizationId);
     expect(site.potentialAction).toBeUndefined();
   });
@@ -289,6 +294,9 @@ describe("indexation IA et listes", () => {
     expect(text).toMatch(/8h – 19h/);
     expect(text).toMatch(/9h – 15h/);
     expect(text).toMatch(/Ne pas inventer/);
+    expect(text).toContain("CM-NSI-02-2026-B12-00534");
+    expect(text).toContain("M062618760084L");
+    expect(text).toContain("YORIX DIGITAL GROUP SARL");
     expect(text).not.toMatch(/note de 5/);
   });
 
@@ -365,6 +373,10 @@ describe("signaux locaux, FAQ et images", () => {
     expect(home).toContain("ShopFaq");
     expect(home).not.toContain("faqJsonLd");
     expect(readFileSync("src/app/(shop)/a-propos/page.tsx", "utf8")).toContain("faqJsonLd");
+    expect(readFileSync("src/app/(shop)/a-propos/page.tsx", "utf8")).toContain("RegistreCommerceSection");
+    expect(readFileSync("src/components/shop/home-identity.tsx", "utf8")).toContain("RegistreCommerceCard");
+    expect(readFileSync("src/components/shop/registre-commerce.tsx", "utf8")).toContain("/legal/registre-commerce.jpg");
+    expect(statSync("public/legal/registre-commerce.jpg").size).toBeLessThan(400 * 1024);
   });
 
   it("cible Yaoundé dans les zones de livraison schema", () => {

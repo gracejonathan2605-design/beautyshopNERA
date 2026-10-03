@@ -53,6 +53,10 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
       },
       {
+        source: "/legal/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
+      },
+      {
         source: "/sitemap.xml",
         headers: [
           { key: "Content-Type", value: "application/xml; charset=utf-8" },

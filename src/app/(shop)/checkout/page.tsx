@@ -5,6 +5,7 @@ import { unitPrice } from "@/lib/pricing";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/shop/checkout-form";
+import { RegistreTrustLink } from "@/components/shop/registre-commerce";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { sellableOnlineWhere } from "@/lib/product-query";
 import { getCustomerSession } from "@/lib/auth";
@@ -64,8 +65,9 @@ export default async function CheckoutPage() {
           Articles {formatCfa(subtotal)}. En livraison, les frais s’ajoutent automatiquement — un seul paiement pour
           les articles et la course. Livraison rapide sous 24h à Yaoundé.
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <PayDeliveryBadges />
+          <RegistreTrustLink />
         </div>
         <CheckoutForm
           subtotal={subtotal}
