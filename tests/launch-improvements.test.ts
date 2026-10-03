@@ -7,7 +7,7 @@ import {
   shouldReleaseUnpaidOrder,
   unpaidOrderCutoff,
 } from "../src/lib/pending-orders";
-import { cameroonPhoneLookupVariants, phoneLastNine, phonesLikelyMatch } from "../src/lib/phone-match";
+import { cameroonMobileLocal, cameroonPhoneLookupVariants, phoneLastNine, phonesLikelyMatch } from "../src/lib/phone-match";
 import { isAllowedProductImage, isHeicFile, PRODUCT_IMAGE_ACCEPT } from "../src/lib/product-images";
 import { isAllowedBulkImage } from "../src/lib/bulk-products";
 import { scanMatchDecision } from "../src/lib/pos";
@@ -101,6 +101,10 @@ describe("rattachement téléphone", () => {
     expect(phoneLastNine("+237 6 96 56 56 54")).toBe("696565654");
     expect(phonesLikelyMatch("0696565654", "237696565654")).toBe(true);
     expect(phonesLikelyMatch("690000000", "691000000")).toBe(false);
+    expect(cameroonMobileLocal("+237 676 93 51 95")).toBe("676935195");
+    expect(cameroonMobileLocal("0676935195")).toBe("676935195");
+    expect(cameroonMobileLocal("abc")).toBe("");
+    expect(cameroonMobileLocal("222345678")).toBe("");
   });
 });
 

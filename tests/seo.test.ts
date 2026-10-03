@@ -339,25 +339,26 @@ describe("Google Search Console", () => {
 });
 
 describe("Google Tag Manager", () => {
-  it("injecte GTM-T973VWFC dans le head de toutes les pages", () => {
+  it("ne charge GTM-T973VWFC qu’après accord", () => {
+    const ids = readFileSync("src/lib/analytics.ts", "utf8");
+    const banner = readFileSync("src/components/shop/analytics-consent.tsx", "utf8");
     const layout = readFileSync("src/app/layout.tsx", "utf8");
-    expect(layout).toContain('GTM_ID = "GTM-T973VWFC"');
-    expect(layout).toContain("googletagmanager.com/gtm.js");
-    expect(layout).toContain("googletagmanager.com/ns.html");
-    expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("googletagmanager.com/gtm.js"));
-    expect(layout.indexOf("<body")).toBeLessThan(layout.indexOf("googletagmanager.com/ns.html"));
+    expect(ids).toContain('GTM_ID = "GTM-T973VWFC"');
+    expect(banner).toContain("googletagmanager.com/gtm.js?id=${GTM_ID}");
+    expect(banner).toContain('if (choice === "granted") startAnalytics()');
+    expect(layout).toContain("AnalyticsConsent");
+    expect(layout).not.toContain("googletagmanager.com");
   });
 });
 
 describe("Google Analytics", () => {
-  it("colle G-PNJ2MC62V3 une seule fois, juste après head", () => {
-    const layout = readFileSync("src/app/layout.tsx", "utf8");
-    expect(layout).toContain('GA_MEASUREMENT_ID = "G-PNJ2MC62V3"');
-    expect(layout).toContain("googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}");
-    expect(layout).toContain("gtag('config', '${GA_MEASUREMENT_ID}')");
-    expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("gtag/js"));
-    expect(layout.indexOf("gtag/js")).toBeLessThan(layout.indexOf("googletagmanager.com/gtm.js"));
-    expect(layout.split("gtag('config'").length - 1).toBe(1);
+  it("ne charge G-PNJ2MC62V3 qu’une fois, après accord", () => {
+    const ids = readFileSync("src/lib/analytics.ts", "utf8");
+    const banner = readFileSync("src/components/shop/analytics-consent.tsx", "utf8");
+    expect(ids).toContain('GA_MEASUREMENT_ID = "G-PNJ2MC62V3"');
+    expect(banner).toContain("googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}");
+    expect(banner).toContain('gtag("config", GA_MEASUREMENT_ID)');
+    expect(banner.split('gtag("config"').length - 1).toBe(1);
   });
 });
 

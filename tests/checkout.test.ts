@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { nextCartQuantity, reorderCartMerge } from "../src/lib/cart";
+import { billableLineQuantity, cartPayableTotal, nextCartQuantity, reorderCartMerge } from "../src/lib/cart";
+import { analyticsCookieAssignment, parseAnalyticsCookie } from "../src/lib/analytics";
 import { isShopTabActive } from "../src/lib/shop-nav";
 import { catalogPhotoFor, PRODUCT_PHOTOS } from "../src/lib/product-photos";
 import { readFileSync } from "node:fs";
@@ -72,6 +73,31 @@ describe("plafond de stock au panier", () => {
     expect(merged.already).toBe(1);
     expect(merged.skipped).toBe(1);
     expect(merged.cart).toEqual([{ variantId: "a", quantity: 2 }]);
+  });
+});
+
+describe("total commandable du panier", () => {
+  it("ignore les quantités au-delà du stock et les ruptures", () => {
+    expect(billableLineQuantity(5, 2)).toBe(2);
+    expect(billableLineQuantity(3, 0)).toBe(0);
+    expect(
+      cartPayableTotal([
+        { unitPrice: 1000, quantity: 5, available: 2 },
+        { unitPrice: 4000, quantity: 1, available: 0 },
+        { unitPrice: 500, quantity: 2, available: 2 },
+      ]),
+    ).toBe(3000);
+  });
+});
+
+describe("bandeau de mesure d’audience", () => {
+  it("ne reconnaît que un accord ou un refus explicite", () => {
+    expect(parseAnalyticsCookie("")).toBeNull();
+    expect(parseAnalyticsCookie("nera_analytics=granted")).toBe("granted");
+    expect(parseAnalyticsCookie("autre=1; nera_analytics=denied")).toBe("denied");
+    expect(parseAnalyticsCookie("nera_analytics=maybe")).toBeNull();
+    expect(analyticsCookieAssignment("granted", true)).toContain("max-age=15552000");
+    expect(analyticsCookieAssignment("denied", false)).not.toContain("secure");
   });
 });
 

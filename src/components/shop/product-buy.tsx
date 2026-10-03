@@ -25,10 +25,19 @@ export function ProductBuy({
   oftenChosen?: boolean;
 }) {
   const [id, setId] = useState(variants[0]?.id ?? "");
+  const [qty, setQty] = useState(1);
   const selected = variants.find((v) => v.id === id) ?? variants[0];
   if (!selected) return null;
   const available = variantAvailable(selected.inventories);
   const inStock = available > 0;
+  const quantity = Math.min(Math.max(1, qty), Math.max(1, available));
+  function chooseVariant(nextId: string) {
+    setId(nextId);
+    setQty(1);
+  }
+  function changeQty(next: number) {
+    setQty(Math.min(available, Math.max(1, next)));
+  }
   const promo = selected.promoPrice;
   const onPromo = Boolean(promo && promo > 0 && promo < selected.salePrice);
   const price = formatCfa(unitPrice(selected));
@@ -50,7 +59,7 @@ export function ProductBuy({
               <button
                 key={variant.id}
                 type="button"
-                onClick={() => setId(variant.id)}
+                onClick={() => chooseVariant(variant.id)}
                 aria-pressed={active}
                 className={`rounded-full border px-4 py-2 text-sm ${
                   active ? "border-wine bg-wine text-white" : "border-[#eee0e6] bg-white text-wine"
@@ -63,7 +72,37 @@ export function ProductBuy({
         </div>
       ) : null}
       {inStock ? (
-        <AddToCartButton action={() => addToCart(selected.id, 1)} className="mt-6 w-full rounded-full bg-brown px-8 py-3 text-cream md:w-auto" />
+        <>
+          <div className="mt-5 flex items-center gap-3">
+            <span className="text-sm text-wine/80">Quantité</span>
+            <button
+              type="button"
+              aria-label="Diminuer la quantité"
+              disabled={quantity <= 1}
+              onClick={() => changeQty(quantity - 1)}
+              className="h-10 w-10 rounded-full border border-[#eee0e6] disabled:opacity-40"
+            >
+              −
+            </button>
+            <span className="min-w-6 text-center" aria-live="polite">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              aria-label="Augmenter la quantité"
+              disabled={quantity >= available}
+              onClick={() => changeQty(quantity + 1)}
+              className="h-10 w-10 rounded-full border border-[#eee0e6] disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+          <AddToCartButton
+            action={() => addToCart(selected.id, quantity)}
+            label={quantity > 1 ? `Ajouter ${quantity}` : "Ajouter au panier"}
+            className="mt-6 w-full rounded-full bg-brown px-8 py-3 text-cream md:w-auto"
+          />
+        </>
       ) : (
         <p className="mt-6 rounded-2xl bg-blush px-4 py-3 text-sm text-wine">
           Bientôt de retour. Cet article reste visible, vous pourrez le commander dès réapprovisionnement.
@@ -83,7 +122,32 @@ export function ProductBuy({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <p className="font-serif text-2xl text-brown">{price}</p>
           {inStock ? (
-            <AddToCartButton action={() => addToCart(selected.id, 1)} className="rounded-full bg-brown px-5 py-3 text-sm text-cream" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Diminuer la quantité"
+                disabled={quantity <= 1}
+                onClick={() => changeQty(quantity - 1)}
+                className="h-10 w-10 rounded-full border border-[#eee0e6] text-sm disabled:opacity-40"
+              >
+                −
+              </button>
+              <span className="min-w-4 text-center text-sm">{quantity}</span>
+              <button
+                type="button"
+                aria-label="Augmenter la quantité"
+                disabled={quantity >= available}
+                onClick={() => changeQty(quantity + 1)}
+                className="h-10 w-10 rounded-full border border-[#eee0e6] text-sm disabled:opacity-40"
+              >
+                +
+              </button>
+              <AddToCartButton
+                action={() => addToCart(selected.id, quantity)}
+                label={quantity > 1 ? `Ajouter ${quantity}` : "Ajouter"}
+                className="rounded-full bg-brown px-5 py-3 text-sm text-cream"
+              />
+            </div>
           ) : (
             <p className="text-sm text-wine">Bientôt de retour</p>
           )}

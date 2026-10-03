@@ -19,6 +19,14 @@ export function cameroonPhoneLookupVariants(raw: string) {
   return [...set];
 }
 
+/** Mobile camerounais : 9 chiffres commençant par 6. Accepte le 0 initial et l’indicatif 237. */
+export function cameroonMobileLocal(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  const local = digits.startsWith("237") ? digits.slice(3) : digits.startsWith("0") ? digits.slice(1) : digits;
+  if (local.length === 9 && local.startsWith("6")) return local;
+  return "";
+}
+
 export function phoneLastNine(raw: string) {
   const d = raw.replace(/\D/g, "");
   if (d.length < 8) return null;

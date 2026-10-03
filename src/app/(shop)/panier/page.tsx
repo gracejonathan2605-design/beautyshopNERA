@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { cartCanCheckout, getCart } from "@/lib/cart";
+import { billableLineQuantity, cartCanCheckout, cartPayableTotal, getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import { setCartQtyForm } from "@/app/actions/shop";
@@ -38,7 +38,13 @@ export default async function CartPage({
     })
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
   const staleItems = cart.filter((item) => !variants.some((v) => v.id === item.variantId));
-  const total = rows.reduce((s, r) => s + unitPrice(r.variant) * r.item.quantity, 0);
+  const total = cartPayableTotal(
+    rows.map((row) => ({
+      unitPrice: unitPrice(row.variant),
+      quantity: row.item.quantity,
+      available: row.available,
+    })),
+  );
   const canCheckout = cartCanCheckout(
     rows.map((r) => ({ available: r.available, quantity: r.item.quantity })),
     cart.length,
@@ -93,7 +99,11 @@ export default async function CartPage({
               <div>
                 <p className="font-medium">{variant.product.name}</p>
                 <p className="text-sm text-black/50">{variant.name}</p>
-                <p>{formatCfa(unitPrice(variant) * item.quantity)}</p>
+                <p>
+                  {billableLineQuantity(item.quantity, available) > 0
+                    ? formatCfa(unitPrice(variant) * billableLineQuantity(item.quantity, available))
+                    : "Hors total"}
+                </p>
                 {available <= 0 ? (
                   <p className="mt-1 text-xs text-wine">Bientôt de retour — retirez-le pour commander le reste.</p>
                 ) : available < item.quantity ? (
@@ -134,7 +144,9 @@ export default async function CartPage({
               </div>
             </div>
           ))}
-          <p className="text-right font-serif text-3xl">Total {formatCfa(total)}</p>
+          <p className="text-right font-serif text-3xl">
+            {canCheckout ? "Total" : "Total commandable"} {formatCfa(total)}
+          </p>
           <PayDeliveryBadges />
           <RegistreTrustLink />
           {canCheckout ? (
