@@ -81,17 +81,26 @@ export function ReceiptLogo() {
   );
 }
 
-export function HeroProducts({ className = "", priority = true }: { className?: string; priority?: boolean }) {
+export function HeroProducts({
+  className = "",
+  priority = true,
+  bleed = false,
+}: {
+  className?: string;
+  priority?: boolean;
+  bleed?: boolean;
+}) {
+  const frame = bleed
+    ? "relative h-full min-h-[82svh] w-full overflow-hidden"
+    : "relative aspect-[3/4] overflow-hidden rounded-[2rem] shadow-[0_28px_60px_-32px_rgba(58,36,48,0.45)] sm:aspect-[4/5] md:aspect-[16/9]";
   return (
-    <div
-      className={`relative aspect-[3/4] overflow-hidden rounded-[2rem] shadow-[0_28px_60px_-32px_rgba(58,36,48,0.45)] sm:aspect-[4/5] md:aspect-[16/9] ${className}`}
-    >
+    <div className={`${frame} ${className}`}>
       <Image
         src={BRAND_HERO_SRC}
         alt="Parfums, mèches, maquillage et mode NERA Beauté"
         fill
-        className="object-cover"
-        sizes="(max-width: 768px) 100vw, 50vw"
+        className="object-cover object-[center_28%]"
+        sizes={bleed ? "100vw" : "(max-width: 768px) 100vw, 50vw"}
         quality={SHOP_IMAGE_QUALITY}
         priority={priority}
       />

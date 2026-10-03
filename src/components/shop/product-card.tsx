@@ -51,7 +51,7 @@ export function ProductCard({
   return (
     <Link
       href={`/produit/${product.slug}`}
-      className="group overflow-hidden rounded-[1.5rem] border border-gold/25 bg-cream shadow-[0_22px_40px_-34px_rgba(36,20,28,0.45)] transition hover:-translate-y-0.5 hover:border-gold"
+      className="group overflow-hidden bg-cream transition duration-500 hover:-translate-y-1"
     >
       <div className="relative aspect-4/5 overflow-hidden bg-linear-to-br from-blush to-champagne">
         <ProductPhoto
@@ -71,7 +71,7 @@ export function ProductCard({
         ) : null}
       </div>
       <div className="p-3 sm:p-4">
-        <h3 className="line-clamp-2 font-serif text-base leading-snug text-wine sm:text-xl">{product.name}</h3>
+        <h3 className="line-clamp-2 font-serif text-lg leading-snug text-wine sm:text-2xl">{product.name}</h3>
         {product.brand?.name ? (
           <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/40">{product.brand.name}</p>
         ) : null}
@@ -86,7 +86,9 @@ export function ProductCard({
           {formatCfa(price)}
         </p>
         {inStock ? (
-          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-gold">Découvrir</p>
+          <p className="mt-3 text-[10px] uppercase tracking-[0.28em] text-gold transition group-hover:tracking-[0.34em]">
+            Découvrir
+          </p>
         ) : null}
         {flash && product.flashEndAt ? <ProductCardFlash endAt={product.flashEndAt} /> : null}
         {!inStock ? <p className="mt-1 text-xs text-black/45">Indisponible pour le moment</p> : null}
