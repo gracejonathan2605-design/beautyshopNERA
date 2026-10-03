@@ -14,6 +14,7 @@ import { getShopSettings } from "@/lib/settings";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function CheckoutPage() {
   const cart = await getCart();

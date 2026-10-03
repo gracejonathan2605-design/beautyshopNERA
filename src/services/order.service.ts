@@ -210,20 +210,19 @@ export async function createOnlineOrder(input: {
       }
       return false;
     })();
+    let chargeKeptAlive = true;
+    try {
+      after(async () => {
+        await chargePromise;
+      });
+    } catch {
+      chargeKeptAlive = false;
+    }
     orangePush = await Promise.race([
       chargePromise,
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4000)),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8000)),
     ]);
-    if (!orangePush) {
-      const finish = () => {
-        void chargePromise;
-      };
-      try {
-        after(finish);
-      } catch {
-        finish();
-      }
-    }
+    if (!chargeKeptAlive && !orangePush) await chargePromise;
   }
   try {
     const settings = await getShopSettings().catch(() => null);
