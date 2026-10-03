@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { categoryNameKey, planDuplicateCategoryMerges } from "@/lib/category-duplicates";
 import { slugify } from "@/lib/pricing";
 
 export type CatalogChild = { name: string; slug: string };
@@ -432,7 +433,79 @@ export async function syncNeraCatalog(db: Db) {
     });
   }
   await fileLingerieAndClosures(db, ids);
+  await mergeDuplicateCategories(db);
   return ids;
+}
+
+/** Garde un seul rayon par nom dans chaque parent, et y déplace les produits. */
+export async function mergeDuplicateCategories(db: Db) {
+  const official = new Set(catalogSlugs());
+  let removed = 0;
+  for (let pass = 0; pass < 6; pass += 1) {
+    const rows = await db.category.findMany({
+      where: { deletedAt: null, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        parentId: true,
+        sortOrder: true,
+        _count: { select: { products: { where: { deletedAt: null } } } },
+      },
+    });
+    const plans = planDuplicateCategoryMerges(
+      rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        parentId: row.parentId,
+        productCount: row._count.products,
+        sortOrder: row.sortOrder,
+      })),
+      official,
+    );
+    if (!plans.length) break;
+    for (const plan of plans) {
+      const ids = plan.duplicateIds;
+      await db.product.updateMany({
+        where: { categoryId: { in: ids } },
+        data: { categoryId: plan.keeperId },
+      });
+      await db.promotion.updateMany({
+        where: { categoryId: { in: ids } },
+        data: { categoryId: plan.keeperId },
+      });
+      await db.brandCollection.updateMany({
+        where: { categoryId: { in: ids } },
+        data: { categoryId: plan.keeperId },
+      });
+      await db.category.updateMany({
+        where: { parentId: { in: ids }, deletedAt: null },
+        data: { parentId: plan.keeperId },
+      });
+      await db.category.updateMany({
+        where: { id: { in: ids } },
+        data: { isActive: false, deletedAt: new Date() },
+      });
+      removed += ids.length;
+    }
+  }
+  return removed;
+}
+
+/** Ancien lien d’un sous-rayon fusionné → le rayon conservé. */
+export async function duplicateCategoryRedirectSlug(db: Db, slug: string) {
+  const retired = await db.category.findUnique({
+    where: { slug },
+    select: { id: true, name: true, parentId: true, isActive: true, deletedAt: true },
+  });
+  if (!retired || (retired.isActive && !retired.deletedAt)) return null;
+  const siblings = await db.category.findMany({
+    where: { parentId: retired.parentId, isActive: true, deletedAt: null, id: { not: retired.id } },
+    select: { slug: true, name: true },
+  });
+  const key = categoryNameKey(retired.name);
+  return siblings.find((row) => categoryNameKey(row.name) === key)?.slug ?? null;
 }
 
 export type CategoryOptionGroup = {

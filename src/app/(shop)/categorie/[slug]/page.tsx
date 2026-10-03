@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ProductCard } from "@/components/shop/product-card";
 import { getCachedCategoryPage } from "@/lib/catalog-cache";
@@ -11,6 +11,8 @@ import { browseShopProducts, countShopProducts, descendantCategoryIds, parseBrow
 import { breadcrumbJsonLd, categoryIntro, collectionJsonLd, pageMetadata } from "@/lib/seo";
 import { categoryPageTitle } from "@/lib/category-seo";
 import { PRODUCT_GRID_CLASS } from "@/lib/image-limits";
+import { duplicateCategoryRedirectSlug } from "@/lib/catalog";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -45,7 +47,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function CategoryPage({ params, searchParams }: Props) {
   const [{ slug }, raw] = await Promise.all([params, searchParams]);
   const data = await getCachedCategoryPage(slug);
-  if (!data) notFound();
+  if (!data) {
+    const dest = await duplicateCategoryRedirectSlug(prisma, slug).catch(() => null);
+    if (dest && dest !== slug) permanentRedirect(`/categorie/${dest}`);
+    notFound();
+  }
   const { category } = data;
   const query = parseBrowseQuery({ ...raw, rayon: slug });
   const categoryIds = await descendantCategoryIds(category.id);
