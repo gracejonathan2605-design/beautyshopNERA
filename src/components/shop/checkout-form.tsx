@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { checkoutOrder, previewCheckoutCoupon, type CheckoutState } from "@/app/actions/shop";
 import { formatCfa } from "@/lib/money";
@@ -228,6 +229,22 @@ export function CheckoutForm({
           <span>{formatCfa(total)}</span>
         </p>
       </div>
+
+      <p className="text-xs leading-relaxed text-black/50">
+        En confirmant, vous acceptez les{" "}
+        <Link href="/cgv" className="text-wine underline decoration-wine/30 underline-offset-2">
+          conditions de vente
+        </Link>
+        , les{" "}
+        <Link href="/retours" className="text-wine underline decoration-wine/30 underline-offset-2">
+          conditions de retour
+        </Link>{" "}
+        et la{" "}
+        <Link href="/confidentialite" className="text-wine underline decoration-wine/30 underline-offset-2">
+          confidentialité
+        </Link>
+        .
+      </p>
 
       <button disabled={pending} className="w-full rounded-full bg-brown py-3.5 text-cream disabled:opacity-60 max-md:fixed max-md:inset-x-3 max-md:bottom-[calc(4.4rem+env(safe-area-inset-bottom))] max-md:z-30 max-md:w-auto max-md:shadow-lg">
         {pending ? "Confirmation…" : `Confirmer la commande — ${formatCfa(total)}`}

@@ -160,7 +160,7 @@ export function ShopFooter() {
             </p>
             <p>
               <Link href="/retours" className="text-wine underline-offset-2 hover:underline">
-                Retours
+                Conditions de retour
               </Link>
             </p>
             <p>
