@@ -4,9 +4,13 @@ import { NERA_IDENTITY } from "@/lib/nera-identity";
 export const REGISTRE_IMAGE_SRC = "/legal/registre-commerce.jpg";
 export const REGISTRE_IMAGE_WIDTH = 1041;
 export const REGISTRE_IMAGE_HEIGHT = 1608;
+export const REGISTRE_PAGE2_SRC = "/legal/registre-commerce-p2.jpg";
+export const REGISTRE_PAGE2_WIDTH = 1052;
+export const REGISTRE_PAGE2_HEIGHT = 652;
 export const REGISTRE_HREF = "/a-propos#immatriculation";
 
 const REGISTRE_ALT = `Déclaration d’immatriculation de ${NERA_IDENTITY.legalName}, RCCM ${NERA_IDENTITY.rccm}.`;
+const REGISTRE_PAGE2_ALT = `Accusé d’enregistrement de ${NERA_IDENTITY.legalName}, RCCM ${NERA_IDENTITY.rccm}.`;
 
 export function RegistreCommerceCard({
   className = "",
@@ -39,25 +43,52 @@ export function RegistreCommerceSection() {
       </h2>
       <p className="mt-3 leading-relaxed text-black/65">
         {NERA_IDENTITY.name} est la boutique de {NERA_IDENTITY.legalName}, immatriculée au Registre du
-        Commerce et du Crédit Mobilier. Le document ci-dessous est la déclaration d’immatriculation. Le RCCM
-        est le même que sur les tickets de caisse.
+        Commerce et du Crédit Mobilier. Les deux pages ci-dessous sont la déclaration d’immatriculation et
+        l’accusé du greffe. Le RCCM est le même que sur les tickets de caisse.
       </p>
-      <figure className="mt-6">
-        <a href={REGISTRE_IMAGE_SRC} target="_blank" rel="noreferrer">
-          <RegistreCommerceCard />
-        </a>
-        <figcaption className="mt-3 text-sm leading-relaxed text-black/50">
-          RCCM {NERA_IDENTITY.rccm} · NUI {NERA_IDENTITY.nui}. Page 1 de la déclaration d’immatriculation.
-        </figcaption>
-        <a
-          href={REGISTRE_IMAGE_SRC}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 inline-block text-sm text-wine underline decoration-wine/30 underline-offset-4"
-        >
-          Agrandir le document
-        </a>
-      </figure>
+      <div className="mt-6 space-y-8">
+        <figure>
+          <a href={REGISTRE_IMAGE_SRC} target="_blank" rel="noreferrer">
+            <RegistreCommerceCard />
+          </a>
+          <figcaption className="mt-3 text-sm leading-relaxed text-black/50">
+            RCCM {NERA_IDENTITY.rccm} · NUI {NERA_IDENTITY.nui}. Page 1 de la déclaration d’immatriculation.
+          </figcaption>
+          <a
+            href={REGISTRE_IMAGE_SRC}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-sm text-wine underline decoration-wine/30 underline-offset-4"
+          >
+            Agrandir la page 1
+          </a>
+        </figure>
+        <figure>
+          <a href={REGISTRE_PAGE2_SRC} target="_blank" rel="noreferrer">
+            {/* Fichier déjà compressé : on évite une seconde compression qui rendrait le texte illisible. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={REGISTRE_PAGE2_SRC}
+              alt={REGISTRE_PAGE2_ALT}
+              width={REGISTRE_PAGE2_WIDTH}
+              height={REGISTRE_PAGE2_HEIGHT}
+              decoding="async"
+              className="h-auto w-full rounded-[1.4rem] border border-[#eee0e6] bg-white shadow-[0_18px_40px_-28px_rgba(58,36,48,0.55)]"
+            />
+          </a>
+          <figcaption className="mt-3 text-sm leading-relaxed text-black/50">
+            Page 2 : accusé d’enregistrement du greffe, RCCM {NERA_IDENTITY.rccm}.
+          </figcaption>
+          <a
+            href={REGISTRE_PAGE2_SRC}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-sm text-wine underline decoration-wine/30 underline-offset-4"
+          >
+            Agrandir la page 2
+          </a>
+        </figure>
+      </div>
     </section>
   );
 }
