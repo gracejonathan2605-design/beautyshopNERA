@@ -1,5 +1,6 @@
 import { registerCustomer } from "@/app/actions/auth";
 import { BrandLogo } from "@/components/brand/logo";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { PasswordField } from "@/components/shop/password-field";
 
 export default async function RegisterPage({
@@ -9,12 +10,12 @@ export default async function RegisterPage({
 }) {
   const { error } = await searchParams;
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
-      <div className="mb-4">
+    <>
+      <MaisonPageHead kicker="Bienvenue" title="Inscription" />
+      <div className="mx-auto max-w-md px-4 py-12">
+      <div className="mb-6">
         <BrandLogo size="md" />
       </div>
-      <p className="text-xs uppercase tracking-[0.28em] text-gold">Bienvenue</p>
-      <h1 className="mt-2 font-serif text-5xl text-wine">Inscription</h1>
       {error === "exists" ? (
         <p className="mt-3 text-sm text-red-700">Cet email ou ce téléphone est déjà utilisé.</p>
       ) : error ? (
@@ -34,5 +35,6 @@ export default async function RegisterPage({
         <button className="w-full rounded-full bg-brown py-3 text-cream">Créer mon compte</button>
       </form>
     </div>
+    </>
   );
 }

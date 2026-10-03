@@ -5,7 +5,7 @@ import { ProductCard } from "@/components/shop/product-card";
 import { getCachedCategoryPage } from "@/lib/catalog-cache";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-toolbar";
-import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, countShopProducts, descendantCategoryIds, parseBrowseQuery } from "@/lib/shop-browse";
 import { breadcrumbJsonLd, categoryIntro, collectionJsonLd, pageMetadata } from "@/lib/seo";
@@ -63,7 +63,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <>
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
       {indexable ? (
         <JsonLd
@@ -75,19 +75,19 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           })}
         />
       ) : null}
-      <ShopBreadcrumbs
-        items={[
+      <MaisonPageHead
+        crumbs={[
           { name: "Accueil", href: "/" },
           { name: "Boutique", href: "/boutique" },
           ...(category.parent ? [{ name: category.parent.name, href: `/categorie/${category.parent.slug}` }] : []),
           { name: category.name },
         ]}
+        kicker="Rayon"
+        title={category.name}
+        lede={intro}
       />
-      <h1 className="mt-3 font-serif text-5xl">{category.name}</h1>
-      <p className="mt-3 max-w-2xl text-black/60">{intro}</p>
-      <div className="mt-5">
-        <PayDeliveryBadges />
-      </div>
+      <div className="mx-auto max-w-6xl px-4 py-10">
+      <PayDeliveryBadges />
 
       {category.children.length > 0 ? (
         <nav aria-label="Sous-rayons" className="mt-6 flex flex-wrap gap-1.5">
@@ -132,5 +132,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         basePath={`/categorie/${slug}`}
       />
     </div>
+    </>
   );
 }

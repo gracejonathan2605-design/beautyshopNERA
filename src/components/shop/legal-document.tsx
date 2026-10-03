@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import type { LegalSection } from "@/lib/shop-legal";
 
 const RELATED = [
@@ -23,11 +24,10 @@ export function LegalDocument({
   current: (typeof RELATED)[number]["href"];
 }) {
   return (
-    <article className="mx-auto max-w-2xl px-4 py-12">
-      <p className="text-xs uppercase tracking-[0.28em] text-gold">{kicker}</p>
-      <h1 className="mt-3 font-serif text-5xl text-wine">{title}</h1>
-      <p className="mt-4 text-sm leading-relaxed text-black/60">{description}</p>
-      <p className="mt-2 text-xs text-black/40">Mise à jour : {updated}</p>
+    <>
+      <MaisonPageHead kicker={kicker} title={title} lede={description} />
+      <article className="mx-auto max-w-2xl px-4 py-12">
+      <p className="text-xs text-black/40">Mise à jour : {updated}</p>
       <nav aria-label="Sommaire" className="mt-8 rounded-2xl border border-[#eee0e6] bg-white p-4">
         <p className="text-xs uppercase tracking-[0.2em] text-gold">Sommaire</p>
         <ol className="mt-3 space-y-1.5 text-sm">
@@ -66,5 +66,6 @@ export function LegalDocument({
         ))}
       </p>
     </article>
+    </>
   );
 }

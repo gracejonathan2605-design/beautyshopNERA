@@ -1,25 +1,23 @@
 import Link from "next/link";
-import { BrandLogo } from "@/components/brand/logo";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 
 export default function NotFound() {
   return (
-    <div className="mx-auto max-w-xl px-4 py-24 text-center">
-      <div className="flex justify-center">
-        <BrandLogo size="lg" />
-      </div>
-      <p className="mt-6 text-sm uppercase tracking-[0.3em] text-gold">NERA Beauté & Shop</p>
-      <h1 className="mt-4 font-serif text-4xl text-wine">Page introuvable</h1>
-      <p className="mt-4 text-black/65">
-        Cette page n’existe pas ou n’est plus en ligne. Revenez à l’accueil ou parcourez la boutique.
-      </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
+    <>
+      <MaisonPageHead
+        align="center"
+        kicker="NERA Beauté & Shop"
+        title="Page introuvable"
+        lede="Cette page n’existe pas ou n’est plus en ligne. Revenez à l’accueil ou parcourez la boutique."
+      />
+      <div className="mx-auto flex max-w-xl flex-wrap justify-center gap-3 px-4 py-12">
         <Link href="/" className="rounded-full bg-brown px-6 py-3 text-cream">
           Accueil
         </Link>
-        <Link href="/boutique" className="rounded-full border border-[#eee0e6] bg-white px-6 py-3 text-wine">
+        <Link href="/boutique" className="rounded-full border border-gold/40 bg-cream px-6 py-3 text-wine">
           Boutique
         </Link>
       </div>
-    </div>
+    </>
   );
 }

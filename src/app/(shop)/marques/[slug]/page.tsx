@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/shop/product-card";
 import { PartnerBrandMark } from "@/components/shop/partner-brands-section";
-import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absolutizeMediaUrl, breadcrumbJsonLd, collectionJsonLd, pageMetadata } from "@/lib/seo";
 import {
@@ -82,53 +82,51 @@ export default async function PartnerBrandPage({ params, searchParams }: Props) 
   const banner = brand.banner;
 
   return (
-    <div>
+    <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Accueil", path: "/" },
+          { name: "Marques partenaires", path: "/marques" },
+          { name: brand.name, path },
+        ])}
+      />
+      <JsonLd
+        data={brandJsonLd({
+          name: brand.name,
+          slug: brand.slug,
+          description: intro,
+          logo,
+          url: absoluteUrl(path),
+        })}
+      />
+      <JsonLd
+        data={collectionJsonLd({
+          path,
+          name: partnerBrandPageTitle(brand.name),
+          description: intro,
+          items: grid.map((product) => ({ name: product.name, path: `/produit/${product.slug}` })),
+        })}
+      />
+      <MaisonPageHead
+        crumbs={[
+          { name: "Accueil", href: "/" },
+          { name: "Marques", href: "/marques" },
+          { name: brand.name },
+        ]}
+        kicker="Marque partenaire"
+        title={brand.name}
+        lede={intro}
+      />
       {banner ? (
-        <div className="relative h-48 overflow-hidden bg-blush md:h-72">
+        <div className="relative h-48 overflow-hidden bg-wine md:h-72">
           <Image src={banner} alt="" fill className="object-cover" sizes="100vw" priority />
         </div>
       ) : null}
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <JsonLd
-          data={breadcrumbJsonLd([
-            { name: "Accueil", path: "/" },
-            { name: "Marques partenaires", path: "/marques" },
-            { name: brand.name, path },
-          ])}
-        />
-        <JsonLd
-          data={brandJsonLd({
-            name: brand.name,
-            slug: brand.slug,
-            description: intro,
-            logo,
-            url: absoluteUrl(path),
-          })}
-        />
-        <JsonLd
-          data={collectionJsonLd({
-            path,
-            name: partnerBrandPageTitle(brand.name),
-            description: intro,
-            items: grid.map((product) => ({ name: product.name, path: `/produit/${product.slug}` })),
-          })}
-        />
-        <ShopBreadcrumbs
-          items={[
-            { name: "Accueil", href: "/" },
-            { name: "Marques", href: "/marques" },
-            { name: brand.name },
-          ]}
-        />
-        <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-end">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end">
           <PartnerBrandMark name={brand.name} logo={brand.logo} size="lg" />
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-gold">Marque partenaire</p>
-            <h1 className="mt-2 font-serif text-5xl text-wine">{brand.name}</h1>
-            <p className="mt-2 text-sm uppercase tracking-[0.16em] text-black/40">× {NERA_IDENTITY.name}</p>
-          </div>
+          <p className="text-sm uppercase tracking-[0.16em] text-black/40">× {NERA_IDENTITY.name}</p>
         </div>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-black/65">{intro}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href="/boutique" className="rounded-full border border-[#eee0e6] bg-white px-6 py-3 text-wine">
             Toute la boutique NERA
@@ -217,6 +215,6 @@ export default async function PartnerBrandPage({ params, searchParams }: Props) 
           </section>
         ) : null}
       </div>
-    </div>
+    </>
   );
 }

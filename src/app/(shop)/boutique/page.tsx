@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProductCard } from "@/components/shop/product-card";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { CatalogPagination, CatalogToolbar } from "@/components/shop/catalog-toolbar";
-import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { browseShopProducts, parseBrowseQuery, shopRayons } from "@/lib/shop-browse";
 import { breadcrumbJsonLd, collectionJsonLd, pageMetadata } from "@/lib/seo";
@@ -36,7 +36,7 @@ export default async function BoutiquePage({
   const indexable = !query.q && !query.rayon && query.vue === "all" && query.page <= 1;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <>
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Accueil", path: "/" },
@@ -54,15 +54,14 @@ export default async function BoutiquePage({
           })}
         />
       ) : null}
-      <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "Boutique" }]} />
-      <p className="mt-3 text-[10px] uppercase tracking-[0.28em] text-gold">Maison NERA</p>
-      <h1 className="mt-2 font-serif text-5xl text-wine md:text-6xl">La boutique</h1>
-      <p className="mt-3 max-w-xl text-black/60">
-        Soins, mèches, parfums et mode. Choisissez un rayon, une nouveauté ou une promo. Les pièces en rupture restent visibles.
-      </p>
-      <div className="mt-5">
-        <PayDeliveryBadges />
-      </div>
+      <MaisonPageHead
+        crumbs={[{ name: "Accueil", href: "/" }, { name: "Boutique" }]}
+        kicker="Maison NERA"
+        title="La boutique"
+        lede="Soins, mèches, parfums et mode. Choisissez un rayon, une nouveauté ou une promo. Les pièces en rupture restent visibles."
+      />
+      <div className="mx-auto max-w-6xl px-4 py-10">
+      <PayDeliveryBadges />
       <CatalogToolbar query={query} rayons={rayons} basePath="/boutique" />
       {query.q || query.rayon || query.vue !== "all" ? (
         <p className="mt-4 text-sm text-black/50">
@@ -92,5 +91,6 @@ export default async function BoutiquePage({
         basePath="/boutique"
       />
     </div>
+    </>
   );
 }

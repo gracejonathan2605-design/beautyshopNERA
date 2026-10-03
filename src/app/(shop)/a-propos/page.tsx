@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/logo";
 import { ShopFaq } from "@/components/shop/shop-faq";
 import { RegistreCommerceSection } from "@/components/shop/registre-commerce";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { JsonLd } from "@/components/seo/json-ld";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
@@ -20,7 +21,7 @@ export const metadata: Metadata = pageMetadata({
 export default async function AboutPage() {
   const categories = await getNavCategories().catch(() => neraParentRayons());
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <>
       <JsonLd
         data={webPageJsonLd({
           path: "/a-propos",
@@ -29,12 +30,13 @@ export default async function AboutPage() {
         })}
       />
       <JsonLd data={faqJsonLd()} />
-      <p className="text-xs uppercase tracking-[0.28em] text-gold">La maison</p>
-      <h1 className="mt-3 font-serif text-5xl text-wine">À propos de NERA Beauté & Shop</h1>
-      <div className="mt-6">
-        <BrandLogo size="lg" />
-      </div>
-      <p className="mt-8 text-lg leading-relaxed text-black/65">{NERA_IDENTITY.slogan}</p>
+      <MaisonPageHead
+        kicker="La maison"
+        title="À propos de NERA Beauté & Shop"
+        lede={NERA_IDENTITY.slogan}
+      />
+      <div className="mx-auto max-w-3xl px-4 py-12">
+      <BrandLogo size="lg" />
       <p className="mt-6 leading-relaxed text-black/65">
         NERA Beauté & Shop est une boutique de beauté à Yaoundé. Nous accueillons en magasin et proposons
         aussi une boutique en ligne pour commander les produits de la sélection NERA.
@@ -83,7 +85,7 @@ export default async function AboutPage() {
       <h2 className="mt-10 font-serif text-3xl text-wine">Services</h2>
       <p className="mt-3 leading-relaxed text-black/65">
         Achat en magasin, commande en ligne, retrait, et livraison disponible. Paiement Orange Money, MTN MoMo
-        et espèces selon les options proposées. Les articles d'hygiène et les mèches ouvertes ne sont ni repris
+        et espèces selon les options proposées. Les articles d’hygiène et les mèches ouvertes ne sont ni repris
         ni échangés.
       </p>
       <p className="mt-8">
@@ -93,5 +95,6 @@ export default async function AboutPage() {
       </p>
       <ShopFaq />
     </div>
+    </>
   );
 }
