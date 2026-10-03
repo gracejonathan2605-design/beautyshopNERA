@@ -6,6 +6,8 @@ import { saleToReceipt } from "@/lib/receipt";
 import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
+import { orangePushWasSent } from "@/lib/payments/orange-money";
+import { OrangePayLaunch } from "@/components/shop/orange-pay-launch";
 import { customerStatusSentence, customerStepIndex, CUSTOMER_STEPS } from "@/lib/order-timeline";
 import { submitPaymentProof } from "@/app/actions/shop";
 import { BrandLogo } from "@/components/brand/logo";
@@ -22,9 +24,9 @@ export default async function OrderPage({
   searchParams,
 }: {
   params: Promise<{ number: string }>;
-  searchParams: Promise<{ t?: string; ok?: string; erreur?: string }>;
+  searchParams: Promise<{ t?: string; ok?: string; erreur?: string; lancer?: string }>;
 }) {
-  const [{ number }, { t, ok, erreur }] = await Promise.all([params, searchParams]);
+  const [{ number }, { t, ok, erreur, lancer }] = await Promise.all([params, searchParams]);
   const [order, settings, staff, customer] = await Promise.all([
     prisma.order.findUnique({
       where: { number },
@@ -47,6 +49,7 @@ export default async function OrderPage({
   const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
   const pay = instructions[network];
   const other = instructions[network === "ORANGE" ? "MTN" : "ORANGE"];
+  const orangePush = network === "ORANGE" && orangePushWasSent(order.payments[0]);
   const step = customerStepIndex(order.status, paid);
   const proof = order.payments.find((p) => p.proofUrl || (p.reference && p.reference !== "ORANGE" && p.reference !== "MTN"));
 
@@ -80,6 +83,11 @@ export default async function OrderPage({
         align="center"
         kicker="Commande reçue"
         title="Merci, nous avons bien reçu votre commande"
+        actions={
+          !paid && network === "ORANGE" ? (
+            <OrangePayLaunch code={pay.code} name={pay.name} auto={lancer === "1" && !orangePush} />
+          ) : null
+        }
       />
       <div className="mx-auto max-w-xl px-4 py-10">
       <div className="flex justify-center">
@@ -123,10 +131,16 @@ export default async function OrderPage({
         <>
           <section className="mt-8 rounded-[1.7rem] border border-gold/40 bg-champagne/70 p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">{pay.title}</p>
-            <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>
-            <p className="mt-1 text-sm text-black/70">{pay.name}</p>
+            {network === "ORANGE" ? (
+              <OrangePayLaunch code={pay.code} name={pay.name} />
+            ) : (
+              <>
+                <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>
+                <p className="mt-1 text-sm text-black/70">{pay.name}</p>
+              </>
+            )}
             <p className="mt-3 text-sm leading-relaxed text-black/65">{pay.detail}</p>
-            {order.payments.some((p) => p.reference?.startsWith("MP")) ? (
+            {orangePush ? (
               <p className="mt-3 text-sm text-wine">
                 Une demande Orange Money a été envoyée sur votre téléphone. Saisissez votre code secret pour valider.
               </p>

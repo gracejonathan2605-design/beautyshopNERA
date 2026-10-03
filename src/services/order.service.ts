@@ -185,23 +185,44 @@ export async function createOnlineOrder(input: {
   }
 
   const network = order.payments[0]?.provider === "MTN" ? "MTN" : "ORANGE";
+  let orangePush = false;
   if (order.payments[0] && order.total > 0) {
-    try {
-      const charge = await startMobileMoneyCharge({
-        network,
-        amount: Number(order.total),
-        orderNumber: order.number,
-        phone: order.shippingPhone ?? "",
-      });
-      if (charge.mode === "api" && charge.providerReference !== network) {
-        await prisma.payment.update({
-          where: { id: order.payments[0].id },
-          data: { reference: charge.providerReference, note: "Demande Orange Money envoyée sur le téléphone" },
+    const paymentId = order.payments[0].id;
+    const chargePromise = (async () => {
+      try {
+        const charge = await startMobileMoneyCharge({
+          network,
+          amount: Number(order.total),
+          orderNumber: order.number,
+          phone: order.shippingPhone ?? "",
         });
-        order.payments[0].reference = charge.providerReference;
+        if (charge.mode === "api" && charge.providerReference && charge.providerReference !== network) {
+          await prisma.payment.update({
+            where: { id: paymentId },
+            data: { reference: charge.providerReference, note: "Demande Orange Money envoyée sur le téléphone" },
+          });
+          order.payments[0].reference = charge.providerReference;
+          order.payments[0].note = "Demande Orange Money envoyée sur le téléphone";
+          return network === "ORANGE";
+        }
+      } catch (err) {
+        reportError("orange-money", err);
       }
-    } catch (err) {
-      reportError("orange-money", err);
+      return false;
+    })();
+    orangePush = await Promise.race([
+      chargePromise,
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4000)),
+    ]);
+    if (!orangePush) {
+      const finish = () => {
+        void chargePromise;
+      };
+      try {
+        after(finish);
+      } catch {
+        finish();
+      }
     }
   }
   try {
@@ -220,7 +241,7 @@ export async function createOnlineOrder(input: {
     reportError("customer-whatsapp", err);
   }
 
-  return order;
+  return Object.assign(order, { orangePush });
 }
 
 export async function updateOrderStatus(input: {

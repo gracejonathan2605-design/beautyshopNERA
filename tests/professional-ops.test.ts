@@ -3,7 +3,7 @@ import { splitPartnerAmounts } from "../src/lib/partner-settlement";
 import { customerStepIndex } from "../src/lib/order-timeline";
 import { rateLimit, resetRateLimit } from "../src/lib/rate-limit";
 import { paymentInstructions } from "../src/lib/payments/mobile-money";
-import { orangePaymentSucceeded, orangeSubscriberMsisdn } from "../src/lib/payments/orange-money";
+import { orangePaymentSucceeded, orangePushWasSent, orangeSubscriberMsisdn, orangeUssdHref } from "../src/lib/payments/orange-money";
 
 describe("relevé partenaire", () => {
   it("calcule la commission sur le chiffre encaissé", () => {
@@ -78,5 +78,13 @@ describe("Orange Money", () => {
   it("reconnaît le statut succès renvoyé par Orange", () => {
     expect(orangePaymentSucceeded("SUCCESSFULL")).toBe(true);
     expect(orangePaymentSucceeded("PENDING")).toBe(false);
+  });
+
+  it("ouvre le code marchand dans le composeur", () => {
+    expect(orangeUssdHref("#150*47*1059897#")).toBe("tel:*150*47*1059897%23");
+    expect(orangeUssdHref("676935195")).toBeNull();
+    expect(orangePushWasSent({ reference: "MP2203", note: null })).toBe(true);
+    expect(orangePushWasSent({ reference: "ORANGE", note: "Demande Orange Money envoyée sur le téléphone" })).toBe(true);
+    expect(orangePushWasSent({ reference: "ORANGE", note: null })).toBe(false);
   });
 });

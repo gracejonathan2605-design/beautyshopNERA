@@ -153,7 +153,9 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
       revalidatePath("/panier");
       revalidatePath("/");
       revalidatePath("/compte");
-      redirect(orderConfirmationPath(order.number));
+      const confirmation = orderConfirmationPath(order.number);
+      const orangePush = Boolean((order as { orangePush?: boolean }).orangePush);
+      redirect(network === "ORANGE" && !orangePush ? `${confirmation}&lancer=1` : confirmation);
     } catch (err) {
       unstable_rethrow(err);
       throw err;
