@@ -9,12 +9,12 @@ export function AddToCartButton({
   label = "Ajouter au panier",
   className = "mt-8 rounded-full bg-brown px-8 py-3 text-cream disabled:opacity-60",
 }: {
-  action: () => Promise<{ ok?: boolean; count?: number; capped?: boolean } | void>;
+  action: () => Promise<{ ok?: boolean; count?: number; capped?: boolean; reason?: "busy" } | void>;
   label?: string;
   className?: string;
 }) {
   const [pending, start] = useTransition();
-  const [notice, setNotice] = useState<"added" | "blocked" | "capped" | null>(null);
+  const [notice, setNotice] = useState<"added" | "blocked" | "capped" | "busy" | null>(null);
 
   return (
     <div>
@@ -26,7 +26,7 @@ export function AddToCartButton({
             setNotice(null);
             const result = await action();
             if (result && result.ok === false) {
-              setNotice("blocked");
+              setNotice(result.reason === "busy" ? "busy" : "blocked");
               return;
             }
             if (result && typeof result.count === "number") notifyCartCount(result.count);
@@ -42,6 +42,11 @@ export function AddToCartButton({
       >
         {pending ? "Ajout…" : label}
       </button>
+      {notice === "busy" ? (
+        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">
+          Le panier n’a pas répondu. Réessayez dans un instant.
+        </p>
+      ) : null}
       {notice === "blocked" ? (
         <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">
           Cet article n’est plus disponible pour le moment.

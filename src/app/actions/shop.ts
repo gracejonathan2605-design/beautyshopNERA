@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { cameroonMobileLocal } from "@/lib/phone-match";
 import { variantAvailable } from "@/lib/stock-display";
+import { isTransientDbError } from "@/lib/prisma";
 import { shopPublicError } from "@/lib/shop-public-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/monitor";
@@ -29,25 +30,34 @@ async function availableForVariant(variantId: string) {
 }
 
 export async function addToCart(variantId: string, quantity = 1) {
-  const available = await availableForVariant(variantId);
-  const cart = await getCart();
-  const current = cart.find((i) => i.variantId === variantId)?.quantity ?? 0;
-  const decision = nextCartQuantity(current, quantity, available);
-  if (!decision.ok) return { ok: false as const };
-  const count = await saveCart(upsertCartItem(cart, variantId, decision.quantity));
-  revalidatePath("/panier");
-  return { ok: true as const, count, capped: decision.capped };
+  try {
+    const available = await availableForVariant(variantId);
+    const cart = await getCart();
+    const current = cart.find((i) => i.variantId === variantId)?.quantity ?? 0;
+    const decision = nextCartQuantity(current, quantity, available);
+    if (!decision.ok) return { ok: false as const };
+    const count = await saveCart(upsertCartItem(cart, variantId, decision.quantity));
+    revalidatePath("/panier");
+    return { ok: true as const, count, capped: decision.capped };
+  } catch (err) {
+    if (!isTransientDbError(err)) throw err;
+    return { ok: false as const, reason: "busy" as const };
+  }
 }
 
 export async function setCartQty(variantId: string, quantity: number) {
-  const cart = await getCart();
-  if (quantity <= 0) {
-    await saveCart(upsertCartItem(cart, variantId, 0));
-  } else {
-    const available = await availableForVariant(variantId);
-    await saveCart(upsertCartItem(cart, variantId, Math.min(quantity, available)));
+  try {
+    const cart = await getCart();
+    if (quantity <= 0) {
+      await saveCart(upsertCartItem(cart, variantId, 0));
+    } else {
+      const available = await availableForVariant(variantId);
+      await saveCart(upsertCartItem(cart, variantId, Math.min(quantity, available)));
+    }
+    revalidatePath("/panier");
+  } catch (err) {
+    if (!isTransientDbError(err)) throw err;
   }
-  revalidatePath("/panier");
 }
 
 export async function setCartQtyForm(formData: FormData) {
