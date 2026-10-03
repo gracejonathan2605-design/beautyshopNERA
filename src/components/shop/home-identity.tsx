@@ -6,8 +6,8 @@ import { YAOUNDE_PLACES } from "@/lib/shop-faces";
 
 export function HomeIdentity() {
   return (
-    <section className="mt-8 bg-champagne" aria-labelledby="nera-identite">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
+    <section className="mt-8" aria-labelledby="nera-identite">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 rounded-[2rem] border border-gold/30 bg-cream px-4 py-14 md:grid-cols-2 md:px-10 md:py-16">
         <HeroProducts priority={false} className="aspect-[4/5] md:aspect-[4/5]" />
         <div>
           <div className="gold-rule max-w-24" />

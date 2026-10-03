@@ -55,10 +55,10 @@ export default async function BoutiquePage({
         />
       ) : null}
       <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "Boutique" }]} />
-      <p className="mt-3 text-xs uppercase tracking-[0.28em] text-gold">Maison NERA</p>
-      <h1 className="mt-2 font-serif text-5xl text-wine">Boutique</h1>
-      <p className="mt-3 max-w-xl text-black/55">
-        Soins, mèches, parfums et mode — filtrez par rayon, nouveauté ou promo. Les ruptures restent visibles.
+      <p className="mt-3 text-[10px] uppercase tracking-[0.28em] text-gold">Maison NERA</p>
+      <h1 className="mt-2 font-serif text-5xl text-wine md:text-6xl">La boutique</h1>
+      <p className="mt-3 max-w-xl text-black/60">
+        Soins, mèches, parfums et mode. Choisissez un rayon, une nouveauté ou une promo. Les pièces en rupture restent visibles.
       </p>
       <div className="mt-5">
         <PayDeliveryBadges />

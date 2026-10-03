@@ -62,18 +62,23 @@ export function ShopLegalBlock({
   email,
   mtnPhone,
   className = "",
+  onDark = false,
 }: {
   rccm?: string;
   nui?: string;
   email?: string;
   mtnPhone?: string;
   className?: string;
+  onDark?: boolean;
 }) {
+  const link = onDark
+    ? "underline decoration-cream/30 underline-offset-2 hover:text-champagne"
+    : "underline decoration-black/20 underline-offset-2 hover:text-wine";
   return (
-    <div className={`space-y-1 text-xs leading-relaxed text-black/50 ${className}`}>
+    <div className={`space-y-1 text-xs leading-relaxed ${onDark ? "text-cream/60" : "text-black/50"} ${className}`}>
       {email ? (
         <p>
-          <a href={`mailto:${email}`} className="underline decoration-black/20 hover:text-wine">
+          <a href={`mailto:${email}`} className={link}>
             {email}
           </a>
         </p>
@@ -81,14 +86,14 @@ export function ShopLegalBlock({
       {mtnPhone ? <p>MoMo / MTN : {mtnPhone}</p> : null}
       {rccm ? (
         <p>
-          <Link href={REGISTRE_HREF} className="underline decoration-black/20 underline-offset-2 hover:text-wine">
+          <Link href={REGISTRE_HREF} className={link}>
             RCCM {rccm}
           </Link>
         </p>
       ) : null}
       {nui ? (
         <p>
-          <Link href={REGISTRE_HREF} className="underline decoration-black/20 underline-offset-2 hover:text-wine">
+          <Link href={REGISTRE_HREF} className={link}>
             NUI {nui}
           </Link>
         </p>

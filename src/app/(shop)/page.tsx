@@ -46,25 +46,30 @@ export default async function HomePage() {
   }
   if (!catalog) {
     return (
-      <section className="px-4 py-16">
-        <div className="mx-auto max-w-6xl">
-          <HeroProducts />
-          <h1 className="mt-6 font-serif text-5xl text-wine">{SHOP_HERO_LINE}</h1>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href={MECHES_HREF} className="rounded-full bg-brown px-6 py-3 text-cream">
-              Voir les mèches
-            </Link>
-            <Link href="/boutique" className="rounded-full border border-[#eee0e6] bg-white px-6 py-3 text-wine">
-              Entrer dans la boutique
-            </Link>
+      <section className="px-4 pt-8 pb-16">
+        <div className="relative mx-auto max-w-6xl">
+          <HeroProducts className="ring-1 ring-gold/40" />
+          <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-linear-to-t from-wine via-wine/45 to-wine/10" />
+          <div className="absolute inset-x-0 bottom-0 p-5 md:p-10">
+            <p className="text-[10px] uppercase tracking-[0.32em] text-champagne">Maison de beauté · Yaoundé</p>
+            <h1 className="mt-3 max-w-xl font-serif text-4xl leading-[0.95] text-cream sm:text-5xl md:text-7xl">{SHOP_HERO_LINE}</h1>
+            <p className="mt-4 max-w-lg text-sm text-cream/80">{SHOP_TRUST_LINE}</p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+              <Link href={MECHES_HREF} className="rounded-full bg-brown px-6 py-3 text-center text-cream">
+                Voir les mèches
+              </Link>
+              <Link href="/boutique" className="rounded-full border border-cream/70 bg-cream px-6 py-3 text-center text-wine">
+                Entrer dans la boutique
+              </Link>
+            </div>
           </div>
-          <p className="mt-4 max-w-xl text-lg text-black/65">
-            La boutique n’a pas pu charger le catalogue. Réessayez dans un instant, ou contactez-nous au{" "}
-            {NERA_IDENTITY.phoneDisplay}.
-          </p>
-          <div className="mt-4">
-            <RegistreTrustLink />
-          </div>
+        </div>
+        <p className="mx-auto mt-6 max-w-xl text-black/65">
+          La boutique n’a pas pu charger le catalogue. Réessayez dans un instant, ou contactez-nous au{" "}
+          {NERA_IDENTITY.phoneDisplay}.
+        </p>
+        <div className="mx-auto mt-4 max-w-6xl">
+          <RegistreTrustLink />
         </div>
       </section>
     );
@@ -84,26 +89,44 @@ export default async function HomePage() {
             "Boutique de beauté physique et e-commerce à Yaoundé, Marché Neptune Ahala, face Skymotors.",
         })}
       />
-      <section className="px-4 pt-6">
+      <section className="px-4 pt-8">
         <div className="relative mx-auto max-w-6xl">
-          <HeroProducts />
-          <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-linear-to-t from-wine/80 via-wine/15 to-transparent" />
+          <HeroProducts className="ring-1 ring-gold/40" />
+          <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-linear-to-t from-wine via-wine/45 to-wine/10" />
           <div className="absolute inset-x-0 bottom-0 p-5 md:p-10">
-            <h1 className="max-w-xl font-serif text-3xl leading-[1.05] text-white sm:text-5xl md:text-6xl">{SHOP_HERO_LINE}</h1>
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+            <p className="text-[10px] uppercase tracking-[0.32em] text-champagne">Maison de beauté · Yaoundé</p>
+            <h1 className="mt-3 max-w-xl font-serif text-4xl leading-[0.95] text-cream sm:text-5xl md:text-7xl">{SHOP_HERO_LINE}</h1>
+            <p className="mt-4 max-w-lg text-sm text-cream/80">{SHOP_TRUST_LINE}</p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               <Link href={MECHES_HREF} className="rounded-full bg-brown px-6 py-3 text-center text-cream">
                 Voir les mèches
               </Link>
-              <Link href="/boutique" className="rounded-full bg-white px-6 py-3 text-center text-wine">
+              <Link href="/boutique" className="rounded-full border border-cream/70 bg-cream px-6 py-3 text-center text-wine">
                 Entrer dans la boutique
               </Link>
             </div>
           </div>
         </div>
-        <p className="mx-auto mt-4 max-w-6xl text-center text-sm text-wine/80">{SHOP_TRUST_LINE}</p>
-        <div className="mx-auto mt-3 flex max-w-6xl justify-center">
-          <RegistreTrustLink />
-        </div>
+        <ul className="mx-auto mt-6 grid max-w-6xl overflow-hidden rounded-[1.4rem] border border-gold/30 bg-gold/25 sm:grid-cols-2 lg:grid-cols-4">
+          <li className="bg-cream px-4 py-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-gold">En magasin</p>
+            <p className="mt-1 text-sm text-wine">{NERA_IDENTITY.streetAddress}</p>
+          </li>
+          <li className="bg-cream px-4 py-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-gold">Ouvert</p>
+            <p className="mt-1 text-sm text-wine">{NERA_IDENTITY.hoursWeekdays}</p>
+          </li>
+          <li className="bg-cream px-4 py-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-gold">Paiement</p>
+            <p className="mt-1 text-sm text-wine">Orange Money sans frais · MoMo</p>
+          </li>
+          <li className="bg-cream px-4 py-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-gold">Entreprise</p>
+            <div className="mt-1">
+              <RegistreTrustLink />
+            </div>
+          </li>
+        </ul>
       </section>
 
       {POUR_MOI.map((shelf) => {
@@ -111,8 +134,11 @@ export default async function HomePage() {
         return (
           <section key={shelf.title} className="mx-auto max-w-6xl px-4 py-8">
             <div className="flex items-end justify-between gap-4">
-              <h2 className="font-serif text-4xl text-wine">{shelf.title}</h2>
-              <Link href={shelf.href} className="text-sm text-wine underline decoration-wine/30 underline-offset-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.28em] text-gold">Choisir</p>
+                <h2 className="mt-1 font-serif text-4xl text-wine md:text-5xl">{shelf.title}</h2>
+              </div>
+              <Link href={shelf.href} className="text-sm text-wine underline decoration-gold/50 underline-offset-4">
                 Voir la sélection
               </Link>
             </div>
@@ -132,7 +158,8 @@ export default async function HomePage() {
       })}
 
       <section className="mx-auto max-w-6xl px-4 py-8">
-        <h2 className="font-serif text-4xl text-wine">Univers NERA</h2>
+        <p className="text-[10px] uppercase tracking-[0.28em] text-gold">Les rayons</p>
+        <h2 className="mt-1 font-serif text-4xl text-wine md:text-5xl">Univers NERA</h2>
         <div className="mt-6 flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible lg:grid-cols-3">
           {catalog.categories.map((category) => {
             const cover = covers.get(category.slug);

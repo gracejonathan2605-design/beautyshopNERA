@@ -19,7 +19,7 @@ export function ShopTabBar() {
   return (
     <nav
       aria-label="Navigation mobile"
-      className="shop-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-[#eee0e6] bg-white/95 md:hidden"
+      className="shop-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-cream/95 md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {TABS.map((tab) => {

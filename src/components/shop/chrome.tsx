@@ -25,12 +25,12 @@ function WhatsAppIcon() {
 
 export function ShopHeaderFallback() {
   return (
-    <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
-      <p className="bg-champagne/80 px-3 py-1.5 text-center text-[11px] leading-snug text-wine">
+    <header className="relative z-20 overflow-x-hidden border-b border-gold/30 bg-cream/95">
+      <p className="bg-wine px-3 py-2 text-center text-[10px] uppercase leading-snug tracking-[0.18em] text-champagne">
         <span className="md:hidden">OM sans frais · Livraison 24h · Retrait magasin</span>
         <span className="hidden md:inline">{SHOP_TRUST_LINE}</span>
       </p>
-      <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-4">
         <BrandLockup size="sm" priority />
         <CartLink count={0} />
       </div>
@@ -38,7 +38,7 @@ export function ShopHeaderFallback() {
         <input
           name="q"
           placeholder="Rechercher…"
-          className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
+          className="w-full rounded-full border border-gold/30 bg-champagne/50 px-4 py-2.5 text-sm"
         />
       </form>
     </header>
@@ -47,13 +47,13 @@ export function ShopHeaderFallback() {
 
 export function ShopHeader() {
   return (
-    <header className="relative z-20 overflow-x-hidden border-b border-[#eee0e6] bg-white/90">
+    <header className="relative z-20 overflow-x-hidden border-b border-gold/30 bg-cream/95">
       <StaffToolbarClient />
-      <p className="bg-champagne/80 px-3 py-1.5 text-center text-[11px] leading-snug text-wine">
+      <p className="bg-wine px-3 py-2 text-center text-[10px] uppercase leading-snug tracking-[0.18em] text-champagne">
         <span className="md:hidden">OM sans frais · Livraison 24h · Retrait magasin</span>
         <span className="hidden md:inline">{SHOP_TRUST_LINE}</span>
       </p>
-      <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-4">
         <Link href="/" className="min-w-0 shrink" aria-label={NERA_IDENTITY.name}>
           <BrandLockup size="sm" priority />
         </Link>
@@ -61,12 +61,15 @@ export function ShopHeader() {
           <input
             name="q"
             placeholder="Rechercher un produit, une mèche, un parfum…"
-            className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-5 py-2.5 text-sm"
+            className="w-full rounded-full border border-gold/30 bg-champagne/40 px-5 py-2.5 text-sm"
           />
         </form>
-        <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
+        <nav aria-label="Boutique NERA" className="flex min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[11px] uppercase tracking-[0.18em]">
           <Link href="/boutique" className="text-wine/80 hover:text-wine">
             Boutique
+          </Link>
+          <Link href="/a-propos" className="hidden text-wine/80 hover:text-wine sm:inline">
+            La maison
           </Link>
           <Link href="/compte" className="text-wine/80 hover:text-wine">
             Compte
@@ -80,7 +83,7 @@ export function ShopHeader() {
         <input
           name="q"
           placeholder="Rechercher…"
-          className="w-full rounded-full border border-[#eee0e6] bg-[#fffcfb] px-4 py-2.5 text-sm"
+          className="w-full rounded-full border border-gold/30 bg-champagne/40 px-4 py-2.5 text-sm"
         />
       </form>
     </header>
@@ -93,18 +96,18 @@ export function ShopFooter() {
   return (
     <>
       <JsonLd data={neraOrganizationGraph()} />
-      <footer className="mt-16 border-t border-[#eee0e6] bg-white/75 pb-24 md:mt-20 md:pb-0">
+      <footer className="mt-16 bg-wine pb-24 text-cream/80 md:mt-20 md:pb-0">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
           <div>
             <BrandLogo size="lg" />
-            <p className="mt-4 font-serif text-3xl tracking-[0.12em] text-wine">{NERA_IDENTITY.name}</p>
+            <p className="mt-4 font-serif text-3xl tracking-[0.14em] text-cream">{NERA_IDENTITY.name}</p>
             <div className="gold-rule mt-4 max-w-40" />
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-black/55">{NERA_IDENTITY.slogan}</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-cream/70">{NERA_IDENTITY.slogan}</p>
             <div className="mt-5">
               <PayDeliveryBadges />
             </div>
           </div>
-          <div className="text-sm leading-7 text-black/60">
+          <div className="text-sm leading-7 text-cream/75">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Boutique</p>
             <address className="mt-2 not-italic">
               <p>{NERA_IDENTITY.streetAddress}</p>
@@ -122,61 +125,62 @@ export function ShopFooter() {
             <p>{settings.email}</p>
             {settings.mtnPhone ? <p>MoMo / MTN : {settings.mtnPhone}</p> : null}
             {wa ? (
-              <a href={wa} className="mt-2 inline-block text-wine underline decoration-wine/30" target="_blank" rel="noreferrer">
+              <a href={wa} className="mt-2 inline-block text-champagne underline decoration-gold/40" target="_blank" rel="noreferrer">
                 Écrire sur WhatsApp
               </a>
             ) : null}
           </div>
-          <div className="text-sm leading-7 text-black/55">
+          <div className="text-sm leading-7 text-cream/75">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">Service</p>
             <p className="mt-2">
-              <Link href="/" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 Accueil
               </Link>
             </p>
             <p>
-              <Link href="/a-propos" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/a-propos" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 À propos
               </Link>
             </p>
             <p>
-              <Link href="/marques" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/marques" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 Marques partenaires
               </Link>
             </p>
             <p>
-              <Link href="/boutique" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/boutique" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 Boutique
               </Link>
             </p>
             <p>
-              <Link href="/flash" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/flash" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 FLASH NERA
               </Link>
             </p>
             <p>
-              <Link href="/cgv" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/cgv" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 Conditions de vente
               </Link>
             </p>
             <p>
-              <Link href="/retours" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/retours" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 Conditions de retour
               </Link>
             </p>
             <p>
-              <Link href="/confidentialite" className="text-wine underline-offset-2 hover:underline">
+              <Link href="/confidentialite" className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline">
                 Confidentialité
               </Link>
             </p>
             <p>
-              <AnalyticsChoiceButton />
+              <AnalyticsChoiceButton className="text-cream/90 underline-offset-2 hover:text-champagne hover:underline" />
             </p>
             <p className="mt-2">Retrait en boutique</p>
             <p>Livraison rapide sous 24h à Yaoundé</p>
             <p>Paiement OM, MoMo et espèces</p>
             <ShopLegalBlock
               className="mt-4"
+              onDark
               rccm={settings.rccm}
               nui={settings.nui}
               email={settings.email}

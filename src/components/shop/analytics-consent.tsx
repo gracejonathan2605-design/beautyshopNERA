@@ -118,9 +118,9 @@ export function AnalyticsConsent() {
   );
 }
 
-export function AnalyticsChoiceButton() {
+export function AnalyticsChoiceButton({ className = "text-wine underline-offset-2 hover:underline" }: { className?: string }) {
   return (
-    <button type="button" onClick={() => requestAnalyticsChoice()} className="text-wine underline-offset-2 hover:underline">
+    <button type="button" onClick={() => requestAnalyticsChoice()} className={className}>
       Mesure d’audience
     </button>
   );
