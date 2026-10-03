@@ -47,9 +47,12 @@ describe("pages légères sans casser l’apparence", () => {
 
   it("affiche le hero, la phrase et À propos aussi sur téléphone", () => {
     const home = src("src/app/(shop)/page.tsx");
-    expect(home).toContain("SHOP_HERO_LINE");
-    expect(home).toContain("Voir les mèches");
+    const heroBlock = src("src/components/shop/maison-hero.tsx");
+    expect(home).toContain("MaisonHero");
+    expect(heroBlock).toContain("SHOP_HERO_LINE");
+    expect(heroBlock).toContain("Voir les mèches");
     expect(home).not.toMatch(/hidden md:block/);
+    expect(heroBlock).not.toMatch(/hidden md:block/);
     expect(src("src/components/shop/home-identity.tsx")).toContain("{NERA_PITCH}");
     expect(src("src/components/shop/home-identity.tsx")).toMatch(/À propos/);
     const hero = src("src/components/brand/logo.tsx").slice(
