@@ -377,7 +377,9 @@ describe("signaux locaux, FAQ et images", () => {
     expect(readFileSync("src/app/(shop)/a-propos/page.tsx", "utf8")).toContain("RegistreCommerceSection");
     expect(readFileSync("src/components/shop/home-identity.tsx", "utf8")).toContain("RegistreCommerceCard");
     expect(readFileSync("src/components/shop/registre-commerce.tsx", "utf8")).toContain("/legal/registre-commerce.jpg");
+    expect(readFileSync("src/components/shop/registre-commerce.tsx", "utf8")).toContain("/legal/registre-commerce-p2.jpg");
     expect(statSync("public/legal/registre-commerce.jpg").size).toBeLessThan(400 * 1024);
+    expect(statSync("public/legal/registre-commerce-p2.jpg").size).toBeLessThan(400 * 1024);
   });
 
   it("cible Yaoundé dans les zones de livraison schema", () => {
