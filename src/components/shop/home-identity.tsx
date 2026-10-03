@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HeroProducts } from "@/components/brand/logo";
+import { RegistreCommerceCard, REGISTRE_HREF } from "@/components/shop/registre-commerce";
 import { NERA_IDENTITY, NERA_PITCH } from "@/lib/nera-identity";
 import { YAOUNDE_PLACES } from "@/lib/shop-faces";
 
@@ -28,6 +29,12 @@ export function HomeIdentity() {
           <Link href="/a-propos" className="mt-6 inline-block text-sm text-wine underline decoration-wine/30 underline-offset-4">
             À propos
           </Link>
+          <div className="mt-8 max-w-md">
+            <p className="text-xs uppercase tracking-[0.2em] text-gold">Entreprise enregistrée</p>
+            <Link href={REGISTRE_HREF} className="mt-3 block">
+              <RegistreCommerceCard preview />
+            </Link>
+          </div>
         </div>
       </div>
     </section>

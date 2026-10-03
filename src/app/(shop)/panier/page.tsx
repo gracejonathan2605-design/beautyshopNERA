@@ -6,6 +6,7 @@ import { setCartQtyForm } from "@/app/actions/shop";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import Link from "next/link";
+import { RegistreTrustLink } from "@/components/shop/registre-commerce";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
 export const dynamic = "force-dynamic";
@@ -123,6 +124,7 @@ export default async function CartPage({
           ))}
           <p className="text-right font-serif text-3xl">Total {formatCfa(total)}</p>
           <PayDeliveryBadges />
+          <RegistreTrustLink />
           {canCheckout ? (
             <Link href="/checkout" className="block rounded-full bg-brown py-3 text-center text-cream">
               Commander

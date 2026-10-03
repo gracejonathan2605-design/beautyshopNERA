@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/logo";
 import { ShopFaq } from "@/components/shop/shop-faq";
+import { RegistreCommerceSection } from "@/components/shop/registre-commerce";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 import { JsonLd } from "@/components/seo/json-ld";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
@@ -51,6 +52,7 @@ export default async function AboutPage() {
       <div className="mt-5">
         <PayDeliveryBadges />
       </div>
+      <RegistreCommerceSection />
       <h2 className="mt-10 font-serif text-3xl text-wine">Ce que nous vendons</h2>
       <p className="mt-3 leading-relaxed text-black/65">
         Selon le catalogue du moment : cosmétiques, soins du visage et du corps, produits capillaires, mèches,

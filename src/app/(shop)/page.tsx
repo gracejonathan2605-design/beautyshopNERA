@@ -12,6 +12,7 @@ import { pageMetadata, webPageJsonLd } from "@/lib/seo";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { PRODUCT_GRID_HOME_CLASS, SHOP_IMAGE_QUALITY } from "@/lib/image-limits";
 import { ProductPhoto } from "@/components/shop/product-photo";
+import { RegistreTrustLink } from "@/components/shop/registre-commerce";
 import { coverByRayon, MECHES_HREF, pickForParents, POUR_MOI, SHOP_HERO_LINE, SHOP_TRUST_LINE } from "@/lib/shop-faces";
 
 export const runtime = "nodejs";
@@ -61,6 +62,9 @@ export default async function HomePage() {
             La boutique n’a pas pu charger le catalogue. Réessayez dans un instant, ou contactez-nous au{" "}
             {NERA_IDENTITY.phoneDisplay}.
           </p>
+          <div className="mt-4">
+            <RegistreTrustLink />
+          </div>
         </div>
       </section>
     );
@@ -97,6 +101,9 @@ export default async function HomePage() {
           </div>
         </div>
         <p className="mx-auto mt-4 max-w-6xl text-center text-sm text-wine/80">{SHOP_TRUST_LINE}</p>
+        <div className="mx-auto mt-3 flex max-w-6xl justify-center">
+          <RegistreTrustLink />
+        </div>
       </section>
 
       {POUR_MOI.map((shelf) => {

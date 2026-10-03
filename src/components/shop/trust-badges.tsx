@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { REGISTRE_HREF } from "@/components/shop/registre-commerce";
+
 function OmMark() {
   return (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" aria-hidden>
@@ -76,8 +79,20 @@ export function ShopLegalBlock({
         </p>
       ) : null}
       {mtnPhone ? <p>MoMo / MTN : {mtnPhone}</p> : null}
-      {rccm ? <p>RCCM {rccm}</p> : null}
-      {nui ? <p>NUI {nui}</p> : null}
+      {rccm ? (
+        <p>
+          <Link href={REGISTRE_HREF} className="underline decoration-black/20 underline-offset-2 hover:text-wine">
+            RCCM {rccm}
+          </Link>
+        </p>
+      ) : null}
+      {nui ? (
+        <p>
+          <Link href={REGISTRE_HREF} className="underline decoration-black/20 underline-offset-2 hover:text-wine">
+            NUI {nui}
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }
