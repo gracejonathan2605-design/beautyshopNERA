@@ -5,6 +5,7 @@ import { PERMISSION_CATALOG, ROLE_PRESETS } from "../src/lib/permissions";
 import { DEFAULT_SETTINGS } from "../src/lib/settings";
 import { slugify } from "../src/lib/pricing";
 import { syncNeraCatalog } from "../src/lib/catalog";
+import { NERA10_OFFER } from "../src/lib/coupon-offer";
 
 const prisma = new PrismaClient();
 
@@ -475,13 +476,13 @@ async function main() {
     });
 
     await tx.coupon.upsert({
-      where: { code: "NERA10" },
-      update: { isActive: true },
+      where: { code: NERA10_OFFER.code },
+      update: { isActive: true, type: "PERCENT", value: NERA10_OFFER.percent, minAmount: NERA10_OFFER.minAmount },
       create: {
-        code: "NERA10",
+        code: NERA10_OFFER.code,
         type: "PERCENT",
-        value: 10,
-        minAmount: 20000,
+        value: NERA10_OFFER.percent,
+        minAmount: NERA10_OFFER.minAmount,
         maxUses: 100,
       },
     });
