@@ -477,11 +477,11 @@ async function main() {
 
     await tx.coupon.upsert({
       where: { code: NERA10_OFFER.code },
-      update: { isActive: true, type: "PERCENT", value: NERA10_OFFER.percent, minAmount: NERA10_OFFER.minAmount },
+      update: { isActive: true, type: NERA10_OFFER.type, value: NERA10_OFFER.amount, minAmount: NERA10_OFFER.minAmount },
       create: {
         code: NERA10_OFFER.code,
-        type: "PERCENT",
-        value: NERA10_OFFER.percent,
+        type: NERA10_OFFER.type,
+        value: NERA10_OFFER.amount,
         minAmount: NERA10_OFFER.minAmount,
         maxUses: 100,
       },
