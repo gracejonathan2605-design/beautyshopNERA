@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { isTransientDbError, prisma } from "@/lib/prisma";
 import { billableLineQuantity, cartCanCheckout, cartPayableTotal, getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
@@ -19,8 +19,18 @@ export default async function CartPage({
 }) {
   const cart = await getCart();
   const { ajoute, ignore, deja } = await searchParams;
-  const variants = cart.length
-    ? await prisma.productVariant.findMany({
+  let cartBusy = false;
+  let variants: {
+    id: string;
+    name: string;
+    salePrice: number;
+    promoPrice: number | null;
+    inventories: { onHand: number; reserved: number }[];
+    product: { name: string };
+  }[] = [];
+  if (cart.length) {
+    try {
+      variants = await prisma.productVariant.findMany({
         where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
         select: {
           id: true,
@@ -30,8 +40,12 @@ export default async function CartPage({
           inventories: shopInventorySelect,
           product: { select: { name: true } },
         },
-      })
-    : [];
+      });
+    } catch (err) {
+      if (!isTransientDbError(err)) throw err;
+      cartBusy = true;
+    }
+  }
   const rows = cart
     .map((item) => {
       const variant = variants.find((v) => v.id === item.variantId);
@@ -68,7 +82,14 @@ export default async function CartPage({
           {ignore ? ` ${ignore} autre${Number(ignore) > 1 ? "s" : ""} en rupture (bientôt de retour).` : ""}
         </p>
       ) : null}
-      {!hasLines ? (
+      {cartBusy ? (
+        <div className="mt-8 rounded-[1.7rem] border border-[#eee0e6] bg-white/80 p-8 text-center">
+          <p className="text-black/70">Le panier n’a pas pu s’ouvrir. Vos articles sont conservés.</p>
+          <a href="/panier" className="mt-6 inline-block rounded-full bg-brown px-6 py-3 text-cream">
+            Réessayer
+          </a>
+        </div>
+      ) : !hasLines ? (
         <div className="mt-8 rounded-[1.7rem] border border-[#eee0e6] bg-white/80 p-8 text-center">
           <p className="text-black/60">Votre panier est encore vide.</p>
           <Link href="/boutique" className="mt-6 inline-block rounded-full bg-brown px-6 py-3 text-cream">

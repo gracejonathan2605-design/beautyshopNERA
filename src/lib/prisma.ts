@@ -2,13 +2,36 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-/** Session pooler Supabase = 15 clients. Une connexion par instance, sinon l’admin sature le pool. */
+/** Une connexion Prisma par instance. Le plafond réel est le pooler, pas ce chiffre. */
 export const PRISMA_DEFAULT_CONNECTION_LIMIT = 1;
 export const PRISMA_DEFAULT_POOL_TIMEOUT = 20;
 
+/**
+ * Le pooler session Supabase (port 5432) ne garde que 15 clients.
+ * Chaque instance Vercel en occupe un, et le 2ᵉ ajout au panier tombe
+ * avec EMAXCONNSESSION. Le port 6543 rend la connexion après chaque requête.
+ * Les transactions Prisma restent valides : PgBouncer les tient jusqu’au COMMIT.
+ * L’hôte direct et Postgres local ne sont pas modifiés.
+ */
+export function supabaseTransactionPoolerUrl(databaseUrl: string) {
+  const at = databaseUrl.lastIndexOf("@");
+  if (at < 0) return databaseUrl;
+  const rest = databaseUrl.slice(at + 1);
+  if (!/pooler\.supabase\.(?:com|co)\b/.test(rest)) return databaseUrl;
+  let host = rest.replace(/(pooler\.supabase\.(?:com|co)):5432\b/, "$1:6543");
+  if (!/:6543\b/.test(host) && !/pooler\.supabase\.(?:com|co):\d+\b/.test(host)) {
+    host = host.replace(/(pooler\.supabase\.(?:com|co))\b/, "$1:6543");
+  }
+  let url = databaseUrl.slice(0, at + 1) + host;
+  if (/:6543\b/.test(host) && !/[?&]pgbouncer=/.test(url)) {
+    url += `${url.includes("?") ? "&" : "?"}pgbouncer=true`;
+  }
+  return url;
+}
+
 export function prismaDatasourceUrl(databaseUrl?: string | null) {
   if (!databaseUrl) return undefined;
-  let url = databaseUrl;
+  let url = supabaseTransactionPoolerUrl(databaseUrl);
   if (!url.includes("connection_limit=")) {
     url += `${url.includes("?") ? "&" : "?"}connection_limit=${PRISMA_DEFAULT_CONNECTION_LIMIT}`;
   }

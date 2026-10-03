@@ -7,7 +7,7 @@ import { parseCfaInput } from "../src/lib/money";
 import { stockEffectForTransition } from "../src/lib/order-flow";
 import { isValidSaleQuantity } from "../src/lib/pos";
 import { phoneLastNine, phonesLikelyMatch } from "../src/lib/phone-match";
-import { isTransientDbError, prismaDatasourceUrl, withDbRetry } from "../src/lib/prisma";
+import { isTransientDbError, prismaDatasourceUrl, supabaseTransactionPoolerUrl, withDbRetry } from "../src/lib/prisma";
 
 describe("saisie FCFA", () => {
   it("lit les milliers à la française (10.000 = dix mille)", () => {
@@ -109,14 +109,38 @@ describe("pool Prisma", () => {
     expect(calls).toBe(2);
   });
 
-  it("limite le pool Prisma sous le plafond session Supabase (15)", () => {
-    const url = prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?schema=public");
-    expect(url).toContain("connection_limit=1");
-    expect(url).toContain("pool_timeout=20");
-    expect(url).not.toMatch(/connection_limit=2/);
+  it("limite le pool Prisma et sort du mode session Supabase (15 clients)", () => {
+    const local = prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?schema=public");
+    expect(local).toContain("127.0.0.1:5432");
+    expect(local).toContain("connection_limit=1");
+    expect(local).toContain("pool_timeout=20");
+    expect(local).not.toContain("pgbouncer");
+    expect(local).not.toMatch(/connection_limit=2/);
     expect(
       prismaDatasourceUrl("postgresql://nera:x@127.0.0.1:5432/nera?connection_limit=8"),
     ).toContain("connection_limit=8");
+
+    const session =
+      "postgresql://postgres.ref:secret@aws-1-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require";
+    const pooled = prismaDatasourceUrl(session);
+    expect(pooled).toContain("pooler.supabase.com:6543");
+    expect(pooled).not.toContain(":5432");
+    expect(pooled).toContain("pgbouncer=true");
+    expect(pooled).toContain("sslmode=require");
+    expect(pooled).toContain("connection_limit=1");
+    expect(supabaseTransactionPoolerUrl(session.replace(":5432", ":6543"))).toContain("pgbouncer=true");
+    const tricky = prismaDatasourceUrl(
+      "postgresql://postgres.ref:p%40ss:5432word@aws-1-eu-central-1.pooler.supabase.com:5432/postgres",
+    );
+    expect(tricky).toContain("p%40ss:5432word@");
+    expect(tricky).toContain("pooler.supabase.com:6543/");
+
+    const direct = prismaDatasourceUrl(
+      "postgresql://postgres.ref:secret@db.ref.supabase.co:5432/postgres?sslmode=require",
+    );
+    expect(direct).toContain("db.ref.supabase.co:5432");
+    expect(direct).not.toContain("pgbouncer");
+
     expect(readFileSync("src/lib/prisma.ts", "utf8")).toContain("PRISMA_DEFAULT_CONNECTION_LIMIT = 1");
     expect(readFileSync("src/lib/catalog-cache.ts", "utf8")).not.toMatch(
       /Promise\.all\(\[\s*prisma\.product\.findMany/,
