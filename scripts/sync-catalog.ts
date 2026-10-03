@@ -1,6 +1,6 @@
 import { config } from "dotenv";
 import { prisma } from "../src/lib/prisma";
-import { catalogParentsAreInstalled, syncNeraCatalog } from "../src/lib/catalog";
+import { catalogParentsAreInstalled, mergeDuplicateCategories, syncNeraCatalog } from "../src/lib/catalog";
 
 config({ path: ".env" });
 config({ path: ".env.local", override: true });
@@ -12,6 +12,8 @@ async function main() {
     where: { parentId: null, isActive: true, deletedAt: null },
     select: { slug: true },
   });
+  const removed = await mergeDuplicateCategories(prisma);
+  if (removed) console.log(`Sous-rayons en double fusionnés : ${removed}.`);
   if (catalogParentsAreInstalled(parents.map((row) => row.slug))) {
     console.log("Catalogue NERA déjà à jour.");
     return;

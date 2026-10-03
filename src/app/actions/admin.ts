@@ -13,6 +13,7 @@ import { getShopSettings, saveShopSettings, type ShopSettings } from "@/lib/sett
 import { uploadProductImage, uploadProductVideo } from "@/lib/storage";
 import { buildAutoSku, skuBaseFromName } from "@/lib/sku";
 import { MAX_PRODUCT_PHOTOS, MAX_VIDEO_SECONDS, mediaIdsFromForm } from "@/lib/product-media";
+import { categoryNameTaken } from "@/lib/category-duplicates";
 import { categoryDeleteBlocker } from "@/lib/categories";
 import { createCustomerRecord } from "@/services/customer.service";
 import { hasPermission } from "@/lib/permissions";
@@ -55,9 +56,17 @@ export async function saveCategory(formData: FormData) {
       if (!parent || parent.deletedAt) bounceCategories("erreur", "Rayon parent introuvable.");
       if (parent.parentId) bounceCategories("erreur", "Un sous-rayon ne peut pas contenir d’autre sous-rayon.");
     }
-    const siblings = await prisma.category.count({
-      where: { parentId, deletedAt: null },
+    const existing = await prisma.category.findMany({
+      where: { parentId, deletedAt: null, isActive: true },
+      select: { name: true },
     });
+    if (categoryNameTaken(existing, name)) {
+      bounceCategories(
+        "erreur",
+        parentId ? "Ce sous-rayon existe déjà dans ce rayon." : "Ce rayon existe déjà.",
+      );
+    }
+    const siblings = existing.length;
     await prisma.category.create({
       data: {
         name,
@@ -84,6 +93,16 @@ export async function updateCategory(formData: FormData) {
     if (!id || !name) bounceCategories("erreur", "Nom requis.");
     const current = await prisma.category.findUnique({ where: { id } });
     if (!current || current.deletedAt) bounceCategories("erreur", "Rayon introuvable.");
+    const siblings = await prisma.category.findMany({
+      where: { parentId: current.parentId, deletedAt: null, isActive: true, id: { not: id } },
+      select: { id: true, name: true },
+    });
+    if (categoryNameTaken(siblings, name, id)) {
+      bounceCategories(
+        "erreur",
+        current.parentId ? "Ce sous-rayon existe déjà dans ce rayon." : "Ce rayon existe déjà.",
+      );
+    }
     await prisma.category.update({ where: { id }, data: { name } });
     await writeAudit({
       userId: session.userId,
