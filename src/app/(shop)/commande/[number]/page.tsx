@@ -126,7 +126,6 @@ export default async function OrderPage({
                 Une demande Orange Money a été envoyée sur votre téléphone. Saisissez votre code secret pour valider.
               </p>
             ) : null}
-            <p className="mt-3 text-sm text-wine">Une demande arrive sur votre téléphone.</p>
             {order.fulfillment === "DELIVERY" ? (
               <p className="mt-2 text-sm text-black/55">
                 Livraison {order.deliveryZone?.name ?? ""} incluse ({formatCfa(order.shippingFee)}) — un seul paiement.

@@ -14,10 +14,10 @@ export const dynamic = "force-dynamic";
 export default async function CartPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ajoute?: string; ignore?: string }>;
+  searchParams: Promise<{ ajoute?: string; ignore?: string; deja?: string }>;
 }) {
   const cart = await getCart();
-  const { ajoute, ignore } = await searchParams;
+  const { ajoute, ignore, deja } = await searchParams;
   const variants = cart.length
     ? await prisma.productVariant.findMany({
         where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
@@ -55,6 +55,12 @@ export default async function CartPage({
           {ignore ? ` ${ignore} en rupture (bientôt de retour).` : ""}
         </p>
       ) : null}
+      {deja ? (
+        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Ces articles sont déjà dans le panier, au maximum disponible.
+          {ignore ? ` ${ignore} autre${Number(ignore) > 1 ? "s" : ""} en rupture (bientôt de retour).` : ""}
+        </p>
+      ) : null}
       {!hasLines ? (
         <div className="mt-8 rounded-[1.7rem] border border-[#eee0e6] bg-white/80 p-8 text-center">
           <p className="text-black/60">Votre panier est encore vide.</p>
@@ -76,7 +82,7 @@ export default async function CartPage({
               <form action={setCartQtyForm}>
                 <input type="hidden" name="variantId" value={item.variantId} />
                 <input type="hidden" name="quantity" value={0} />
-                <button className="text-sm text-red-700" type="submit">
+                <button className="text-sm text-red-700" type="submit" aria-label="Retirer cet article du panier">
                   Retirer
                 </button>
               </form>
@@ -100,7 +106,7 @@ export default async function CartPage({
                 <form action={setCartQtyForm}>
                   <input type="hidden" name="variantId" value={item.variantId} />
                   <input type="hidden" name="quantity" value={item.quantity - 1} />
-                  <button className="h-8 w-8 rounded-full border" type="submit">
+                  <button className="h-8 w-8 rounded-full border" type="submit" aria-label="Diminuer la quantité">
                     −
                   </button>
                 </form>
@@ -108,14 +114,20 @@ export default async function CartPage({
                 <form action={setCartQtyForm}>
                   <input type="hidden" name="variantId" value={item.variantId} />
                   <input type="hidden" name="quantity" value={item.quantity + 1} />
-                  <button className="h-8 w-8 rounded-full border" type="submit" disabled={available <= item.quantity}>
+                  <button
+                    className="h-8 w-8 rounded-full border"
+                    type="submit"
+                    aria-label="Augmenter la quantité"
+                    disabled={available <= item.quantity}
+                    title={available <= item.quantity ? "Quantité maximale du stock" : undefined}
+                  >
                     +
                   </button>
                 </form>
                 <form action={setCartQtyForm}>
                   <input type="hidden" name="variantId" value={item.variantId} />
                   <input type="hidden" name="quantity" value={0} />
-                  <button className="text-sm text-red-700" type="submit">
+                  <button className="text-sm text-red-700" type="submit" aria-label="Retirer du panier">
                     Retirer
                   </button>
                 </form>

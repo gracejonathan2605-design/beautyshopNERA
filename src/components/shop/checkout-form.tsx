@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { checkoutOrder, previewCheckoutCoupon, type CheckoutState } from "@/app/actions/shop";
 import { formatCfa } from "@/lib/money";
-import { PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor, type PaymentNetwork } from "@/lib/checkout";
+import { MANUAL_PAYMENT_HINT, PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor, type PaymentNetwork } from "@/lib/checkout";
 import type { PaymentInstruction } from "@/lib/payments/mobile-money";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 
@@ -72,7 +72,6 @@ export function CheckoutForm({
       ) : null}
 
       <p className="font-serif text-5xl text-brown">{formatCfa(total)}</p>
-      <p className="text-sm text-wine/70">Une demande arrive sur votre téléphone.</p>
 
       <label className="block text-sm">
         Mode
@@ -193,7 +192,7 @@ export function CheckoutForm({
 
       <fieldset className="space-y-3">
         <legend className="text-sm text-wine">Paiement</legend>
-        <p className="text-sm text-black/65">Une demande arrive sur votre téléphone.</p>
+        <p className="text-sm text-black/65">{MANUAL_PAYMENT_HINT}</p>
         <label className="flex items-start gap-3 text-sm">
           <input type="radio" name="paymentNetwork" value="ORANGE" defaultChecked className="mt-1" />
           <span>

@@ -15,3 +15,7 @@ export function shippingFeeFor(fulfillment: string, zoneFee: number) {
 export function payableTotal(subtotal: number, discount: number, shippingFee: number) {
   return Math.max(0, subtotal - discount + shippingFee);
 }
+
+/** Paiement boutique : code marchand ou transfert, pas une demande automatique sur le téléphone. */
+export const MANUAL_PAYMENT_HINT =
+  "Payez avec le code ou le numéro indiqué, puis envoyez la référence du transfert.";

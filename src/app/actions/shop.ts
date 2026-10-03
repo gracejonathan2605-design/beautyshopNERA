@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
-import { checkoutLinesFromCart, clearCart, getCart, saveCart, upsertCartItem } from "@/lib/cart";
+import { checkoutLinesFromCart, clearCart, getCart, nextCartQuantity, reorderCartMerge, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession, hashPassword } from "@/lib/auth";
 import { createOnlineOrder } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
@@ -29,12 +29,13 @@ async function availableForVariant(variantId: string) {
 
 export async function addToCart(variantId: string, quantity = 1) {
   const available = await availableForVariant(variantId);
-  if (available <= 0) return { ok: false as const };
   const cart = await getCart();
   const current = cart.find((i) => i.variantId === variantId)?.quantity ?? 0;
-  const count = await saveCart(upsertCartItem(cart, variantId, Math.min(current + quantity, available)));
+  const decision = nextCartQuantity(current, quantity, available);
+  if (!decision.ok) return { ok: false as const };
+  const count = await saveCart(upsertCartItem(cart, variantId, decision.quantity));
   revalidatePath("/panier");
-  return { ok: true as const, count };
+  return { ok: true as const, count, capped: decision.capped };
 }
 
 export async function setCartQty(variantId: string, quantity: number) {
@@ -227,6 +228,9 @@ export async function updateCustomerProfile(
     if (!firstName || !lastName || !email) {
       return { ok: false, error: "Indiquez prénom, nom et email." };
     }
+    if (password && password.length < 8) {
+      return { ok: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
+    }
     const emailTaken = await prisma.customer.findFirst({
       where: { email, deletedAt: null, NOT: { id: session.customerId } },
       select: { id: true },
@@ -270,22 +274,17 @@ export async function reorderFromOrder(formData: FormData) {
   });
   if (!order) redirect("/compte?erreur=commande");
   const cart = await getCart();
-  let added = 0;
-  let skipped = 0;
-  let next = cart;
+  const available = new Map<string, number>();
   for (const item of order.items) {
-    const available = await availableForVariant(item.variantId);
-    if (available <= 0) {
-      skipped += 1;
-      continue;
-    }
-    const current = next.find((row) => row.variantId === item.variantId)?.quantity ?? 0;
-    const qty = Math.min(current + item.quantity, available);
-    if (qty > current) added += 1;
-    next = upsertCartItem(next, item.variantId, qty);
+    if (!available.has(item.variantId)) available.set(item.variantId, await availableForVariant(item.variantId));
   }
-  await saveCart(next);
+  const merged = reorderCartMerge(cart, order.items, (variantId) => available.get(variantId) ?? 0);
+  await saveCart(merged.cart);
   revalidatePath("/panier");
-  if (!added) redirect("/compte?erreur=rupture");
-  redirect(`/panier?ajoute=${added}${skipped ? `&ignore=${skipped}` : ""}`);
+  const ignored = merged.skipped ? `&ignore=${merged.skipped}` : "";
+  if (!merged.added) {
+    if (merged.already) redirect(`/panier?deja=1${ignored}`);
+    redirect("/compte?erreur=rupture");
+  }
+  redirect(`/panier?ajoute=${merged.added}${ignored}`);
 }

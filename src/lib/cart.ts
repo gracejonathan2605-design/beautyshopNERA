@@ -71,6 +71,38 @@ export function upsertCartItem(items: CartItem[], variantId: string, quantity: n
   return normalizeCartItems([...items.filter((i) => i.variantId !== variantId), { variantId, quantity }]);
 }
 
+/** Quantité après un ajout, plafonnée au stock. `capped` : le stock empêchait d’augmenter. */
+export function nextCartQuantity(current: number, add: number, available: number) {
+  const safeAdd = Number.isFinite(add) && add > 0 ? Math.floor(add) : 1;
+  if (available <= 0) return { ok: false as const };
+  const quantity = Math.min(Math.max(0, current) + safeAdd, available);
+  return { ok: true as const, quantity, capped: quantity === Math.max(0, current) };
+}
+
+export function reorderCartMerge(
+  cart: CartItem[],
+  items: { variantId: string; quantity: number }[],
+  availableFor: (variantId: string) => number,
+) {
+  let added = 0;
+  let skipped = 0;
+  let already = 0;
+  let next = cart;
+  for (const item of items) {
+    const available = availableFor(item.variantId);
+    if (available <= 0) {
+      skipped += 1;
+      continue;
+    }
+    const current = next.find((row) => row.variantId === item.variantId)?.quantity ?? 0;
+    const qty = Math.min(current + item.quantity, available);
+    if (qty > current) added += 1;
+    else already += 1;
+    next = upsertCartItem(next, item.variantId, qty);
+  }
+  return { cart: next, added, skipped, already };
+}
+
 export function cartCanCheckout(
   rows: { available: number; quantity: number }[],
   cookieLineCount = rows.length,

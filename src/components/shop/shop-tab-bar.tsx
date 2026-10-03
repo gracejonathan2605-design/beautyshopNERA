@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShopCartBadge } from "@/components/shop/cart-badge";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
+import { isShopTabActive } from "@/lib/shop-nav";
 
 const TABS = [
   { href: "/", label: "Accueil" },
@@ -22,11 +23,12 @@ export function ShopTabBar() {
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {TABS.map((tab) => {
-          const active = tab.href === "/" ? path === "/" : path.startsWith(tab.href);
+          const active = isShopTabActive(tab.href, path);
           return (
             <li key={tab.href}>
               <Link
                 href={tab.href}
+                aria-current={active ? "page" : undefined}
                 className={`flex min-h-14 items-center justify-center px-1 text-center text-[11px] ${active ? "font-medium text-brown" : "text-wine/70"}`}
               >
                 {tab.label}
