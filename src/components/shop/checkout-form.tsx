@@ -189,7 +189,7 @@ export function CheckoutForm({
           </p>
         ) : (
           <p className="mt-2 text-xs text-black/45">
-            Exemple : {NERA10_OFFER.code}, {NERA10_OFFER.percent} % dès {formatCfa(NERA10_OFFER.minAmount)} d’articles.
+            Exemple : {NERA10_OFFER.code}, {formatCfa(NERA10_OFFER.amount)} de remise dès {formatCfa(NERA10_OFFER.minAmount)} d’articles.
           </p>
         )}
       </div>
