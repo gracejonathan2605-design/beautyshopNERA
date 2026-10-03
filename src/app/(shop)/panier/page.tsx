@@ -6,6 +6,7 @@ import { setCartQtyForm } from "@/app/actions/shop";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
 import { variantAvailable } from "@/lib/stock-display";
 import Link from "next/link";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { RegistreTrustLink } from "@/components/shop/registre-commerce";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
 
@@ -52,9 +53,9 @@ export default async function CartPage({
   const hasLines = rows.length > 0 || staleItems.length > 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <p className="text-xs uppercase tracking-[0.28em] text-gold">Votre sélection</p>
-      <h1 className="mt-2 font-serif text-5xl text-wine">Panier</h1>
+    <>
+      <MaisonPageHead kicker="Votre sélection" title="Panier" />
+      <div className="mx-auto max-w-3xl px-4 py-10">
       {ajoute ? (
         <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
           {ajoute} article{Number(ajoute) > 1 ? "s" : ""} remis dans le panier.
@@ -161,5 +162,6 @@ export default async function CartPage({
         </div>
       )}
     </div>
+    </>
   );
 }

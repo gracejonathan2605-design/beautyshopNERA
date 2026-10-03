@@ -12,7 +12,7 @@ import { formatCfa } from "@/lib/money";
 import { unitPrice, promoPercent } from "@/lib/pricing";
 import { SHOP_TRUST_LINE, YAOUNDE_PLACES } from "@/lib/shop-faces";
 import { ProductFlashMeta } from "@/components/shop/product-flash-meta";
-import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ProductOpenGraphTags } from "@/components/seo/product-open-graph";
 import { isFlashActive } from "@/lib/flash";
@@ -115,7 +115,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 pb-36 md:py-8 md:pb-12">
+    <>
       <ProductOpenGraphTags price={price} inStock={inStock} brand={product.brand?.name} />
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
       <JsonLd
@@ -133,8 +133,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
           shippingZones,
         })}
       />
-      <ShopBreadcrumbs
-        items={[
+      <MaisonPageHead
+        compact
+        crumbs={[
           { name: "Accueil", href: "/" },
           product.category
             ? { name: product.category.name, href: `/categorie/${product.category.slug}` }
@@ -142,7 +143,8 @@ export default async function ProductPage({ params, searchParams }: Props) {
           { name: heading },
         ]}
       />
-      <div className="mt-6 grid gap-10 md:grid-cols-2">
+      <div className="mx-auto max-w-6xl px-4 py-8 pb-36 md:pb-12">
+      <div className="grid gap-10 md:grid-cols-2">
         {photos.length === 0 && !hasVideo ? (
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem]">
             <ProductPhotoPlaceholder name={heading} />
@@ -232,5 +234,6 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </section>
       ) : null}
     </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCachedPartnerBrands } from "@/lib/catalog-cache";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { PartnerBrandMark } from "@/components/shop/partner-brands-section";
 import { JsonLd } from "@/components/seo/json-ld";
 import { collectionJsonLd, pageMetadata, webPageJsonLd } from "@/lib/seo";
@@ -24,7 +25,7 @@ export default async function PartnerBrandsPage() {
     brands = [];
   }
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <>
       <JsonLd
         data={webPageJsonLd({
           path: "/marques",
@@ -40,12 +41,12 @@ export default async function PartnerBrandsPage() {
           items: brands.map((brand) => ({ name: brand.name, path: partnerBrandPath(brand.slug) })),
         })}
       />
-      <p className="text-xs uppercase tracking-[0.28em] text-gold">Chez NERA</p>
-      <h1 className="mt-3 font-serif text-5xl text-wine">Nos marques partenaires</h1>
-      <p className="mt-4 max-w-2xl text-lg leading-relaxed text-black/60">
-        Chaque marque reste elle-même. Vous achetez comme d’habitude chez {NERA_IDENTITY.name} — panier, paiement,
-        retrait ou livraison.
-      </p>
+      <MaisonPageHead
+        kicker="Chez NERA"
+        title="Nos marques partenaires"
+        lede={`Chaque marque reste elle-même. Vous achetez comme d’habitude chez ${NERA_IDENTITY.name} — panier, paiement, retrait ou livraison.`}
+      />
+      <div className="mx-auto max-w-6xl px-4 py-12">
       {brands.length === 0 ? (
         <p className="mt-10 rounded-[1.6rem] border border-[#eee0e6] bg-white/85 p-8 text-black/55">
           Les marques partenaires apparaîtront ici dès qu’elles seront publiées depuis l’administration.
@@ -70,5 +71,6 @@ export default async function PartnerBrandsPage() {
         </ul>
       )}
     </div>
+    </>
   );
 }

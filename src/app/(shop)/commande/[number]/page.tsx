@@ -9,6 +9,7 @@ import { paymentInstructions } from "@/lib/payments/mobile-money";
 import { customerStatusSentence, customerStepIndex, CUSTOMER_STEPS } from "@/lib/order-timeline";
 import { submitPaymentProof } from "@/app/actions/shop";
 import { BrandLogo } from "@/components/brand/logo";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { PayDeliveryBadges, ShopLegalBlock } from "@/components/shop/trust-badges";
 import { getCustomerSession, getStaffSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -74,12 +75,16 @@ export default async function OrderPage({
   );
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-10">
+    <>
+      <MaisonPageHead
+        align="center"
+        kicker="Commande reçue"
+        title="Merci, nous avons bien reçu votre commande"
+      />
+      <div className="mx-auto max-w-xl px-4 py-10">
       <div className="flex justify-center">
         <BrandLogo size="md" />
       </div>
-      <p className="mt-4 text-center text-xs uppercase tracking-[0.28em] text-gold">Commande reçue</p>
-      <h1 className="mt-2 text-center font-serif text-4xl text-wine">Merci, nous avons bien reçu votre commande</h1>
       <p className="mt-3 text-center text-black/60">
         Commande <strong>{order.number}</strong>
         {paid ? " · Paiement reçu." : ". Payez maintenant le montant ci-dessous, puis gardez ce reçu."}
@@ -186,5 +191,6 @@ export default async function OrderPage({
         mtnPhone={settings.mtnPhone}
       />
     </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { BrandLogo } from "@/components/brand/logo";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { SHOP_PAGE_UNAVAILABLE } from "@/lib/shop-public-error";
 
 export default function ErrorPage({
@@ -11,17 +11,19 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-xl px-4 py-24 text-center">
-      <div className="flex justify-center">
-        <BrandLogo size="lg" />
+    <>
+      <MaisonPageHead
+        align="center"
+        kicker="NERA Beauté & Shop"
+        title="La page n’a pas pu s’afficher"
+        lede={SHOP_PAGE_UNAVAILABLE}
+      />
+      <div className="mx-auto max-w-xl px-4 py-12 text-center">
+        <p className="text-xs text-black/40">{error.digest ? `Réf. ${error.digest}` : "Réessayez dans un instant."}</p>
+        <button type="button" onClick={reset} className="mt-6 rounded-full bg-brown px-6 py-3 text-cream">
+          Réessayer
+        </button>
       </div>
-      <p className="mt-6 text-sm uppercase tracking-[0.3em] text-brown">NERA Beauté & Shop</p>
-      <h1 className="mt-4 font-serif text-4xl">La page n’a pas pu s’afficher</h1>
-      <p className="mt-4 text-black/70">{SHOP_PAGE_UNAVAILABLE}</p>
-      <p className="mt-2 text-xs text-black/40">{error.digest ? `Réf. ${error.digest}` : "Réessayez dans un instant."}</p>
-      <button type="button" onClick={reset} className="mt-8 rounded-full bg-brown px-6 py-3 text-cream">
-        Réessayer
-      </button>
-    </div>
+    </>
   );
 }

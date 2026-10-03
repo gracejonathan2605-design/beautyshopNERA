@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ORDER_STATUS_LABELS } from "@/lib/status-labels";
 import { orderConfirmationPath } from "@/lib/order-access";
 import { AccountProfileForm } from "@/components/shop/account-profile-form";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -32,16 +33,18 @@ export default async function AccountPage({
   if (!customer) redirect("/compte/connexion");
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="font-serif text-5xl">Bonjour {customer.firstName}</h1>
-        <form action={logoutCustomer}>
-          <button className="text-sm">Déconnexion</button>
-        </form>
-      </div>
-      <p className="mt-2 text-black/60">
-        {customer.email} · {customer.phone || "Pas de téléphone"}
-      </p>
+    <>
+      <MaisonPageHead
+        kicker="Votre espace"
+        title={`Bonjour ${customer.firstName}`}
+        lede={`${customer.email} · ${customer.phone || "Pas de téléphone"}`}
+        actions={
+          <form action={logoutCustomer}>
+            <button className="rounded-full border border-cream/70 px-5 py-2 text-sm text-cream">Déconnexion</button>
+          </form>
+        }
+      />
+      <div className="mx-auto max-w-3xl px-4 py-10">
       {erreur === "rupture" ? (
         <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Ces articles sont en rupture. Ils restent visibles en boutique : bientôt de retour.
@@ -91,5 +94,6 @@ export default async function AccountPage({
         </ul>
       )}
     </div>
+    </>
   );
 }

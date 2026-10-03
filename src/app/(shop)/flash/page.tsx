@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getActiveFlashProducts } from "@/lib/catalog-cache";
 import { FlashProductCard } from "@/components/shop/flash-product-card";
-import { ShopBreadcrumbs } from "@/components/shop/breadcrumbs";
+import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd, pageMetadata } from "@/lib/seo";
 import { PRODUCT_GRID_HOME_CLASS } from "@/lib/image-limits";
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FlashPage() {
   const products = await getActiveFlashProducts(48).catch(() => []);
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <>
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Accueil", path: "/" },
@@ -42,12 +42,13 @@ export default async function FlashPage() {
           })}
         />
       ) : null}
-      <ShopBreadcrumbs items={[{ name: "Accueil", href: "/" }, { name: "FLASH NERA" }]} />
-      <p className="mt-3 text-xs uppercase tracking-[0.32em] text-gold">Nouveautés du moment</p>
-      <h1 className="mt-3 font-serif text-5xl text-wine md:text-6xl">FLASH NERA</h1>
-      <p className="mt-4 max-w-2xl text-lg text-black/55">
-        Les nouveautés du moment chez NERA Beauté & Shop à Yaoundé — une sélection qui ne reste pas longtemps en avant.
-      </p>
+      <MaisonPageHead
+        crumbs={[{ name: "Accueil", href: "/" }, { name: "FLASH NERA" }]}
+        kicker="Nouveautés du moment"
+        title="FLASH NERA"
+        lede="Les nouveautés du moment chez NERA Beauté & Shop à Yaoundé — une sélection qui ne reste pas longtemps en avant."
+      />
+      <div className="mx-auto max-w-6xl px-4 py-12">
       {products.length ? (
         <>
           <h2 className="mt-10 font-serif text-3xl text-wine">Nouveautés</h2>
@@ -63,5 +64,6 @@ export default async function FlashPage() {
         </p>
       )}
     </div>
+    </>
   );
 }
