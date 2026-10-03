@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseHref, catalogPageMeta, paginateItems, parseBrowseQuery, SHOP_PAGE_SIZE, sortShopProducts } from "../src/lib/shop-browse";
+import { browseHref, catalogPageMeta, escapeBrowseLike, paginateItems, parseBrowseQuery, SHOP_PAGE_SIZE, shopBrowseSqlWhere, sortShopProducts } from "../src/lib/shop-browse";
 import { productInStock, variantAvailable } from "../src/lib/stock-display";
 
 describe("navigation boutique", () => {
@@ -37,6 +37,14 @@ describe("navigation boutique", () => {
     expect(page).toEqual({ items: [3, 4], total: 5, page: 2, pages: 3 });
     expect(SHOP_PAGE_SIZE).toBe(24);
     expect(catalogPageMeta(100, 2).skip).toBe(24);
+  });
+
+  it("inclut les produits marqués promo même sans prix barré, et échappe les jokers", () => {
+    const sql = shopBrowseSqlWhere({ q: "100%_lait", vue: "promo" });
+    expect(sql.text).toContain(`p."isPromo" = true`);
+    expect(sql.text).toContain(`ESCAPE '\\'`);
+    expect(escapeBrowseLike("100%_lait\\")).toBe("100\\%\\_lait\\\\");
+    expect(sql.values).toContain("%100\\%\\_lait%");
   });
 });
 

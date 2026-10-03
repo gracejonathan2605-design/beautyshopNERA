@@ -179,16 +179,21 @@ const EFFECTIVE_PRICE_SQL = Prisma.sql`(
   WHERE v."productId" = p.id AND v."isActive" = true AND v."deletedAt" IS NULL
 )`;
 
-function shopBrowseSqlWhere(filters: { q?: string; categoryIds?: string[]; vue?: BrowseView }) {
+/** Échappe `%`, `_` et `\` pour qu’une recherche ILIKE ne les traite pas comme des jokers. */
+export function escapeBrowseLike(term: string) {
+  return term.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+export function shopBrowseSqlWhere(filters: { q?: string; categoryIds?: string[]; vue?: BrowseView }) {
   const parts: Prisma.Sql[] = [
     Prisma.sql`p.status = 'ACTIVE' AND p."onlineVisible" = true AND p."deletedAt" IS NULL`,
   ];
   if (filters.q) {
-    const like = `%${filters.q}%`;
+    const like = `%${escapeBrowseLike(filters.q)}%`;
     parts.push(Prisma.sql`(
-      p.name ILIKE ${like}
-      OR coalesce(p."shortDescription", '') ILIKE ${like}
-      OR EXISTS (SELECT 1 FROM "Category" c WHERE c.id = p."categoryId" AND c.name ILIKE ${like})
+      p.name ILIKE ${like} ESCAPE '\\'
+      OR coalesce(p."shortDescription", '') ILIKE ${like} ESCAPE '\\'
+      OR EXISTS (SELECT 1 FROM "Category" c WHERE c.id = p."categoryId" AND c.name ILIKE ${like} ESCAPE '\\')
     )`);
   }
   if (filters.categoryIds?.length) {
@@ -196,14 +201,17 @@ function shopBrowseSqlWhere(filters: { q?: string; categoryIds?: string[]; vue?:
   }
   if (filters.vue === "new") parts.push(Prisma.sql`p."isNew" = true`);
   if (filters.vue === "promo") {
-    parts.push(Prisma.sql`EXISTS (
-      SELECT 1 FROM "ProductVariant" v
-      WHERE v."productId" = p.id
-        AND v."isActive" = true
-        AND v."deletedAt" IS NULL
-        AND v."promoPrice" IS NOT NULL
-        AND v."promoPrice" > 0
-        AND v."promoPrice" < v."salePrice"
+    parts.push(Prisma.sql`(
+      p."isPromo" = true
+      OR EXISTS (
+        SELECT 1 FROM "ProductVariant" v
+        WHERE v."productId" = p.id
+          AND v."isActive" = true
+          AND v."deletedAt" IS NULL
+          AND v."promoPrice" IS NOT NULL
+          AND v."promoPrice" > 0
+          AND v."promoPrice" < v."salePrice"
+      )
     )`);
   }
   return Prisma.join(parts, " AND ");

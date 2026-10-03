@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { nextCartQuantity, reorderCartMerge } from "../src/lib/cart";
+import { isShopTabActive } from "../src/lib/shop-nav";
 import { catalogPhotoFor, PRODUCT_PHOTOS } from "../src/lib/product-photos";
+import { readFileSync } from "node:fs";
 import {
+  MANUAL_PAYMENT_HINT,
   PAYMENT_INSTRUCTIONS,
   payableTotal,
   shippingFeeFor,
@@ -34,5 +38,51 @@ describe("total commande", () => {
   it("demande un transfert MTN vers Kouekam Raisa", () => {
     expect(PAYMENT_INSTRUCTIONS.MTN.code).toBe("676935195");
     expect(PAYMENT_INSTRUCTIONS.MTN.name).toBe("Kouekam Raisa");
+  });
+
+  it("ne promet une demande sur le téléphone que pour un push Orange réel", () => {
+    expect(MANUAL_PAYMENT_HINT).toMatch(/code ou le numéro/);
+    const checkout = readFileSync("src/components/shop/checkout-form.tsx", "utf8");
+    const confirmation = readFileSync("src/app/(shop)/commande/[number]/page.tsx", "utf8");
+    expect(checkout).toContain("MANUAL_PAYMENT_HINT");
+    expect(checkout).not.toContain("Une demande arrive sur votre téléphone");
+    expect(confirmation).not.toContain("Une demande arrive sur votre téléphone");
+    expect(confirmation).toContain("Une demande Orange Money a été envoyée");
+    expect(confirmation).toContain('startsWith("MP")');
+  });
+});
+
+describe("plafond de stock au panier", () => {
+  it("signale qu’on ne peut plus augmenter une quantité déjà au maximum", () => {
+    expect(nextCartQuantity(2, 1, 2)).toEqual({ ok: true, quantity: 2, capped: true });
+    expect(nextCartQuantity(1, 1, 3)).toEqual({ ok: true, quantity: 2, capped: false });
+    expect(nextCartQuantity(0, 1, 0).ok).toBe(false);
+  });
+
+  it("ne traite pas un article déjà au maximum comme une rupture", () => {
+    const merged = reorderCartMerge(
+      [{ variantId: "a", quantity: 2 }],
+      [
+        { variantId: "a", quantity: 1 },
+        { variantId: "b", quantity: 1 },
+      ],
+      (id) => (id === "a" ? 2 : 0),
+    );
+    expect(merged.added).toBe(0);
+    expect(merged.already).toBe(1);
+    expect(merged.skipped).toBe(1);
+    expect(merged.cart).toEqual([{ variantId: "a", quantity: 2 }]);
+  });
+});
+
+describe("onglet boutique", () => {
+  it("reste actif sur une fiche, une catégorie, le flash et les marques", () => {
+    expect(isShopTabActive("/boutique", "/produit/gloss")).toBe(true);
+    expect(isShopTabActive("/boutique", "/categorie/cheveux")).toBe(true);
+    expect(isShopTabActive("/boutique", "/flash")).toBe(true);
+    expect(isShopTabActive("/boutique", "/marques")).toBe(true);
+    expect(isShopTabActive("/", "/produit/gloss")).toBe(false);
+    expect(isShopTabActive("/compte", "/compte/connexion")).toBe(true);
+    expect(isShopTabActive("/boutique", "/compte")).toBe(false);
   });
 });

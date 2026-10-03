@@ -9,13 +9,12 @@ export function AddToCartButton({
   label = "Ajouter au panier",
   className = "mt-8 rounded-full bg-brown px-8 py-3 text-cream disabled:opacity-60",
 }: {
-  action: () => Promise<{ ok?: boolean; count?: number } | void>;
+  action: () => Promise<{ ok?: boolean; count?: number; capped?: boolean } | void>;
   label?: string;
   className?: string;
 }) {
   const [pending, start] = useTransition();
-  const [added, setAdded] = useState(false);
-  const [blocked, setBlocked] = useState(false);
+  const [notice, setNotice] = useState<"added" | "blocked" | "capped" | null>(null);
 
   return (
     <div>
@@ -24,27 +23,36 @@ export function AddToCartButton({
         disabled={pending}
         onClick={() => {
           start(async () => {
-            setBlocked(false);
+            setNotice(null);
             const result = await action();
             if (result && result.ok === false) {
-              setBlocked(true);
+              setNotice("blocked");
               return;
             }
             if (result && typeof result.count === "number") notifyCartCount(result.count);
-            setAdded(true);
-            window.setTimeout(() => setAdded(false), 5000);
+            if (result && "capped" in result && result.capped) {
+              setNotice("capped");
+              return;
+            }
+            setNotice("added");
+            window.setTimeout(() => setNotice((current) => (current === "added" ? null : current)), 5000);
           });
         }}
         className={`disabled:opacity-60 ${className}`}
       >
         {pending ? "Ajout…" : label}
       </button>
-      {blocked ? (
+      {notice === "blocked" ? (
         <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">
           Cet article n’est plus disponible pour le moment.
         </p>
       ) : null}
-      {added ? (
+      {notice === "capped" ? (
+        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">
+          Quantité déjà au maximum du stock.
+        </p>
+      ) : null}
+      {notice === "added" ? (
         <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-2 text-sm text-emerald-900" role="status">
           Produit ajouté au panier.{" "}
           <Link href="/panier" className="underline">

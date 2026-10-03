@@ -37,6 +37,8 @@ export function ProductGallery({ name, media }: { name: string; media: Media[] }
               key={photo.id}
               type="button"
               onClick={() => setActive(index)}
+              aria-pressed={index === active}
+              aria-label={`Photo ${index + 1} de ${name}`}
               className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ${index === active ? "ring-2 ring-brown" : ""}`}
             >
               <Image src={photo.url} alt={`${name} — vue ${index + 1}`} fill className="object-cover" sizes="64px" loading="lazy" />
