@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { checkoutOrder, previewCheckoutCoupon, type CheckoutState } from "@/app/actions/shop";
+import { NERA10_OFFER } from "@/lib/coupon-offer";
 import { formatCfa } from "@/lib/money";
 import { MANUAL_PAYMENT_HINT, PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor, type PaymentNetwork } from "@/lib/checkout";
 import type { PaymentInstruction } from "@/lib/payments/mobile-money";
@@ -167,7 +168,7 @@ export function CheckoutForm({
                 setCouponLabel("");
                 setCouponError("");
               }}
-              placeholder="NERA10"
+              placeholder={NERA10_OFFER.code}
               className="w-full rounded-xl border px-4 py-3 uppercase"
               autoComplete="off"
             />
@@ -187,7 +188,9 @@ export function CheckoutForm({
             {couponLabel} appliqué : −{formatCfa(couponDiscount)}
           </p>
         ) : (
-          <p className="mt-2 text-xs text-black/45">Exemple : NERA10 dès 20 000 FCFA d’articles.</p>
+          <p className="mt-2 text-xs text-black/45">
+            Exemple : {NERA10_OFFER.code}, {NERA10_OFFER.percent} % dès {formatCfa(NERA10_OFFER.minAmount)} d’articles.
+          </p>
         )}
       </div>
 

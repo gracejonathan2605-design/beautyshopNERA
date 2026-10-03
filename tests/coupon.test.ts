@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { couponDiscountAmount, couponLabel, explainCouponFailure, normalizeCouponCode } from "../src/lib/coupon";
+import { NERA10_OFFER } from "../src/lib/coupon-offer";
 import type { Coupon } from "@prisma/client";
 
 function coupon(partial: Partial<Coupon>): Coupon {
@@ -7,7 +8,7 @@ function coupon(partial: Partial<Coupon>): Coupon {
     id: "c1",
     code: "NERA10",
     type: "PERCENT",
-    value: 10,
+    value: NERA10_OFFER.percent,
     startAt: null,
     endAt: null,
     maxUses: 100,
@@ -20,12 +21,13 @@ function coupon(partial: Partial<Coupon>): Coupon {
 }
 
 describe("codes promo", () => {
-  it("applique 10 % au-dessus du minimum NERA10", () => {
-    expect(couponDiscountAmount("PERCENT", 10, 20000)).toBe(2000);
-    expect(couponDiscountAmount("PERCENT", 10, 19999)).toBe(2000);
+  it("applique 2 % au-dessus du minimum NERA10", () => {
+    expect(NERA10_OFFER.percent).toBe(2);
+    expect(couponDiscountAmount("PERCENT", NERA10_OFFER.percent, 20000)).toBe(400);
+    expect(couponDiscountAmount("PERCENT", NERA10_OFFER.percent, 25000)).toBe(500);
     expect(explainCouponFailure(coupon({}), 19999)).toContain("20");
     expect(explainCouponFailure(coupon({}), 20000)).toBeNull();
-    expect(couponLabel("PERCENT", 10)).toBe("−10 %");
+    expect(couponLabel("PERCENT", NERA10_OFFER.percent)).toBe("−2 %");
   });
 
   it("plafonne une remise fixe au sous-total", () => {
