@@ -18,7 +18,7 @@ const classicEnv = {
   ORANGE_MONEY_AUTH_TOKEN: "auth-token",
   ORANGE_MONEY_CHANNEL_MSISDN: "699000111",
   ORANGE_MONEY_PIN: "1234",
-} as NodeJS.ProcessEnv;
+} as unknown as NodeJS.ProcessEnv;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -74,6 +74,12 @@ describe("réponse Orange", () => {
       }),
     ).toBe(true);
     expect(readOrangeReference({ parameters: { MessageId: "MPNOTE1" } })).toBe("MPNOTE1");
+    expect(
+      orangeCashInAccepted({
+        StatusCode: 200,
+        parameters: { MessageId: "MPNOTE2", operation: "OM_CMR collection ussd-mut" },
+      }),
+    ).toBe(true);
   });
 });
 
@@ -178,7 +184,7 @@ describe("demande de paiement", () => {
           ORANGE_MONEY_USERNAME: "client-id",
           ORANGE_MONEY_PASSWORD: "client-secret",
           ORANGE_MONEY_AUTH_TOKEN: "customer-key",
-        },
+        } as unknown as NodeJS.ProcessEnv,
         fetchImpl,
       },
     );
@@ -238,7 +244,10 @@ describe("la commande attend la fin du push", () => {
     const source = readFileSync("src/services/order.service.ts", "utf8");
     expect(source).toContain("await chargePromise");
     expect(source).not.toContain("void chargePromise");
+    expect(source).not.toContain("resolve(false), 15000");
     expect(source).toContain("timeout: 20_000");
     expect(source).toContain("sendOrderOrangePush");
+    const page = readFileSync("src/app/(shop)/commande/[number]/page.tsx", "utf8");
+    expect(page).toContain("sendOrderOrangePush");
   });
 });

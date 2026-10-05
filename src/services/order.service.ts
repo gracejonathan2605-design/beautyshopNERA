@@ -16,9 +16,17 @@ import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normaliz
 import { normalizeCartItems } from "@/lib/cart";
 import { findCustomerByPhone } from "@/services/customer.service";
 import { unpaidOrderCutoff } from "@/lib/pending-orders";
+import { rateLimit } from "@/lib/rate-limit";
 
 const ORANGE_PUSH_NOTE = "Demande Orange Money envoyée sur le téléphone";
-const ORANGE_PUSH_PENDING_NOTE = "Demande Orange Money en cours";
+const ORANGE_PUSH_PENDING_PREFIX = "Demande Orange Money en cours";
+
+function orangePushPendingAge(note: string | null) {
+  if (!note?.startsWith(ORANGE_PUSH_PENDING_PREFIX)) return null;
+  const stamp = Number(note.slice(ORANGE_PUSH_PENDING_PREFIX.length).trim());
+  if (!Number.isFinite(stamp) || stamp < 1_000_000_000_000) return Number.POSITIVE_INFINITY;
+  return Date.now() - stamp;
+}
 
 /** Réserve le paiement puis déclenche l’encaissement automatique YNote (OM_CMR). */
 export async function sendOrderOrangePush(input: {
@@ -33,10 +41,12 @@ export async function sendOrderOrangePush(input: {
   });
   if (!current || current.status !== "PENDING") return "failed";
   if (orangePushWasSent(current)) return "sent";
-  if (current.note === ORANGE_PUSH_PENDING_NOTE) return "pending";
+  const pendingAge = orangePushPendingAge(current.note);
+  if (pendingAge !== null && pendingAge < 45_000) return "pending";
+  if (!rateLimit(`om-push:${current.id}`, 8, 10 * 60 * 1000)) return "failed";
   const claimed = await prisma.payment.updateMany({
     where: { id: current.id, status: "PENDING", note: current.note },
-    data: { note: ORANGE_PUSH_PENDING_NOTE },
+    data: { note: `${ORANGE_PUSH_PENDING_PREFIX} ${Date.now()}` },
   });
   if (claimed.count !== 1) return "pending";
   try {
@@ -57,8 +67,8 @@ export async function sendOrderOrangePush(input: {
     reportError("orange-money", err);
   }
   await prisma.payment.updateMany({
-    where: { id: current.id, note: ORANGE_PUSH_PENDING_NOTE },
-    data: { note: current.note },
+    where: { id: current.id, note: { startsWith: ORANGE_PUSH_PENDING_PREFIX } },
+    data: { note: pendingAge === null ? current.note : null },
   });
   return "failed";
 }
@@ -241,19 +251,7 @@ export async function createOnlineOrder(input: {
       orderNumber: order.number,
       phone: order.shippingPhone ?? "",
     });
-    let chargeKeptAlive = true;
-    try {
-      after(async () => {
-        await chargePromise;
-      });
-    } catch {
-      chargeKeptAlive = false;
-    }
-    orangePush = await Promise.race([
-      chargePromise.then((result) => result === "sent"),
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 15000)),
-    ]);
-    if (!chargeKeptAlive && !orangePush) orangePush = (await chargePromise) === "sent";
+    orangePush = (await chargePromise) === "sent";
     if (orangePush) {
       payment.note = ORANGE_PUSH_NOTE;
     }

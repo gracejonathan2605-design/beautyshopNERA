@@ -188,19 +188,27 @@ export function orangeCashInAccepted(body: unknown) {
   if (Number.isFinite(statusCode) && statusCode >= 400) return false;
   if (textOf(row.ErrorMessage)) return false;
   const blob = `${row.message ?? ""} ${row.body ?? ""} ${row.data?.inittxnmessage ?? ""}`.toLowerCase();
+  if (/error|failed|échec|echec|invalid|missing|wrong|refus/.test(blob)) return false;
   if (/push sent to customer/.test(blob)) return true;
   const initStatus = String(row.data?.inittxnstatus ?? "").trim();
   if (initStatus === "200") return true;
   const dataStatus = (row.data?.status ?? "").replace(/\s/g, "").toUpperCase();
+  if (dataStatus === "FAILED" || dataStatus === "REJECTED" || dataStatus === "CANCELLED") return false;
   if (
     (dataStatus === "PENDING" || dataStatus === "SUCCESSFULL" || dataStatus === "SUCCESSFUL") &&
     /initiated|pin|paiement|accepted/.test(blob)
   ) {
     return true;
   }
-  if (textOf(row.parameters?.MessageId) && (!blob.trim() || /accepted|initiated|success/.test(blob))) return true;
-  if (statusCode === 200 && /accepted/.test(blob)) return true;
+  if (readOrangeReference(body) && (!Number.isFinite(statusCode) || statusCode < 400)) return true;
+  if (statusCode === 200 && /accepted|initiated|success|paiement/.test(blob)) return true;
   return false;
+}
+
+function isRetriableOrangeError(err: unknown) {
+  if (!(err instanceof Error)) return false;
+  if (err.name === "TimeoutError" || err.name === "AbortError") return true;
+  return /token |fetch failed|network|ECONN|ETIMEDOUT|pay 401|pay 5\d\d/i.test(err.message);
 }
 
 function orangeFailureText(step: string, status: number, body: unknown) {
@@ -267,9 +275,17 @@ export async function requestOrangeCashIn(
   const amount = Math.round(input.amount);
   if (amount < 10) return { ok: false as const, reason: "amount" };
   const doFetch = options?.fetchImpl ?? fetch;
-  const token = await accessToken(config, doFetch);
-  if (config.kind === "paynote") return paynoteCashIn(config, token, doFetch, input, subscriber, amount);
-  return classicCashIn(config, token, doFetch, input, subscriber, amount);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const token = await accessToken(config, doFetch);
+      if (config.kind === "paynote") return await paynoteCashIn(config, token, doFetch, input, subscriber, amount);
+      return await classicCashIn(config, token, doFetch, input, subscriber, amount);
+    } catch (err) {
+      resetOrangeTokenCache();
+      if (attempt === 1 || !isRetriableOrangeError(err)) throw err;
+    }
+  }
+  return { ok: false as const, reason: "orange-money" };
 }
 
 async function classicCashIn(
