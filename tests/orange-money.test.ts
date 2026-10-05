@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { paymentFailureWhatsAppUrl } from "../src/lib/payments/payment-help";
+import { paymentFailureWhatsAppUrl, paymentReferenceAfterProof } from "../src/lib/payments/payment-help";
 import {
   orangeApiTarget,
   orangeCashInAccepted,
@@ -250,6 +250,23 @@ describe("message client solde Orange Money", () => {
     expect(message).not.toMatch(/n’a pas abouti/);
     expect(ORANGE_BALANCE_NOTICE).toMatch(/avant toute transaction/i);
     expect(ORANGE_BALANCE_NOTICE).toMatch(/solde|assez d’argent/i);
+  });
+
+  it("ne prend pas une demande en cours pour un envoi réussi", () => {
+    const source = readFileSync("src/services/order.service.ts", "utf8");
+    const sentCheck = source.indexOf("if (orangePushWasSent(current)) return \"sent\";");
+    const pendingCheck = source.indexOf("orangePushPendingAge(current.note)");
+    expect(sentCheck).toBeGreaterThan(-1);
+    expect(pendingCheck).toBeGreaterThan(sentCheck);
+  });
+
+  it("garde la référence Orange quand le client envoie une preuve", () => {
+    expect(paymentReferenceAfterProof("MP2203.123", "reçu client")).toBe("MP2203.123");
+    expect(paymentReferenceAfterProof("ORANGE", "TX-9988")).toBe("TX-9988");
+    expect(paymentReferenceAfterProof(null, "TX-9988")).toBe("TX-9988");
+    const shop = readFileSync("src/app/actions/shop.ts", "utf8");
+    expect(shop).toContain("erreur=preuve");
+    expect(shop).toContain("&t=${encodeURIComponent(token)}");
   });
 
   it("propose un lien WhatsApp direct quand le paiement échoue", () => {

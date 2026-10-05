@@ -82,8 +82,8 @@ export function orangeUssdHref(code: string) {
 
 export function orangePushWasSent(payment?: { reference?: string | null; note?: string | null } | null) {
   if (!payment) return false;
-  if (payment.note?.includes("Demande Orange Money")) return true;
-  return Boolean(payment.reference?.startsWith("MP"));
+  if (payment.reference?.startsWith("MP")) return true;
+  return Boolean(payment.note?.includes("envoyée sur le téléphone"));
 }
 
 /** Affiché avant le paiement : le client contrôle son solde avant d’envoyer l’argent. */

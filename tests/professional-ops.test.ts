@@ -85,6 +85,7 @@ describe("Orange Money", () => {
     expect(orangeUssdHref("676935195")).toBeNull();
     expect(orangePushWasSent({ reference: "MP2203", note: null })).toBe(true);
     expect(orangePushWasSent({ reference: "ORANGE", note: "Demande Orange Money envoyée sur le téléphone" })).toBe(true);
+    expect(orangePushWasSent({ reference: "ORANGE", note: "Demande Orange Money en cours 1710000000000" })).toBe(false);
     expect(orangePushWasSent({ reference: "ORANGE", note: null })).toBe(false);
   });
 });
