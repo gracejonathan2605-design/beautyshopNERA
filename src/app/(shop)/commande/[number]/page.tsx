@@ -53,7 +53,7 @@ export default async function OrderPage({
   const pay = instructions[network];
   const other = instructions[network === "ORANGE" ? "MTN" : "ORANGE"];
   let orangePush = network === "ORANGE" && orangePushWasSent(order.payments[0]);
-  let orangeBalanceError = false;
+  let orangeNotice = "";
   if (!paid && network === "ORANGE" && !orangePush && order.payments[0] && Number(order.total) > 0) {
     try {
       const pushed = await sendOrderOrangePush({
@@ -63,10 +63,11 @@ export default async function OrderPage({
         phone: order.shippingPhone ?? "",
       });
       if (pushed === "sent") orangePush = true;
-      else if (pushed === "failed") orangeBalanceError = true;
+      else if (pushed === "limited") orangeNotice = "Trop de tentatives. Réessayez dans quelques minutes.";
+      else if (pushed === "failed") orangeNotice = orangeCustomerPaymentError();
     } catch (err) {
       reportError("orange-money", err);
-      orangeBalanceError = true;
+      orangeNotice = orangeCustomerPaymentError();
     }
   }
   const step = customerStepIndex(order.status, paid);
@@ -110,7 +111,7 @@ export default async function OrderPage({
               orderNumber={order.number}
               accessToken={t ?? ""}
               api={pay.mode === "api"}
-              initialMessage={orangeBalanceError ? orangeCustomerPaymentError() : ""}
+              initialMessage={orangeNotice}
             />
           ) : null
         }
@@ -165,7 +166,7 @@ export default async function OrderPage({
                 orderNumber={order.number}
                 accessToken={t ?? ""}
                 api={pay.mode === "api"}
-                initialMessage={orangeBalanceError ? orangeCustomerPaymentError() : ""}
+                initialMessage={orangeNotice}
               />
             ) : network === "ORANGE" ? (
               <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>

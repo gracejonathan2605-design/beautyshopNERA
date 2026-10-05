@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     reportError("orange-webhook", err);
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

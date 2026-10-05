@@ -5,6 +5,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { checkoutLinesFromCart, clearCart, getCart, nextCartQuantity, reorderCartMerge, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession, hashPassword } from "@/lib/auth";
+import { paymentReferenceAfterProof } from "@/lib/payments/payment-help";
 import { orangeCustomerPaymentError } from "@/lib/payments/orange-money";
 import { createOnlineOrder, sendOrderOrangePush } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
@@ -174,9 +175,6 @@ export type OrangeLaunchState = { ok: boolean; pending?: boolean; error?: string
 export async function launchOrangePayment(number: string, token: string): Promise<OrangeLaunchState> {
   const trimmed = number.trim();
   if (!trimmed) return { ok: false, error: "Commande introuvable." };
-  if (!rateLimit(`om-push:${trimmed}`, 4, 10 * 60 * 1000)) {
-    return { ok: false, error: "Trop de tentatives. Réessayez dans quelques minutes." };
-  }
   const session = await getCustomerSession();
   const order = await prisma.order.findUnique({
     where: { number: trimmed },
@@ -191,6 +189,9 @@ export async function launchOrangePayment(number: string, token: string): Promis
   if (!payment || payment.provider === "MTN") {
     return { ok: false, error: "Ce paiement n’est pas un Orange Money." };
   }
+  if (!rateLimit(`om-push:${trimmed}`, 4, 10 * 60 * 1000)) {
+    return { ok: false, error: "Trop de tentatives. Réessayez dans quelques minutes." };
+  }
   try {
     const result = await sendOrderOrangePush({
       paymentId: payment.id,
@@ -203,6 +204,9 @@ export async function launchOrangePayment(number: string, token: string): Promis
       return { ok: true };
     }
     if (result === "pending") return { ok: false, pending: true };
+    if (result === "limited") {
+      return { ok: false, error: "Trop de tentatives. Réessayez dans quelques minutes." };
+    }
     return { ok: false, error: orangeCustomerPaymentError() };
   } catch (err) {
     reportError("orange-money", err);
@@ -214,7 +218,11 @@ export async function submitPaymentProof(formData: FormData) {
   const number = String(formData.get("number") ?? "").trim();
   const token = String(formData.get("token") ?? "").trim();
   const reference = String(formData.get("reference") ?? "").trim();
-  if (!number || !reference) redirect(`/commande/${encodeURIComponent(number)}?erreur=preuve`);
+  if (!number) redirect("/panier");
+  if (!reference) {
+    const missing = `/commande/${encodeURIComponent(number)}?erreur=preuve`;
+    redirect(token ? `${missing}&t=${encodeURIComponent(token)}` : missing);
+  }
   const { isValidOrderAccessToken, orderConfirmationPath } = await import("@/lib/order-access");
   const session = await getCustomerSession();
   const order = await prisma.order.findUnique({
@@ -237,12 +245,16 @@ export async function submitPaymentProof(formData: FormData) {
       reportError("payment-proof", err);
     }
   }
+  const keptReference = paymentReferenceAfterProof(pending.reference, reference);
   await prisma.payment.update({
     where: { id: pending.id },
     data: {
-      reference,
+      reference: keptReference,
       proofUrl: proofUrl ?? pending.proofUrl,
-      note: pending.note,
+      note:
+        keptReference === reference
+          ? pending.note
+          : [pending.note, `Référence indiquée par le client : ${reference}`].filter(Boolean).join(" · "),
     },
   });
   revalidatePath(`/commande/${number}`);

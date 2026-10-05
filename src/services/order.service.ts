@@ -34,7 +34,7 @@ export async function sendOrderOrangePush(input: {
   amount: number;
   orderNumber: string;
   phone: string;
-}): Promise<"sent" | "pending" | "failed"> {
+}): Promise<"sent" | "pending" | "failed" | "limited"> {
   const current = await prisma.payment.findUnique({
     where: { id: input.paymentId },
     select: { id: true, status: true, note: true, reference: true },
@@ -43,7 +43,7 @@ export async function sendOrderOrangePush(input: {
   if (orangePushWasSent(current)) return "sent";
   const pendingAge = orangePushPendingAge(current.note);
   if (pendingAge !== null && pendingAge < 45_000) return "pending";
-  if (!rateLimit(`om-push:${current.id}`, 8, 10 * 60 * 1000)) return "failed";
+  if (!rateLimit(`om-push:${current.id}`, 8, 10 * 60 * 1000)) return "limited";
   const claimed = await prisma.payment.updateMany({
     where: { id: current.id, status: "PENDING", note: current.note },
     data: { note: `${ORANGE_PUSH_PENDING_PREFIX} ${Date.now()}` },
