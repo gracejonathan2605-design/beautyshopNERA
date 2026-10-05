@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { paymentFailureWhatsAppUrl } from "../src/lib/payments/payment-help";
 import {
   orangeApiTarget,
   orangeCashInAccepted,
@@ -249,6 +250,15 @@ describe("message client solde Orange Money", () => {
     expect(message).not.toMatch(/n’a pas abouti/);
     expect(ORANGE_BALANCE_NOTICE).toMatch(/avant toute transaction/i);
     expect(ORANGE_BALANCE_NOTICE).toMatch(/solde|assez d’argent/i);
+  });
+
+  it("propose un lien WhatsApp direct quand le paiement échoue", () => {
+    const url = paymentFailureWhatsAppUrl("NERA-2026-0001");
+    expect(url.startsWith("https://wa.me/237676935195?text=")).toBe(true);
+    const text = decodeURIComponent(url.split("text=")[1] ?? "");
+    expect(text).toContain("NERA-2026-0001");
+    expect(text).toMatch(/paiement/i);
+    expect(readFileSync("src/components/shop/orange-pay-launch.tsx", "utf8")).toContain("Assistance WhatsApp");
   });
 
   it("affiche cet avertissement au checkout et sur l’échec du paiement", () => {

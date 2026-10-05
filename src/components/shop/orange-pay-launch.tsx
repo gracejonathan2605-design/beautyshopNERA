@@ -3,7 +3,23 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { launchOrangePayment } from "@/app/actions/shop";
+import { paymentFailureWhatsAppUrl } from "@/lib/payments/payment-help";
 import { ORANGE_BALANCE_NOTICE, orangeCustomerPaymentError, orangeUssdHref } from "@/lib/payments/orange-money";
+
+function PaymentWhatsAppHelp({ orderNumber }: { orderNumber?: string }) {
+  const href = paymentFailureWhatsAppUrl(orderNumber);
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex w-full items-center justify-center rounded-full border border-wine/30 bg-white px-6 py-3 text-center text-sm text-wine"
+    >
+      Assistance WhatsApp
+    </a>
+  );
+}
 
 export function OrangePayLaunch({
   code,
@@ -25,6 +41,7 @@ export function OrangePayLaunch({
   const href = orangeUssdHref(code);
   const router = useRouter();
   const [message, setMessage] = useState(initialMessage);
+  const [failed, setFailed] = useState(Boolean(initialMessage));
   const [pending, startLaunch] = useTransition();
 
   function launch() {
@@ -32,15 +49,18 @@ export function OrangePayLaunch({
     startLaunch(async () => {
       const result = await launchOrangePayment(orderNumber, accessToken);
       if (result.ok) {
+        setFailed(false);
         setMessage("Demande envoyée. Saisissez votre code secret sur le téléphone.");
         router.refresh();
         return;
       }
       if (result.pending) {
+        setFailed(false);
         setMessage("La demande Orange Money est en cours d’envoi sur votre téléphone.");
         window.setTimeout(() => router.refresh(), 4000);
         return;
       }
+      setFailed(true);
       setMessage(result.error ?? orangeCustomerPaymentError());
     });
   }
@@ -91,6 +111,7 @@ export function OrangePayLaunch({
             {message}
           </p>
         ) : null}
+        {failed ? <PaymentWhatsAppHelp orderNumber={orderNumber} /> : null}
         {href ? (
           <a href={href} className="mt-3 block text-center text-sm text-black/55 underline">
             Ou composer {code}
@@ -112,6 +133,7 @@ export function OrangePayLaunch({
             {message}
           </p>
         ) : null}
+        {failed ? <PaymentWhatsAppHelp orderNumber={orderNumber} /> : null}
         <p className="font-serif text-3xl text-wine">{code}</p>
       </div>
     );
@@ -125,6 +147,7 @@ export function OrangePayLaunch({
           {message}
         </p>
       ) : null}
+      {failed ? <PaymentWhatsAppHelp orderNumber={orderNumber} /> : null}
       <a href={href} className="flex flex-col items-center rounded-full bg-brown px-6 py-4 text-center text-cream">
         <span className="text-sm">Lancer Orange Money</span>
         <span className="mt-1 font-serif text-3xl">{code}</span>
