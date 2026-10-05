@@ -7,6 +7,8 @@ import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
 import { orangePushWasSent } from "@/lib/payments/orange-money";
+import { reportError } from "@/lib/monitor";
+import { sendOrderOrangePush } from "@/services/order.service";
 import { OrangePayLaunch } from "@/components/shop/orange-pay-launch";
 import { customerStatusSentence, customerStepIndex, CUSTOMER_STEPS } from "@/lib/order-timeline";
 import { submitPaymentProof } from "@/app/actions/shop";
@@ -50,7 +52,20 @@ export default async function OrderPage({
   const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
   const pay = instructions[network];
   const other = instructions[network === "ORANGE" ? "MTN" : "ORANGE"];
-  const orangePush = network === "ORANGE" && orangePushWasSent(order.payments[0]);
+  let orangePush = network === "ORANGE" && orangePushWasSent(order.payments[0]);
+  if (!paid && network === "ORANGE" && !orangePush && order.payments[0] && Number(order.total) > 0) {
+    try {
+      const pushed = await sendOrderOrangePush({
+        paymentId: order.payments[0].id,
+        amount: Number(order.total),
+        orderNumber: order.number,
+        phone: order.shippingPhone ?? "",
+      });
+      if (pushed === "sent") orangePush = true;
+    } catch (err) {
+      reportError("orange-money", err);
+    }
+  }
   const step = customerStepIndex(order.status, paid);
   const proof = order.payments.find((p) => p.proofUrl || (p.reference && p.reference !== "ORANGE" && p.reference !== "MTN"));
 
@@ -142,7 +157,7 @@ export default async function OrderPage({
               <OrangePayLaunch
                 code={pay.code}
                 name={pay.name}
-                auto={lancer === "1"}
+                auto={lancer === "1" && !orangePush}
                 orderNumber={order.number}
                 accessToken={t ?? ""}
                 api={pay.mode === "api"}

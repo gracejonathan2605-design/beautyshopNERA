@@ -16,6 +16,7 @@ import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normaliz
 import { normalizeCartItems } from "@/lib/cart";
 import { findCustomerByPhone } from "@/services/customer.service";
 import { unpaidOrderCutoff } from "@/lib/pending-orders";
+import { rateLimit } from "@/lib/rate-limit";
 
 const ORANGE_PUSH_NOTE = "Demande Orange Money envoyée sur le téléphone";
 const ORANGE_PUSH_PENDING_PREFIX = "Demande Orange Money en cours";
@@ -42,6 +43,7 @@ export async function sendOrderOrangePush(input: {
   if (orangePushWasSent(current)) return "sent";
   const pendingAge = orangePushPendingAge(current.note);
   if (pendingAge !== null && pendingAge < 45_000) return "pending";
+  if (!rateLimit(`om-push:${current.id}`, 8, 10 * 60 * 1000)) return "failed";
   const claimed = await prisma.payment.updateMany({
     where: { id: current.id, status: "PENDING", note: current.note },
     data: { note: `${ORANGE_PUSH_PENDING_PREFIX} ${Date.now()}` },

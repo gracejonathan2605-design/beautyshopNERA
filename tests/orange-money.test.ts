@@ -247,5 +247,7 @@ describe("la commande attend la fin du push", () => {
     expect(source).not.toContain("resolve(false), 15000");
     expect(source).toContain("timeout: 20_000");
     expect(source).toContain("sendOrderOrangePush");
+    const page = readFileSync("src/app/(shop)/commande/[number]/page.tsx", "utf8");
+    expect(page).toContain("sendOrderOrangePush");
   });
 });
