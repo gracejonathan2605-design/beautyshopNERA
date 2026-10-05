@@ -106,6 +106,11 @@ export function orangePaymentSucceeded(status?: string | null) {
   return value === "SUCCESSFULL" || value === "SUCCESSFUL" || value === "SUCCESS";
 }
 
+export function orangePaymentRefused(status?: string | null) {
+  const value = (status ?? "").replace(/\s/g, "").toUpperCase();
+  return value === "FAILED" || value === "REJECTED" || value === "CANCELLED" || value === "CANCELED";
+}
+
 export function resetOrangeTokenCache() {
   cachedToken = null;
 }

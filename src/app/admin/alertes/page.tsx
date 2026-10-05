@@ -2,10 +2,11 @@ import { requireStaff } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { markAllNotificationsRead, markNotificationRead } from "@/app/actions/ops";
 import Link from "next/link";
-import { alertFallbackHref, orderNumberFromAlert } from "@/lib/alert-href";
+import { alertFallbackHref, alertLinksToOrder, orderNumberFromAlert } from "@/lib/alert-href";
 
 const TYPE_LABEL: Record<string, string> = {
   NEW_ORDER: "Nouvelle commande",
+  PAYMENT_REFUSED: "Paiement refusé",
   STOCK_LOW: "Stock bas",
   STOCK_OUT: "Rupture",
 };
@@ -23,7 +24,7 @@ export default async function AlertsPage() {
   });
   const unread = alerts.filter((a) => !a.isRead).length;
   const orderNumbers = alerts
-    .map((a) => (a.type === "NEW_ORDER" ? orderNumberFromAlert(a.message) : null))
+    .map((a) => (alertLinksToOrder(a.type) ? orderNumberFromAlert(a.message) : null))
     .filter((n): n is string => Boolean(n));
   const orders = orderNumbers.length
     ? await prisma.order.findMany({
@@ -38,7 +39,7 @@ export default async function AlertsPage() {
         <div>
           <h1 className="font-serif text-4xl">Alertes</h1>
           <p className="mt-2 text-sm text-black/55">
-            {unread} non lue{unread > 1 ? "s" : ""} · nouvelles commandes et stock.
+            {unread} non lue{unread > 1 ? "s" : ""} · commandes, paiements refusés et stock.
           </p>
         </div>
         {unread ? (
@@ -52,7 +53,7 @@ export default async function AlertsPage() {
       ) : (
         <ul className="mt-6 space-y-2">
           {alerts.map((alert) => {
-            const number = alert.type === "NEW_ORDER" ? orderNumberFromAlert(alert.message) : null;
+            const number = alertLinksToOrder(alert.type) ? orderNumberFromAlert(alert.message) : null;
             const href =
               number && orderIds.get(number)
                 ? `/admin/commandes/${orderIds.get(number)}`
@@ -73,7 +74,7 @@ export default async function AlertsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Link href={href} className="rounded-full border px-3 py-1 text-xs">
-                      {alert.type === "NEW_ORDER" ? "Voir" : "Stocks"}
+                      {alertLinksToOrder(alert.type) ? "Voir" : "Stocks"}
                     </Link>
                     {!alert.isRead ? (
                       <form action={markNotificationRead}>

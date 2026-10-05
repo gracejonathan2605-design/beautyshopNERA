@@ -331,6 +331,46 @@ export async function sendCustomerWhatsApp(phone: string, text: string, stored?:
   return { sent, reason: sent ? ("ok" as const) : ("failed" as const), detail: "" };
 }
 
+export function formatCustomerPaymentReceipt(input: {
+  number: string;
+  totalLabel: string;
+  items: { productName: string; variantName?: string | null; quantity: number; total: number }[];
+}) {
+  const lines = ["NERA Beauté & Shop", "", `Commande ${input.number}`, "Paiement reçu. Nous préparons votre commande.", "", "Reçu"];
+  if (!input.items.length) lines.push("Aucun article listé.");
+  for (const item of input.items) {
+    const variant =
+      item.variantName && item.variantName !== "Default" && item.variantName.toLowerCase() !== "défaut"
+        ? ` (${item.variantName})`
+        : "";
+    lines.push(`• ${item.productName}${variant} × ${item.quantity} — ${formatCfa(item.total)}`);
+  }
+  lines.push("");
+  lines.push(`Total payé : ${input.totalLabel}`);
+  lines.push("Merci pour votre achat.");
+  return lines.join("\n");
+}
+
+export async function notifyCustomerPaymentReceipt(input: {
+  phone?: string | null;
+  number: string;
+  total: number;
+  items: { productName: string; variantName?: string | null; quantity: number; total: number }[];
+}) {
+  if (!input.phone?.trim()) return;
+  const text = formatCustomerPaymentReceipt({
+    number: input.number,
+    totalLabel: formatCfa(input.total),
+    items: input.items,
+  });
+  try {
+    const settings = await getShopSettings().catch(() => null);
+    await sendCustomerWhatsApp(input.phone, text, settings);
+  } catch {
+    /* le reçu ne doit pas annuler un paiement déjà confirmé */
+  }
+}
+
 export async function notifyCustomerAboutOrder(input: {
   phone?: string | null;
   number: string;

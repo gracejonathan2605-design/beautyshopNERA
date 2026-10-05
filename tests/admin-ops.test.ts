@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { csvEscape, csvRow, toCsv } from "../src/lib/csv";
 import { parseReportQuery } from "../src/lib/report-query";
 import { rangeFromPreset } from "../src/services/reports.service";
-import { orderNumberFromAlert } from "../src/lib/alert-href";
+import { alertFallbackHref, alertLinksToOrder, orderNumberFromAlert } from "../src/lib/alert-href";
 
 describe("CSV", () => {
   it("échappe les virgules et guillemets", () => {
@@ -21,6 +21,12 @@ describe("période rapports", () => {
     expect(custom.range.from.getTime()).toBeLessThan(custom.range.to.getTime());
     expect(custom.range.to.getHours()).toBe(23);
     expect(orderNumberFromAlert("Commande NERA-2026-000012 — 15000 FCFA")).toBe("NERA-2026-000012");
+    expect(orderNumberFromAlert("Commande NERA-2026-000012 : Orange Money refusé (solde insuffisant).")).toBe(
+      "NERA-2026-000012",
+    );
+    expect(alertLinksToOrder("PAYMENT_REFUSED")).toBe(true);
+    expect(alertFallbackHref("PAYMENT_REFUSED")).toBe("/admin/commandes");
+    expect(alertFallbackHref("STOCK_LOW")).toBe("/admin/stocks");
   });
 
   it("fournit jour, semaine et 30 jours", () => {

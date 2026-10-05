@@ -5,10 +5,13 @@ import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getDefaultLocationId, getShopSettings } from "@/lib/settings";
 import { notify } from "@/lib/audit";
-import { notifyCustomerAboutOrder, notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
+import { notifyCustomerAboutOrder, notifyCustomerPaymentReceipt, notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
 import { customerStatusSentence } from "@/lib/order-timeline";
 import { paymentInstructions, startMobileMoneyCharge } from "@/lib/payments/mobile-money";
 import { orangePushWasSent } from "@/lib/payments/orange-money";
+import { paymentNoteIsRefusal } from "@/lib/payments/payment-help";
+import { orangeNotifPath } from "@/lib/payments/orange-webhook";
+import { absoluteUrl } from "@/lib/site-url";
 import { reportError } from "@/lib/monitor";
 import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
@@ -26,6 +29,48 @@ function orangePushPendingAge(note: string | null) {
   const stamp = Number(note.slice(ORANGE_PUSH_PENDING_PREFIX.length).trim());
   if (!Number.isFinite(stamp) || stamp < 1_000_000_000_000) return Number.POSITIVE_INFINITY;
   return Date.now() - stamp;
+}
+
+const BALANCE_SKIP = new Set(["not-configured", "invalid-phone", "amount"]);
+
+/** Une seule alerte admin par refus. Une nouvelle tentative reste possible. */
+export async function recordPaymentRefusal(input: {
+  paymentId: string;
+  orderNumber: string;
+  network: "ORANGE" | "MTN";
+  balance: boolean;
+}) {
+  const payment = await prisma.payment.findUnique({
+    where: { id: input.paymentId },
+    select: { id: true, note: true, status: true },
+  });
+  if (!payment || payment.status !== "PENDING" || paymentNoteIsRefusal(payment.note)) return;
+  const note =
+    input.network === "MTN"
+      ? "Paiement MTN refusé"
+      : input.balance
+        ? "Paiement refusé : solde insuffisant"
+        : "Paiement Orange refusé";
+  const saved = await prisma.payment.updateMany({
+    where: { id: payment.id, status: "PENDING", note: payment.note },
+    data: { note },
+  });
+  if (saved.count !== 1) return;
+  const detail =
+    input.network === "MTN"
+      ? "MTN MoMo refusé"
+      : input.balance
+        ? "Orange Money refusé (solde insuffisant)"
+        : "Orange Money refusé";
+  try {
+    await notify({
+      type: "PAYMENT_REFUSED",
+      title: "Paiement refusé",
+      message: `Commande ${input.orderNumber} : ${detail}.`,
+    });
+  } catch (err) {
+    reportError("payment-refused", err);
+  }
 }
 
 /** Réserve le paiement puis déclenche l’encaissement automatique YNote (OM_CMR). */
@@ -49,12 +94,15 @@ export async function sendOrderOrangePush(input: {
     data: { note: `${ORANGE_PUSH_PENDING_PREFIX} ${Date.now()}` },
   });
   if (claimed.count !== 1) return "pending";
+  let declined = false;
+  let balance = true;
   try {
     const charge = await startMobileMoneyCharge({
       network: "ORANGE",
       amount: input.amount,
       orderNumber: input.orderNumber,
       phone: input.phone,
+      notifUrl: absoluteUrl(orangeNotifPath()),
     });
     if (charge.mode === "api" && charge.providerReference && charge.providerReference !== "ORANGE") {
       await prisma.payment.update({
@@ -63,13 +111,24 @@ export async function sendOrderOrangePush(input: {
       });
       return "sent";
     }
+    declined = true;
+    balance = !charge.reason || !BALANCE_SKIP.has(charge.reason);
   } catch (err) {
     reportError("orange-money", err);
+    declined = true;
   }
   await prisma.payment.updateMany({
     where: { id: current.id, note: { startsWith: ORANGE_PUSH_PENDING_PREFIX } },
     data: { note: pendingAge === null ? current.note : null },
   });
+  if (declined) {
+    await recordPaymentRefusal({
+      paymentId: current.id,
+      orderNumber: input.orderNumber,
+      network: "ORANGE",
+      balance,
+    });
+  }
   return "failed";
 }
 
@@ -257,12 +316,20 @@ export async function createOnlineOrder(input: {
     }
   } else if (order.payments[0] && order.total > 0) {
     try {
-      await startMobileMoneyCharge({
+      const charge = await startMobileMoneyCharge({
         network,
         amount: Number(order.total),
         orderNumber: order.number,
         phone: order.shippingPhone ?? "",
       });
+      if (charge.reason === "declined") {
+        await recordPaymentRefusal({
+          paymentId: order.payments[0].id,
+          orderNumber: order.number,
+          network: "MTN",
+          balance: false,
+        });
+      }
     } catch (err) {
       reportError("mobile-money", err);
     }
@@ -464,11 +531,16 @@ export async function collectCompletedOrderPayment(input: {
   });
   try {
     after(() =>
-      notifyCustomerAboutOrder({
+      notifyCustomerPaymentReceipt({
         phone: order.shippingPhone,
         number: order.number,
         total: Number(order.total),
-        sentence: "Paiement reçu. Nous préparons votre commande.",
+        items: order.items.map((item) => ({
+          productName: item.productName,
+          variantName: item.variantName,
+          quantity: item.quantity,
+          total: Number(item.total),
+        })),
       }),
     );
   } catch (err) {
