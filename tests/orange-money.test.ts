@@ -6,6 +6,7 @@ import {
   orangeConfig,
   orangeConfigIssue,
   readOrangeReference,
+  orangePaymentStatus,
   requestOrangeCashIn,
   resetOrangeTokenCache,
 } from "../src/lib/payments/orange-money";
@@ -193,9 +194,42 @@ describe("demande de paiement", () => {
       customersecret: "client-secret",
       subscriberMsisdn: "699112233",
       amount: "20000",
-      PaiementMethod: "ORANGE_CMR",
+      PaiementMethod: "OM_CMR",
     });
     expect(sent.API_MUT.pin).toBeUndefined();
+  });
+
+  it("vérifie le statut Paynote en OM_CMR", async () => {
+    let statusBody = "";
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
+      const href = String(url);
+      urls.push(href);
+      if (href.endsWith("/oauth2/token")) return jsonResponse({ access_token: "tok", expires_in: 300 });
+      statusBody = String(init?.body ?? "");
+      expect(init?.method).toBe("POST");
+      return jsonResponse({ parameters: { status: "PENDING" } });
+    }) as typeof fetch;
+
+    const status = await orangePaymentStatus("MPNOTE1", {
+      env: {
+        ORANGE_MONEY_API_URL: "https://omapi.ynote.africa/prod/webpayment",
+        ORANGE_MONEY_USERNAME: "client-id",
+        ORANGE_MONEY_PASSWORD: "client-secret",
+        ORANGE_MONEY_CUSTOMER_KEY: "customer-key",
+        ORANGE_MONEY_CUSTOMER_SECRET: "customer-secret",
+      } as unknown as NodeJS.ProcessEnv,
+      fetchImpl,
+    });
+
+    expect(status).toBe("PENDING");
+    expect(urls[1]).toBe("https://omapi.ynote.africa/prod/webpayment/status");
+    expect(JSON.parse(statusBody)).toMatchObject({
+      customerkey: "customer-key",
+      customersecret: "customer-secret",
+      message_id: "MPNOTE1",
+      payment_method: "OM_CMR",
+    });
   });
 });
 
@@ -204,5 +238,7 @@ describe("la commande attend la fin du push", () => {
     const source = readFileSync("src/services/order.service.ts", "utf8");
     expect(source).toContain("await chargePromise");
     expect(source).not.toContain("void chargePromise");
+    expect(source).toContain("timeout: 20_000");
+    expect(source).toContain("sendOrderOrangePush");
   });
 });

@@ -140,11 +140,13 @@ export function readOrangeReference(body: unknown) {
     row.paytoken,
     row.MessageId,
     row.messageId,
+    row.message_id,
     row.paymentRef,
     data.payToken,
     data.paytoken,
     parameters.MessageId,
     parameters.messageId,
+    parameters.message_id,
   ]) {
     const text = textOf(value);
     if (text) return text;
@@ -154,8 +156,21 @@ export function readOrangeReference(body: unknown) {
 
 export function readOrangeStatus(body: unknown) {
   if (!body || typeof body !== "object") return null;
-  const row = body as { data?: { status?: string }; status?: string; parameters?: { status?: string } };
-  return row.data?.status ?? row.parameters?.status ?? row.status ?? null;
+  const row = body as {
+    data?: { status?: string };
+    status?: string;
+    payment_status?: string;
+    parameters?: { status?: string; Status?: string; payment_status?: string };
+  };
+  return (
+    row.data?.status ??
+    row.parameters?.status ??
+    row.parameters?.Status ??
+    row.parameters?.payment_status ??
+    row.payment_status ??
+    row.status ??
+    null
+  );
 }
 
 /** Vrai quand Orange confirme que le client doit saisir son code sur le téléphone. */
@@ -324,7 +339,7 @@ async function paynoteCashIn(
         subscriberMsisdn: subscriber,
         description: input.description.slice(0, 80),
         notifUrl: input.notifUrl,
-        PaiementMethod: "ORANGE_CMR",
+        PaiementMethod: "OM_CMR",
       },
     }),
     signal: AbortSignal.timeout(20000),
@@ -343,11 +358,14 @@ export async function orangePaymentStatus(payToken: string, options?: { fetchImp
   const token = await accessToken(config, doFetch);
   const res =
     config.kind === "paynote"
-      ? await doFetch(`${paynotePayUrl(config)}/status/${encodeURIComponent(payToken)}`, {
-          method: "GET",
+      ? await doFetch(`${paynotePayUrl(config)}/status`, {
+          method: "POST",
           headers: authHeaders(config, token, true),
           body: JSON.stringify({
-            API_MUT: { customerkey: config.customerKey, customersecret: config.customerSecret },
+            customerkey: config.customerKey,
+            customersecret: config.customerSecret,
+            message_id: payToken,
+            payment_method: "OM_CMR",
           }),
           signal: AbortSignal.timeout(12000),
         })
