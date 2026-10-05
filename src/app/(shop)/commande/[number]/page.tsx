@@ -18,6 +18,7 @@ import { hasPermission } from "@/lib/permissions";
 import { isValidOrderAccessToken } from "@/lib/order-access";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function OrderPage({
   params,
@@ -84,8 +85,14 @@ export default async function OrderPage({
         kicker="Commande reçue"
         title="Merci, nous avons bien reçu votre commande"
         actions={
-          !paid && network === "ORANGE" ? (
-            <OrangePayLaunch code={pay.code} name={pay.name} auto={lancer === "1" && !orangePush} />
+          !paid && network === "ORANGE" && !orangePush ? (
+            <OrangePayLaunch
+              code={pay.code}
+              name={pay.name}
+              orderNumber={order.number}
+              accessToken={t ?? ""}
+              api={pay.mode === "api"}
+            />
           ) : null
         }
       />
@@ -131,8 +138,17 @@ export default async function OrderPage({
         <>
           <section className="mt-8 rounded-[1.7rem] border border-gold/40 bg-champagne/70 p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-gold">{pay.title}</p>
-            {network === "ORANGE" ? (
-              <OrangePayLaunch code={pay.code} name={pay.name} />
+            {network === "ORANGE" && !orangePush ? (
+              <OrangePayLaunch
+                code={pay.code}
+                name={pay.name}
+                auto={lancer === "1"}
+                orderNumber={order.number}
+                accessToken={t ?? ""}
+                api={pay.mode === "api"}
+              />
+            ) : network === "ORANGE" ? (
+              <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>
             ) : (
               <>
                 <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>

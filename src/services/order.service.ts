@@ -8,6 +8,7 @@ import { notify } from "@/lib/audit";
 import { notifyCustomerAboutOrder, notifyStaffNewOnlineOrder, paymentNetworkLabel } from "@/lib/order-alert";
 import { customerStatusSentence } from "@/lib/order-timeline";
 import { paymentInstructions, startMobileMoneyCharge } from "@/lib/payments/mobile-money";
+import { orangePushWasSent } from "@/lib/payments/orange-money";
 import { reportError } from "@/lib/monitor";
 import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } from "@/lib/order-flow";
 import { unitPrice as priced } from "@/lib/pricing";
@@ -15,6 +16,52 @@ import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normaliz
 import { normalizeCartItems } from "@/lib/cart";
 import { findCustomerByPhone } from "@/services/customer.service";
 import { unpaidOrderCutoff } from "@/lib/pending-orders";
+
+const ORANGE_PUSH_NOTE = "Demande Orange Money envoyée sur le téléphone";
+const ORANGE_PUSH_PENDING_NOTE = "Demande Orange Money en cours";
+
+/** Réserve le paiement puis déclenche l’encaissement automatique YNote (OM_CMR). */
+export async function sendOrderOrangePush(input: {
+  paymentId: string;
+  amount: number;
+  orderNumber: string;
+  phone: string;
+}): Promise<"sent" | "pending" | "failed"> {
+  const current = await prisma.payment.findUnique({
+    where: { id: input.paymentId },
+    select: { id: true, status: true, note: true, reference: true },
+  });
+  if (!current || current.status !== "PENDING") return "failed";
+  if (orangePushWasSent(current)) return "sent";
+  if (current.note === ORANGE_PUSH_PENDING_NOTE) return "pending";
+  const claimed = await prisma.payment.updateMany({
+    where: { id: current.id, status: "PENDING", note: current.note },
+    data: { note: ORANGE_PUSH_PENDING_NOTE },
+  });
+  if (claimed.count !== 1) return "pending";
+  try {
+    const charge = await startMobileMoneyCharge({
+      network: "ORANGE",
+      amount: input.amount,
+      orderNumber: input.orderNumber,
+      phone: input.phone,
+    });
+    if (charge.mode === "api" && charge.providerReference && charge.providerReference !== "ORANGE") {
+      await prisma.payment.update({
+        where: { id: current.id },
+        data: { reference: charge.providerReference, note: ORANGE_PUSH_NOTE },
+      });
+      return "sent";
+    }
+  } catch (err) {
+    reportError("orange-money", err);
+  }
+  await prisma.payment.updateMany({
+    where: { id: current.id, note: ORANGE_PUSH_PENDING_NOTE },
+    data: { note: current.note },
+  });
+  return "failed";
+}
 
 export async function createOnlineOrder(input: {
   customerId?: string | null;
@@ -145,7 +192,7 @@ export async function createOnlineOrder(input: {
     }
 
     return created;
-  });
+  }, { maxWait: 10_000, timeout: 20_000 });
 
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const articleWord = itemCount > 1 ? "articles" : "article";
@@ -186,30 +233,14 @@ export async function createOnlineOrder(input: {
 
   const network = order.payments[0]?.provider === "MTN" ? "MTN" : "ORANGE";
   let orangePush = false;
-  if (order.payments[0] && order.total > 0) {
-    const paymentId = order.payments[0].id;
-    const chargePromise = (async () => {
-      try {
-        const charge = await startMobileMoneyCharge({
-          network,
-          amount: Number(order.total),
-          orderNumber: order.number,
-          phone: order.shippingPhone ?? "",
-        });
-        if (charge.mode === "api" && charge.providerReference && charge.providerReference !== network) {
-          await prisma.payment.update({
-            where: { id: paymentId },
-            data: { reference: charge.providerReference, note: "Demande Orange Money envoyée sur le téléphone" },
-          });
-          order.payments[0].reference = charge.providerReference;
-          order.payments[0].note = "Demande Orange Money envoyée sur le téléphone";
-          return network === "ORANGE";
-        }
-      } catch (err) {
-        reportError("orange-money", err);
-      }
-      return false;
-    })();
+  if (order.payments[0] && order.total > 0 && network === "ORANGE") {
+    const payment = order.payments[0];
+    const chargePromise = sendOrderOrangePush({
+      paymentId: payment.id,
+      amount: Number(order.total),
+      orderNumber: order.number,
+      phone: order.shippingPhone ?? "",
+    });
     let chargeKeptAlive = true;
     try {
       after(async () => {
@@ -219,10 +250,24 @@ export async function createOnlineOrder(input: {
       chargeKeptAlive = false;
     }
     orangePush = await Promise.race([
-      chargePromise,
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8000)),
+      chargePromise.then((result) => result === "sent"),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 15000)),
     ]);
-    if (!chargeKeptAlive && !orangePush) await chargePromise;
+    if (!chargeKeptAlive && !orangePush) orangePush = (await chargePromise) === "sent";
+    if (orangePush) {
+      payment.note = ORANGE_PUSH_NOTE;
+    }
+  } else if (order.payments[0] && order.total > 0) {
+    try {
+      await startMobileMoneyCharge({
+        network,
+        amount: Number(order.total),
+        orderNumber: order.number,
+        phone: order.shippingPhone ?? "",
+      });
+    } catch (err) {
+      reportError("mobile-money", err);
+    }
   }
   try {
     const settings = await getShopSettings().catch(() => null);

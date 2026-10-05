@@ -5,9 +5,9 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { checkoutLinesFromCart, clearCart, getCart, nextCartQuantity, reorderCartMerge, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession, hashPassword } from "@/lib/auth";
-import { createOnlineOrder } from "@/services/order.service";
+import { createOnlineOrder, sendOrderOrangePush } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
-import { orderConfirmationPath } from "@/lib/order-access";
+import { isValidOrderAccessToken, orderConfirmationPath } from "@/lib/order-access";
 import { quoteCoupon } from "@/lib/coupon";
 import { prisma } from "@/lib/prisma";
 import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
@@ -164,6 +164,54 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     unstable_rethrow(err);
     reportError("checkout", err);
     return { ok: false, error: shopPublicError(err) };
+  }
+}
+
+export type OrangeLaunchState = { ok: boolean; pending?: boolean; error?: string };
+
+/** Relance l’encaissement YNote OM si la demande automatique n’est pas encore partie. */
+export async function launchOrangePayment(number: string, token: string): Promise<OrangeLaunchState> {
+  const trimmed = number.trim();
+  if (!trimmed) return { ok: false, error: "Commande introuvable." };
+  if (!rateLimit(`om-push:${trimmed}`, 4, 10 * 60 * 1000)) {
+    return { ok: false, error: "Trop de tentatives. Réessayez dans quelques minutes." };
+  }
+  const session = await getCustomerSession();
+  const order = await prisma.order.findUnique({
+    where: { number: trimmed },
+    include: { payments: true },
+  });
+  const allowed =
+    order &&
+    (isValidOrderAccessToken(trimmed, token) || (session && order.customerId === session.customerId));
+  if (!order || !allowed) return { ok: false, error: "Commande introuvable." };
+  if (order.payments.some((payment) => payment.status === "COMPLETED")) return { ok: true };
+  const payment = order.payments.find((row) => row.status === "PENDING") ?? order.payments[0];
+  if (!payment || payment.provider === "MTN") {
+    return { ok: false, error: "Ce paiement n’est pas un Orange Money." };
+  }
+  try {
+    const result = await sendOrderOrangePush({
+      paymentId: payment.id,
+      amount: Number(order.total),
+      orderNumber: order.number,
+      phone: order.shippingPhone ?? "",
+    });
+    if (result === "sent") {
+      revalidatePath(`/commande/${order.number}`);
+      return { ok: true };
+    }
+    if (result === "pending") return { ok: false, pending: true };
+    return {
+      ok: false,
+      error: "La demande automatique n’a pas abouti. Réessayez, ou payez avec le code marchand.",
+    };
+  } catch (err) {
+    reportError("orange-money", err);
+    return {
+      ok: false,
+      error: "La demande automatique n’a pas abouti. Réessayez, ou payez avec le code marchand.",
+    };
   }
 }
 
