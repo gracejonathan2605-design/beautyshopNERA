@@ -6,6 +6,7 @@ import { checkoutOrder, previewCheckoutCoupon, type CheckoutState } from "@/app/
 import { NERA10_OFFER } from "@/lib/coupon-offer";
 import { formatCfa } from "@/lib/money";
 import { MANUAL_PAYMENT_HINT, PAYMENT_INSTRUCTIONS, payableTotal, shippingFeeFor, type PaymentNetwork } from "@/lib/checkout";
+import { ORANGE_BALANCE_NOTICE } from "@/lib/payments/orange-money";
 import type { PaymentInstruction } from "@/lib/payments/mobile-money";
 import { FormBusyOverlay } from "@/components/admin/form-pending";
 
@@ -204,6 +205,7 @@ export function CheckoutForm({
           <span>
             <strong>Orange Money — sans frais.</strong> {instructions.ORANGE.code} ·{" "}
             {instructions.ORANGE.name}.
+            <span className="mt-1 block text-black/60">{ORANGE_BALANCE_NOTICE}</span>
           </span>
         </label>
         <label className="flex items-start gap-3 text-sm">

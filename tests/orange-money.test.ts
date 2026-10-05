@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import {
   orangeApiTarget,
   orangeCashInAccepted,
+  orangeCustomerPaymentError,
+  ORANGE_BALANCE_NOTICE,
   orangeConfig,
   orangeConfigIssue,
   readOrangeReference,
@@ -236,6 +238,24 @@ describe("demande de paiement", () => {
       message_id: "MPNOTE1",
       payment_method: "OM_CMR",
     });
+  });
+});
+
+describe("message client solde Orange Money", () => {
+  it("dit explicitement que le compte n’a pas assez d’argent", () => {
+    const message = orangeCustomerPaymentError();
+    expect(message).toMatch(/n’a pas assez d’argent/);
+    expect(message).toMatch(/solde/i);
+    expect(message).not.toMatch(/n’a pas abouti/);
+    expect(ORANGE_BALANCE_NOTICE).toMatch(/avant toute transaction/i);
+    expect(ORANGE_BALANCE_NOTICE).toMatch(/solde|assez d’argent/i);
+  });
+
+  it("affiche cet avertissement au checkout et sur l’échec du paiement", () => {
+    expect(readFileSync("src/app/actions/shop.ts", "utf8")).toContain("orangeCustomerPaymentError()");
+    expect(readFileSync("src/components/shop/orange-pay-launch.tsx", "utf8")).toContain("ORANGE_BALANCE_NOTICE");
+    expect(readFileSync("src/components/shop/checkout-form.tsx", "utf8")).toContain("ORANGE_BALANCE_NOTICE");
+    expect(readFileSync("src/app/actions/shop.ts", "utf8")).not.toContain("La demande automatique n’a pas abouti");
   });
 });
 
