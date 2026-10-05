@@ -63,12 +63,13 @@ export async function startMobileMoneyCharge(input: {
   amount: number;
   orderNumber: string;
   phone: string;
+  notifUrl?: string;
 }) {
   if (input.network === "ORANGE") {
     const issue = orangeConfigIssue();
     if (issue) {
       reportError("orange-money", new Error(issue));
-      return { mode: "manual" as const, providerReference: input.network };
+      return { mode: "manual" as const, providerReference: input.network, reason: "not-configured" };
     }
     const { requestOrangeCashIn } = await import("./orange-money");
     const { absoluteUrl } = await import("@/lib/site-url");
@@ -77,11 +78,11 @@ export async function startMobileMoneyCharge(input: {
       phone: input.phone,
       orderId: input.orderNumber,
       description: `Commande ${input.orderNumber}`,
-      notifUrl: absoluteUrl("/api/payments/orange"),
+      notifUrl: input.notifUrl?.trim() || absoluteUrl("/api/payments/orange"),
     });
     if (result.ok) return { mode: "api" as const, providerReference: result.payToken };
     reportError("orange-money", new Error(result.reason));
-    return { mode: "manual" as const, providerReference: input.network };
+    return { mode: "manual" as const, providerReference: input.network, reason: result.reason };
   }
   const apiUrl = process.env.MTN_MOMO_API_URL?.trim();
   const apiKey = process.env.MTN_MOMO_API_KEY?.trim();
@@ -100,7 +101,7 @@ export async function startMobileMoneyCharge(input: {
     }),
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) return { mode: "manual" as const, providerReference: input.network };
+  if (!res.ok) return { mode: "manual" as const, providerReference: input.network, reason: "declined" };
   const body = (await res.json().catch(() => null)) as { reference?: string } | null;
   return { mode: "api" as const, providerReference: body?.reference?.trim() || input.network };
 }

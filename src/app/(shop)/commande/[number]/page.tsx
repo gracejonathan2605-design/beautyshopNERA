@@ -7,6 +7,9 @@ import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
 import { orangeCustomerPaymentError, orangePushWasSent } from "@/lib/payments/orange-money";
+import { paymentBadgeLabel, paymentNoteIsRefusal } from "@/lib/payments/payment-help";
+import { OrderPaymentWatch } from "@/components/shop/order-payment-watch";
+import { PaymentHelpLink } from "@/components/shop/payment-help-link";
 import { reportError } from "@/lib/monitor";
 import { sendOrderOrangePush } from "@/services/order.service";
 import { OrangePayLaunch } from "@/components/shop/orange-pay-launch";
@@ -52,9 +55,11 @@ export default async function OrderPage({
   const network = isPaymentNetwork(networkRaw) ? networkRaw : "ORANGE";
   const pay = instructions[network];
   const other = instructions[network === "ORANGE" ? "MTN" : "ORANGE"];
+  const paymentNote = order.payments[0]?.note;
+  const storedRefusal = paymentNoteIsRefusal(paymentNote);
   let orangePush = network === "ORANGE" && orangePushWasSent(order.payments[0]);
   let orangeNotice = "";
-  if (!paid && network === "ORANGE" && !orangePush && order.payments[0] && Number(order.total) > 0) {
+  if (!paid && network === "ORANGE" && !orangePush && !storedRefusal && order.payments[0] && Number(order.total) > 0) {
     try {
       const pushed = await sendOrderOrangePush({
         paymentId: order.payments[0].id,
@@ -70,6 +75,17 @@ export default async function OrderPage({
       orangeNotice = orangeCustomerPaymentError();
     }
   }
+  if (!paid && storedRefusal && !orangeNotice && network === "ORANGE") {
+    orangeNotice = paymentNote?.toLowerCase().includes("solde")
+      ? orangeCustomerPaymentError()
+      : "Le paiement n’a pas abouti. Vous pouvez réessayer, ou écrire sur WhatsApp.";
+  }
+  const refusedNow = storedRefusal || orangeNotice === orangeCustomerPaymentError() || Boolean(orangeNotice && network === "ORANGE" && storedRefusal);
+  const badge = paid ? "paid" : refusedNow ? "refused" : "pending";
+  const badgeLabel = paymentBadgeLabel(
+    badge,
+    paymentNote?.toLowerCase().includes("solde") || orangeNotice.toLowerCase().includes("solde") ? "solde" : paymentNote,
+  );
   const step = customerStepIndex(order.status, paid);
   const proof = order.payments.find((p) => p.proofUrl || (p.reference && p.reference !== "ORANGE" && p.reference !== "MTN"));
 
@@ -146,7 +162,19 @@ export default async function OrderPage({
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">Indiquez la référence du transfert.</p>
       ) : null}
 
+      {!paid ? <OrderPaymentWatch number={order.number} token={t ?? ""} state={badge === "refused" ? "refused" : "pending"} /> : null}
       <p className="mt-6 text-center font-serif text-5xl text-brown">{formatCfa(order.total)}</p>
+      <p
+        className={`mx-auto mt-3 w-fit rounded-full px-4 py-1 text-sm font-medium ${
+          badge === "paid"
+            ? "bg-emerald-50 text-emerald-900"
+            : badge === "refused"
+              ? "bg-red-50 text-red-800"
+              : "bg-amber-50 text-amber-950"
+        }`}
+      >
+        {badgeLabel}
+      </p>
       {paid ? (
         <section className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
           Paiement confirmé
@@ -162,7 +190,7 @@ export default async function OrderPage({
               <OrangePayLaunch
                 code={pay.code}
                 name={pay.name}
-                auto={lancer === "1" && !orangePush}
+                auto={lancer === "1" && !orangePush && !storedRefusal}
                 orderNumber={order.number}
                 accessToken={t ?? ""}
                 api={pay.mode === "api"}
@@ -177,6 +205,7 @@ export default async function OrderPage({
               </>
             )}
             <p className="mt-3 text-sm leading-relaxed text-black/65">{pay.detail}</p>
+            {network === "MTN" && storedRefusal ? <PaymentHelpLink orderNumber={order.number} /> : null}
             {orangePush ? (
               <p className="mt-3 text-sm text-wine">
                 Une demande Orange Money a été envoyée sur votre téléphone. Saisissez votre code secret pour valider.

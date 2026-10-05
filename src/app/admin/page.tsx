@@ -6,7 +6,7 @@ import { getDashboardMetrics, rangeFromPreset } from "@/services/reports.service
 import { formatCfa } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { availableQty } from "@/services/inventory.service";
-import { alertFallbackHref, orderNumberFromAlert } from "@/lib/alert-href";
+import { alertFallbackHref, alertLinksToOrder, orderNumberFromAlert } from "@/lib/alert-href";
 
 export default async function AdminHomePage() {
   const session = await requireStaff();
@@ -27,7 +27,7 @@ export default async function AdminHomePage() {
     }),
   ]);
   const orderNumbers = alerts
-    .map((a) => (a.type === "NEW_ORDER" ? orderNumberFromAlert(a.message) : null))
+    .map((a) => (alertLinksToOrder(a.type) ? orderNumberFromAlert(a.message) : null))
     .filter((n): n is string => Boolean(n));
   const relatedOrders = orderNumbers.length
     ? await prisma.order.findMany({
@@ -117,7 +117,7 @@ export default async function AdminHomePage() {
           {alerts.length ? (
             <ul className="mt-4 space-y-2">
               {alerts.map((a) => {
-                const number = a.type === "NEW_ORDER" ? orderNumberFromAlert(a.message) : null;
+                const number = alertLinksToOrder(a.type) ? orderNumberFromAlert(a.message) : null;
                 const href = number && orderIds.get(number)
                   ? `/admin/commandes/${orderIds.get(number)}`
                   : alertFallbackHref(a.type);

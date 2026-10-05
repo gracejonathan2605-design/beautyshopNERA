@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { paymentFailureWhatsAppUrl, paymentReferenceAfterProof } from "../src/lib/payments/payment-help";
+import { paymentBadgeFromNote, paymentBadgeLabel, paymentFailureWhatsAppUrl, paymentNoteIsRefusal, paymentReferenceAfterProof } from "../src/lib/payments/payment-help";
+import { orangeNotifPath, orangeWebhookAuthorized, orangeWebhookKey } from "../src/lib/payments/orange-webhook";
+import { formatCustomerPaymentReceipt } from "../src/lib/order-alert";
 import {
   orangeApiTarget,
   orangeCashInAccepted,
@@ -9,6 +11,7 @@ import {
   orangeConfig,
   orangeConfigIssue,
   readOrangeReference,
+  orangePaymentRefused,
   orangePaymentStatus,
   requestOrangeCashIn,
   resetOrangeTokenCache,
@@ -275,7 +278,9 @@ describe("message client solde Orange Money", () => {
     const text = decodeURIComponent(url.split("text=")[1] ?? "");
     expect(text).toContain("NERA-2026-0001");
     expect(text).toMatch(/paiement/i);
-    expect(readFileSync("src/components/shop/orange-pay-launch.tsx", "utf8")).toContain("Assistance WhatsApp");
+    expect(readFileSync("src/components/shop/payment-help-link.tsx", "utf8")).toContain("Assistance WhatsApp");
+    expect(readFileSync("src/app/(shop)/commande/[number]/page.tsx", "utf8")).toContain("OrderPaymentWatch");
+    expect(readFileSync("src/app/(shop)/commande/[number]/page.tsx", "utf8")).toContain("PaymentHelpLink");
   });
 
   it("affiche cet avertissement au checkout et sur l’échec du paiement", () => {
@@ -283,6 +288,42 @@ describe("message client solde Orange Money", () => {
     expect(readFileSync("src/components/shop/orange-pay-launch.tsx", "utf8")).toContain("ORANGE_BALANCE_NOTICE");
     expect(readFileSync("src/components/shop/checkout-form.tsx", "utf8")).toContain("ORANGE_BALANCE_NOTICE");
     expect(readFileSync("src/app/actions/shop.ts", "utf8")).not.toContain("La demande automatique n’a pas abouti");
+  });
+});
+
+describe("suivi et signature Orange", () => {
+  it("refuse un webhook sans le jeton dérivé du secret", () => {
+    const env = { AUTH_SECRET: "secret-de-test" } as unknown as NodeJS.ProcessEnv;
+    const key = orangeWebhookKey(env);
+    expect(key.length).toBeGreaterThan(10);
+    expect(orangeWebhookAuthorized(null, env)).toBe(false);
+    expect(orangeWebhookAuthorized("autre", env)).toBe(false);
+    expect(orangeWebhookAuthorized(key, env)).toBe(true);
+    expect(orangeNotifPath(env)).toBe(`/api/payments/orange?k=${encodeURIComponent(key)}`);
+    expect(orangePaymentRefused("FAILED")).toBe(true);
+    expect(orangePaymentRefused("PENDING")).toBe(false);
+  });
+
+  it("affiche Payé, Refusé (solde) ou En attente", () => {
+    expect(paymentBadgeLabel("paid")).toBe("Payé");
+    expect(paymentBadgeLabel("pending")).toBe("En attente");
+    expect(paymentBadgeFromNote(false, "Paiement refusé : solde insuffisant")).toBe("refused");
+    expect(paymentBadgeLabel("refused", "solde insuffisant")).toBe("Refusé (solde)");
+    expect(paymentBadgeLabel("refused", "Paiement MTN refusé")).toBe("Refusé");
+    expect(paymentNoteIsRefusal("Demande Orange Money envoyée sur le téléphone")).toBe(false);
+    expect(paymentNoteIsRefusal("Paiement MTN refusé")).toBe(true);
+  });
+
+  it("prépare un reçu WhatsApp après confirmation du paiement", () => {
+    const text = formatCustomerPaymentReceipt({
+      number: "NERA-9",
+      totalLabel: "15 000 FCFA",
+      items: [{ productName: "Huile", variantName: "Default", quantity: 1, total: 15000 }],
+    });
+    expect(text).toContain("Paiement reçu");
+    expect(text).toContain("NERA-9");
+    expect(text).toContain("Huile × 1");
+    expect(text).toContain("Total payé : 15 000 FCFA");
   });
 });
 

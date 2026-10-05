@@ -10,6 +10,25 @@ export function paymentReferenceAfterProof(current: string | null | undefined, t
   return typed.trim();
 }
 
+export type PaymentBadge = "paid" | "refused" | "pending";
+
+export function paymentNoteIsRefusal(note?: string | null) {
+  return Boolean(note && /paiement (?:mtn |orange )?refusé/i.test(note));
+}
+
+export function paymentBadgeFromNote(paid: boolean, note?: string | null): PaymentBadge {
+  if (paid) return "paid";
+  if (paymentNoteIsRefusal(note)) return "refused";
+  return "pending";
+}
+
+export function paymentBadgeLabel(badge: PaymentBadge, note?: string | null) {
+  if (badge === "paid") return "Payé";
+  if (badge === "refused" && note?.toLowerCase().includes("solde")) return "Refusé (solde)";
+  if (badge === "refused") return "Refusé";
+  return "En attente";
+}
+
 /** Lien wa.me vers la boutique, message déjà rempli après un paiement refusé. */
 export function paymentFailureWhatsAppUrl(orderNumber?: string) {
   const number = orderNumber?.trim();
