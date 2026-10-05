@@ -86,6 +86,21 @@ export function orangePushWasSent(payment?: { reference?: string | null; note?: 
   return Boolean(payment.reference?.startsWith("MP"));
 }
 
+/** Affiché avant le paiement : le client contrôle son solde avant d’envoyer l’argent. */
+export const ORANGE_BALANCE_NOTICE =
+  "Avant toute transaction, vérifiez que votre compte Orange Money contient assez d’argent pour le montant à payer.";
+
+/**
+ * Un compte vide revient souvent comme une erreur générique côté Orange.
+ * On le dit clairement au client au lieu d’un échec vague.
+ */
+export const ORANGE_ACCOUNT_EMPTY =
+  "Votre compte Orange Money n’a pas assez d’argent pour cette commande. Vérifiez votre solde avant de payer, rechargez le compte, puis relancez. Vous pouvez aussi payer avec le code marchand.";
+
+export function orangeCustomerPaymentError() {
+  return ORANGE_ACCOUNT_EMPTY;
+}
+
 export function orangePaymentSucceeded(status?: string | null) {
   const value = (status ?? "").replace(/\s/g, "").toUpperCase();
   return value === "SUCCESSFULL" || value === "SUCCESSFUL" || value === "SUCCESS";

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { launchOrangePayment } from "@/app/actions/shop";
-import { orangeUssdHref } from "@/lib/payments/orange-money";
+import { ORANGE_BALANCE_NOTICE, orangeCustomerPaymentError, orangeUssdHref } from "@/lib/payments/orange-money";
 
 export function OrangePayLaunch({
   code,
@@ -12,6 +12,7 @@ export function OrangePayLaunch({
   orderNumber,
   accessToken = "",
   api = false,
+  initialMessage = "",
 }: {
   code: string;
   name: string;
@@ -19,10 +20,11 @@ export function OrangePayLaunch({
   orderNumber?: string;
   accessToken?: string;
   api?: boolean;
+  initialMessage?: string;
 }) {
   const href = orangeUssdHref(code);
   const router = useRouter();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage);
   const [pending, startLaunch] = useTransition();
 
   function launch() {
@@ -39,7 +41,7 @@ export function OrangePayLaunch({
         window.setTimeout(() => router.refresh(), 4000);
         return;
       }
-      setMessage(result.error ?? "La demande automatique n’a pas abouti.");
+      setMessage(result.error ?? orangeCustomerPaymentError());
     });
   }
 
@@ -74,6 +76,7 @@ export function OrangePayLaunch({
   if (api && orderNumber) {
     return (
       <div className="mt-4">
+        <p className="mb-3 text-center text-sm leading-relaxed text-wine">{ORANGE_BALANCE_NOTICE}</p>
         <button
           type="button"
           onClick={launch}
@@ -83,7 +86,11 @@ export function OrangePayLaunch({
           <span className="text-sm">{pending ? "Envoi de la demande…" : "Lancer Orange Money"}</span>
           <span className="mt-1 text-xs text-cream/80">Demande automatique sur votre téléphone</span>
         </button>
-        {message ? <p className="mt-3 text-center text-sm text-wine">{message}</p> : null}
+        {message ? (
+          <p role="alert" className="mt-3 text-center text-sm text-wine">
+            {message}
+          </p>
+        ) : null}
         {href ? (
           <a href={href} className="mt-3 block text-center text-sm text-black/55 underline">
             Ou composer {code}
@@ -97,14 +104,32 @@ export function OrangePayLaunch({
   }
 
   if (!href) {
-    return <p className="mt-3 font-serif text-3xl text-wine">{code}</p>;
+    return (
+      <div className="mt-4">
+        <p className="mb-3 text-center text-sm leading-relaxed text-wine">{ORANGE_BALANCE_NOTICE}</p>
+        {message ? (
+          <p role="alert" className="mb-3 text-center text-sm text-wine">
+            {message}
+          </p>
+        ) : null}
+        <p className="font-serif text-3xl text-wine">{code}</p>
+      </div>
+    );
   }
 
   return (
-    <a href={href} className="mt-4 flex flex-col items-center rounded-full bg-brown px-6 py-4 text-center text-cream">
-      <span className="text-sm">Lancer Orange Money</span>
-      <span className="mt-1 font-serif text-3xl">{code}</span>
-      <span className="mt-1 text-xs text-cream/80">{name}</span>
-    </a>
+    <div className="mt-4">
+      <p className="mb-3 text-center text-sm leading-relaxed text-wine">{ORANGE_BALANCE_NOTICE}</p>
+      {message ? (
+        <p role="alert" className="mb-3 text-center text-sm text-wine">
+          {message}
+        </p>
+      ) : null}
+      <a href={href} className="flex flex-col items-center rounded-full bg-brown px-6 py-4 text-center text-cream">
+        <span className="text-sm">Lancer Orange Money</span>
+        <span className="mt-1 font-serif text-3xl">{code}</span>
+        <span className="mt-1 text-xs text-cream/80">{name}</span>
+      </a>
+    </div>
   );
 }

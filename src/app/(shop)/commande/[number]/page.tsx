@@ -6,7 +6,7 @@ import { saleToReceipt } from "@/lib/receipt";
 import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
-import { orangePushWasSent } from "@/lib/payments/orange-money";
+import { orangeCustomerPaymentError, orangePushWasSent } from "@/lib/payments/orange-money";
 import { reportError } from "@/lib/monitor";
 import { sendOrderOrangePush } from "@/services/order.service";
 import { OrangePayLaunch } from "@/components/shop/orange-pay-launch";
@@ -53,6 +53,7 @@ export default async function OrderPage({
   const pay = instructions[network];
   const other = instructions[network === "ORANGE" ? "MTN" : "ORANGE"];
   let orangePush = network === "ORANGE" && orangePushWasSent(order.payments[0]);
+  let orangeBalanceError = false;
   if (!paid && network === "ORANGE" && !orangePush && order.payments[0] && Number(order.total) > 0) {
     try {
       const pushed = await sendOrderOrangePush({
@@ -62,8 +63,10 @@ export default async function OrderPage({
         phone: order.shippingPhone ?? "",
       });
       if (pushed === "sent") orangePush = true;
+      else if (pushed === "failed") orangeBalanceError = true;
     } catch (err) {
       reportError("orange-money", err);
+      orangeBalanceError = true;
     }
   }
   const step = customerStepIndex(order.status, paid);
@@ -107,6 +110,7 @@ export default async function OrderPage({
               orderNumber={order.number}
               accessToken={t ?? ""}
               api={pay.mode === "api"}
+              initialMessage={orangeBalanceError ? orangeCustomerPaymentError() : ""}
             />
           ) : null
         }
@@ -161,6 +165,7 @@ export default async function OrderPage({
                 orderNumber={order.number}
                 accessToken={t ?? ""}
                 api={pay.mode === "api"}
+                initialMessage={orangeBalanceError ? orangeCustomerPaymentError() : ""}
               />
             ) : network === "ORANGE" ? (
               <p className="mt-3 font-serif text-3xl text-wine">{pay.code}</p>

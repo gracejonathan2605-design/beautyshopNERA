@@ -5,6 +5,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { checkoutLinesFromCart, clearCart, getCart, nextCartQuantity, reorderCartMerge, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession, hashPassword } from "@/lib/auth";
+import { orangeCustomerPaymentError } from "@/lib/payments/orange-money";
 import { createOnlineOrder, sendOrderOrangePush } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { isValidOrderAccessToken, orderConfirmationPath } from "@/lib/order-access";
@@ -202,16 +203,10 @@ export async function launchOrangePayment(number: string, token: string): Promis
       return { ok: true };
     }
     if (result === "pending") return { ok: false, pending: true };
-    return {
-      ok: false,
-      error: "La demande automatique n’a pas abouti. Réessayez, ou payez avec le code marchand.",
-    };
+    return { ok: false, error: orangeCustomerPaymentError() };
   } catch (err) {
     reportError("orange-money", err);
-    return {
-      ok: false,
-      error: "La demande automatique n’a pas abouti. Réessayez, ou payez avec le code marchand.",
-    };
+    return { ok: false, error: orangeCustomerPaymentError() };
   }
 }
 
