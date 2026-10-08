@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { ShopFooter, ShopHeader, ShopHeaderFallback } from "@/components/shop/chrome";
+import { NjangiSkincareBanner } from "@/components/shop/njangi-banner";
 import { ShopTabBar } from "@/components/shop/shop-tab-bar";
 
 export const runtime = "nodejs";
@@ -14,6 +15,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
       >
         Aller au contenu
       </a>
+      <NjangiSkincareBanner />
       <Suspense fallback={<ShopHeaderFallback />}>
         <ShopHeader />
       </Suspense>
