@@ -196,6 +196,113 @@ button.bg-brown:hover {
   display: none;
 }
 
+/* Bannière Njangi : le visuel défile en boucle, le bouton reste fixe. */
+.njangi-banner {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: #f6efe6;
+  border-bottom: 1px solid rgba(166, 132, 86, 0.35);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.njangi-banner:focus-visible {
+  outline: 2px solid var(--brown);
+  outline-offset: -3px;
+}
+
+.njangi-viewport {
+  display: block;
+  overflow: hidden;
+  padding-block: 0.45rem;
+  mask-image: linear-gradient(90deg, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
+}
+
+.njangi-track {
+  display: flex;
+  width: max-content;
+  animation: njangi-marquee 42s linear infinite;
+}
+
+.njangi-slide {
+  display: block;
+  height: clamp(168px, 20vw, 248px);
+  width: auto;
+  max-width: none;
+  flex: none;
+  aspect-ratio: 1600 / 600;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  border-radius: 14px;
+  margin-right: clamp(12px, 2vw, 28px);
+}
+
+.njangi-banner:hover .njangi-track,
+.njangi-banner:focus-visible .njangi-track {
+  animation-play-state: paused;
+}
+
+.njangi-banner:hover {
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+.njangi-cta {
+  display: flex;
+  justify-content: center;
+  padding: 0 0.75rem 0.45rem;
+  color: var(--brown);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+@keyframes njangi-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (min-width: 2600px) {
+  .njangi-slide {
+    height: 300px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .njangi-viewport {
+    mask-image: none;
+    padding-inline: 0.75rem;
+  }
+
+  .njangi-track {
+    animation: none;
+    width: 100%;
+    transform: none;
+  }
+
+  .njangi-slide {
+    display: none;
+    width: 100%;
+    height: auto;
+    margin-right: 0;
+    border-radius: 16px;
+  }
+
+  .njangi-slide:first-child {
+    display: block;
+    width: min(100%, 920px);
+    height: auto;
+    margin-inline: auto;
+  }
+}
+
 @page {
   size: 80mm auto;
   margin: 0;
