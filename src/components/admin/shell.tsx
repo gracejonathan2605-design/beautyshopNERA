@@ -13,6 +13,7 @@ const LINKS: { href: string; label: string; permission?: PermissionCode }[] = [
   { href: "/admin/categories", label: "Rayons", permission: "categories.view" },
   { href: "/admin/attributs", label: "Teintes & tailles", permission: "attributes.view" },
   { href: "/admin/stocks", label: "Stocks", permission: "stock.view" },
+  { href: "/admin/stocks/renouveler", label: "Liste d’achats", permission: "stock.view" },
   { href: "/admin/commandes", label: "Commandes", permission: "orders.view" },
   { href: "/admin/ventes", label: "Ventes POS", permission: "sales.view" },
   { href: "/admin/clients", label: "Clients", permission: "customers.view" },

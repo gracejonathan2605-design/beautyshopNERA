@@ -1,6 +1,7 @@
 import { Prisma, StockMovementType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/audit";
+import { stockAlertKind } from "@/lib/stock-alert";
 import { availableQty } from "@/lib/stock-display";
 
 export { availableQty };
@@ -17,23 +18,23 @@ async function raiseStockAlerts(
   });
   if (!inventory) return;
   const available = availableQty(inventory.onHand, inventory.reserved);
-  if (available <= 0 && prevAvailable > 0) {
-    await tx.notification.create({
-      data: {
-        type: "STOCK_OUT",
-        title: "Rupture de stock",
-        message: `${inventory.variant.product.name} — ${inventory.variant.name} n'a plus de stock disponible.`,
-      },
-    });
-  } else if (available <= inventory.minQuantity && prevAvailable > inventory.minQuantity) {
-    await tx.notification.create({
-      data: {
-        type: "STOCK_LOW",
-        title: "Stock faible",
-        message: `${inventory.variant.product.name} — ${inventory.variant.name} : ${available} unité(s) restante(s).`,
-      },
-    });
-  }
+  const kind = stockAlertKind(prevAvailable, available, inventory.minQuantity);
+  if (!kind) return;
+  const name = `${inventory.variant.product.name} — ${inventory.variant.name}`;
+  await tx.notification.create({
+    data:
+      kind === "STOCK_OUT"
+        ? {
+            type: "STOCK_OUT",
+            title: "Rupture de stock",
+            message: `${name} n'a plus de stock disponible.`,
+          }
+        : {
+            type: "STOCK_LOW",
+            title: "Stock faible",
+            message: `${name} : ${available} unité(s) restante(s).`,
+          },
+  });
 }
 
 export async function applyStockChange(

@@ -7,5 +7,6 @@ export function alertLinksToOrder(type: string) {
 }
 
 export function alertFallbackHref(type: string) {
+  if (type === "STOCK_LOW" || type === "STOCK_OUT") return "/admin/stocks/renouveler";
   return alertLinksToOrder(type) ? "/admin/commandes" : "/admin/stocks";
 }

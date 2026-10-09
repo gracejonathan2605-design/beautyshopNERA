@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/guard";
 import { saveStockAdjust } from "@/app/actions/admin";
@@ -53,7 +54,12 @@ export default async function StockAdminPage({
   }));
   return (
     <div>
-      <h1 className="font-serif text-4xl">Stocks</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="font-serif text-4xl">Stocks</h1>
+        <Link href="/admin/stocks/renouveler" className="rounded-full bg-brown px-4 py-2 text-sm text-cream">
+          Liste d’achats
+        </Link>
+      </div>
       <AdminFlash ok={ok} erreur={erreur} />
       {canPurchase ? (
         <form action={saveStockPurchase} className="mt-6 grid gap-3 rounded-2xl border border-[#eee0e6] bg-white p-5 md:grid-cols-5">
