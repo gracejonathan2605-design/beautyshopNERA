@@ -74,7 +74,7 @@ export default async function AlertsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Link href={href} className="rounded-full border px-3 py-1 text-xs">
-                      {alertLinksToOrder(alert.type) ? "Voir" : "Stocks"}
+                      {alertLinksToOrder(alert.type) ? "Voir" : alert.type.startsWith("STOCK_") ? "Liste d’achats" : "Stocks"}
                     </Link>
                     {!alert.isRead ? (
                       <form action={markNotificationRead}>

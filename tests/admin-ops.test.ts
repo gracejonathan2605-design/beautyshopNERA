@@ -26,7 +26,8 @@ describe("période rapports", () => {
     );
     expect(alertLinksToOrder("PAYMENT_REFUSED")).toBe(true);
     expect(alertFallbackHref("PAYMENT_REFUSED")).toBe("/admin/commandes");
-    expect(alertFallbackHref("STOCK_LOW")).toBe("/admin/stocks");
+    expect(alertFallbackHref("STOCK_LOW")).toBe("/admin/stocks/renouveler");
+    expect(alertFallbackHref("STOCK_OUT")).toBe("/admin/stocks/renouveler");
   });
 
   it("fournit jour, semaine et 30 jours", () => {

@@ -138,8 +138,8 @@ export default async function AdminHomePage() {
         <section>
           <div className="flex items-center justify-between">
             <h2 className="font-serif text-2xl">Stock bas</h2>
-            <Link href="/admin/stocks" className="text-sm underline">
-              Stocks
+            <Link href="/admin/stocks/renouveler" className="text-sm underline">
+              Liste d’achats
             </Link>
           </div>
           {low.length ? (
