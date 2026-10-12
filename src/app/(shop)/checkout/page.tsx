@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getCart } from "@/lib/cart";
+import { checkoutLinesFromCart, getCart } from "@/lib/cart";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import Link from "next/link";
@@ -8,7 +8,8 @@ import { CheckoutForm } from "@/components/shop/checkout-form";
 import { MaisonPageHead } from "@/components/shop/maison-hero";
 import { RegistreTrustLink } from "@/components/shop/registre-commerce";
 import { PayDeliveryBadges } from "@/components/shop/trust-badges";
-import { sellableOnlineWhere } from "@/lib/product-query";
+import { sellableOnlineWhere, shopInventorySelect } from "@/lib/product-query";
+import { variantAvailable } from "@/lib/stock-display";
 import { getCustomerSession } from "@/lib/auth";
 import { getShopSettings } from "@/lib/settings";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
@@ -92,7 +93,7 @@ async function loadCheckout(cart: Awaited<ReturnType<typeof getCart>>) {
     const [variants, zones, session, settings] = await Promise.all([
       prisma.productVariant.findMany({
         where: { id: { in: cart.map((i) => i.variantId) }, ...sellableOnlineWhere },
-        select: { id: true, salePrice: true, promoPrice: true },
+        select: { id: true, salePrice: true, promoPrice: true, inventories: shopInventorySelect },
       }),
       prisma.deliveryZone.findMany({
         where: { isActive: true },
@@ -108,12 +109,12 @@ async function loadCheckout(cart: Awaited<ReturnType<typeof getCart>>) {
           select: { firstName: true, lastName: true, phone: true, address: true, city: true },
         })
       : null;
-    const missing = cart.some((item) => !variants.some((x) => x.id === item.variantId));
-    const subtotal = cart.reduce((s, item) => {
-      const v = variants.find((x) => x.id === item.variantId);
-      return s + (v ? unitPrice(v) * item.quantity : 0);
-    }, 0);
-    if (missing || !subtotal) return { status: "invalid" as const };
+    const availableByVariant = new Map(variants.map((variant) => [variant.id, variantAvailable(variant.inventories)]));
+    const ready = checkoutLinesFromCart(cart, availableByVariant);
+    if (!ready.ok) return { status: "invalid" as const };
+    const priceById = new Map(variants.map((variant) => [variant.id, unitPrice(variant)]));
+    const subtotal = ready.lines.reduce((sum, item) => sum + (priceById.get(item.variantId) ?? 0) * item.quantity, 0);
+    if (!subtotal) return { status: "invalid" as const };
     return { status: "ready" as const, subtotal, zones, profile, settings };
   } catch {
     return { status: "error" as const };

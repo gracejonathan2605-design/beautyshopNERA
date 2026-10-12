@@ -19,8 +19,14 @@ export function shouldReleaseUnpaidOrder(input: {
   createdAt: Date;
   cutoff: Date;
   hasCompletedPayment: boolean;
+  /** Preuve ou référence client : l’équipe doit encore confirmer. */
+  awaitingStaffCheck?: boolean;
+  /** Commande offerte : à confirmer, pas à annuler. */
+  total?: number;
 }) {
   if (input.status !== "PENDING") return false;
   if (input.hasCompletedPayment) return false;
+  if (input.awaitingStaffCheck) return false;
+  if (input.total === 0) return false;
   return input.createdAt.getTime() <= input.cutoff.getTime();
 }

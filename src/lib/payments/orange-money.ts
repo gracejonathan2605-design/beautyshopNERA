@@ -101,6 +101,20 @@ export function orangeCustomerPaymentError() {
   return ORANGE_ACCOUNT_EMPTY;
 }
 
+/** Échec d’envoi automatique : le code marchand reste utilisable. */
+export const ORANGE_PUSH_MANUAL_HINT =
+  "La demande automatique n’a pas pu partir. Réessayez, ou payez avec le code marchand.";
+
+export type OrangePushResult = "sent" | "pending" | "failed" | "limited" | "manual";
+
+/** Message client après une tentative de push. Vide = pas d’alerte (code marchand ou succès). */
+export function orangePushCustomerNotice(result: OrangePushResult, mode: "api" | "manual") {
+  if (result === "limited") return "Trop de tentatives. Réessayez dans quelques minutes.";
+  if (result === "failed") return ORANGE_ACCOUNT_EMPTY;
+  if (result === "manual" && mode === "api") return ORANGE_PUSH_MANUAL_HINT;
+  return "";
+}
+
 export function orangePaymentSucceeded(status?: string | null) {
   const value = (status ?? "").replace(/\s/g, "").toUpperCase();
   return value === "SUCCESSFULL" || value === "SUCCESSFUL" || value === "SUCCESS";

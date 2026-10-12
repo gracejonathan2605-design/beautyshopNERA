@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/monitor";
 import { orangePaymentRefused, orangePaymentStatus, orangePaymentSucceeded } from "@/lib/payments/orange-money";
 import { paymentBadgeFromNote, paymentNoteIsRefusal } from "@/lib/payments/payment-help";
-import { collectCompletedOrderPayment, recordPaymentRefusal } from "@/services/order.service";
+import { confirmProviderPayment, recordPaymentRefusal } from "@/services/order.service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -43,11 +43,17 @@ export async function GET(request: Request, context: { params: Promise<{ number:
       const status = await orangePaymentStatus(reference);
       if (orangePaymentSucceeded(status)) {
         try {
-          await collectCompletedOrderPayment({
+          const result = await confirmProviderPayment({
             orderId: order.id,
-            userId: "",
             cashierName: "Orange Money",
           });
+          if (result.state === "ignored") {
+            const done = await prisma.payment.findFirst({
+              where: { orderId: order.id, status: "COMPLETED" },
+              select: { id: true },
+            });
+            if (!done) return NextResponse.json({ state: "pending" });
+          }
         } catch (err) {
           const done = await prisma.payment.findFirst({
             where: { orderId: order.id, status: "COMPLETED" },

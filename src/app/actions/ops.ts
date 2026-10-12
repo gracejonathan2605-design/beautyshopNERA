@@ -10,7 +10,6 @@ import { writeAudit } from "@/lib/audit";
 import { receivePurchase } from "@/services/inventory.service";
 import { getShopSettings } from "@/lib/settings";
 import { formatRef, nextSequence } from "@/lib/sequences";
-import { slugify } from "@/lib/pricing";
 import { parseCfaInput } from "@/lib/money";
 import { buildAutoSku } from "@/lib/sku";
 import { assignFlashOnPublish, isPublishedOnline } from "@/lib/flash";
@@ -109,6 +108,9 @@ export async function updateStaffUser(formData: FormData) {
     if (!user) bounce("/admin/utilisateurs", "erreur", "Utilisateur introuvable.");
     if (userId === session.userId && !active) {
       bounce("/admin/utilisateurs", "erreur", "Vous ne pouvez pas désactiver votre propre compte.");
+    }
+    if (userId === session.userId && roleId !== user.roleId) {
+      bounce("/admin/utilisateurs", "erreur", "Vous ne pouvez pas changer votre propre rôle.");
     }
     const role = await prisma.role.findUnique({ where: { id: roleId } });
     if (!role) bounce("/admin/utilisateurs", "erreur", "Rôle introuvable.");

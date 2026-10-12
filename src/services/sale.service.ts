@@ -5,9 +5,11 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
-import { clampDiscount, isValidSaleQuantity, settlePosPayments, ticketTotals } from "@/lib/pos";
+import { clampDiscount, isValidSaleQuantity, mergeSaleLines, settlePosPayments, ticketTotals } from "@/lib/pos";
 import { cashReturnTillExpenseAmount } from "@/lib/till";
+import { availableQty } from "@/lib/stock-display";
 import { lockCashSessionRow, lockOpenCashSession, resolveTillExpenseCategoryId } from "@/services/cash.service";
+import { reduceCustomerSpend } from "@/services/customer.service";
 
 export type SaleLineInput = {
   variantId: string;
@@ -23,10 +25,13 @@ export async function createPosSale(input: {
   discount?: number;
   notes?: string;
   heldTicketId?: string | null;
+  /** Un super admin peut encaisser le ticket d’une autre caisse. */
+  claimAnyHeldTicket?: boolean;
   lines: SaleLineInput[];
   payments: { method: PaymentMethod; amount: number; reference?: string }[];
 }) {
   if (!input.lines.length) throw new Error("Le panier est vide");
+  const lines = mergeSaleLines(input.lines);
 
   const result = await prisma.$transaction(async (tx) => {
     const settings = await getShopSettings(tx);
@@ -34,14 +39,14 @@ export async function createPosSale(input: {
     const number = formatRef(settings.prefixes.sale, seq.year, seq.value);
 
     const variants = await tx.productVariant.findMany({
-      where: { id: { in: input.lines.map((l) => l.variantId) }, deletedAt: null, isActive: true },
+      where: { id: { in: lines.map((l) => l.variantId) }, deletedAt: null, isActive: true },
       include: { product: true },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
 
     const pricedLines: { variantId: string; quantity: number; unitPrice: number; discount: number; productName: string; variantName: string; sku: string }[] = [];
 
-    for (const line of input.lines) {
+    for (const line of lines) {
       const variant = byId.get(line.variantId);
       if (!variant) throw new Error("Variante introuvable ou inactive");
       if (!isValidSaleQuantity(line.quantity)) throw new Error("Quantité invalide");
@@ -80,16 +85,39 @@ export async function createPosSale(input: {
     const payments = settlePosPayments(input.payments, total);
 
     if (input.cashSessionId) {
-      await lockOpenCashSession(
+      const row = await lockOpenCashSession(
         tx,
         input.cashSessionId,
         "La caisse n’est plus ouverte. Rouvrez-la avant d’encaisser.",
       );
+      if (row.openedById !== input.cashierId) {
+        throw new Error("Cette caisse est ouverte par quelqu’un d’autre.");
+      }
+      const located = await tx.cashSession.findUnique({
+        where: { id: input.cashSessionId },
+        select: { register: { select: { locationId: true } } },
+      });
+      if (located && located.register.locationId !== input.locationId) {
+        throw new Error("La caisse ne correspond pas à cet emplacement de stock.");
+      }
+    }
+
+    for (const line of pricedLines) {
+      const inventory = await tx.inventory.findUnique({
+        where: { variantId_locationId: { variantId: line.variantId, locationId: input.locationId } },
+      });
+      const available = inventory ? availableQty(inventory.onHand, inventory.reserved) : 0;
+      if (available < line.quantity) {
+        throw new Error(`Stock insuffisant pour ${line.productName}.`);
+      }
     }
 
     if (input.heldTicketId) {
       const consumed = await tx.heldTicket.deleteMany({
-        where: { id: input.heldTicketId, cashierId: input.cashierId },
+        where: {
+          id: input.heldTicketId,
+          ...(input.claimAnyHeldTicket ? {} : { cashierId: input.cashierId }),
+        },
       });
       if (consumed.count !== 1) {
         throw new Error("Ce ticket en attente a déjà été encaissé ou retiré.");
@@ -120,7 +148,7 @@ export async function createPosSale(input: {
       include: { items: true, payments: true, cashier: true, customer: true },
     });
 
-    for (const line of input.lines) {
+    for (const line of pricedLines) {
       await applyStockChange(tx, {
         variantId: line.variantId,
         locationId: input.locationId,
@@ -186,6 +214,7 @@ async function recordCashReturnTillExpense(
   const found = await tx.cashSession.findFirst({
     where: { status: "OPEN", openedById: input.userId },
     select: { id: true },
+    orderBy: { openedAt: "desc" },
   });
   if (!found) {
     throw new Error(
@@ -262,10 +291,7 @@ export async function cancelSale(input: { saleId: string; userId: string; restoc
     }
 
     if (sale.customerId) {
-      await tx.customer.update({
-        where: { id: sale.customerId },
-        data: { totalSpent: { decrement: sale.total } },
-      });
+      await reduceCustomerSpend(tx, sale.customerId, sale.total);
     }
 
     await tx.auditLog.create({
@@ -328,10 +354,7 @@ export async function refundSale(input: { saleId: string; userId: string; restoc
     }
 
     if (sale.customerId) {
-      await tx.customer.update({
-        where: { id: sale.customerId },
-        data: { totalSpent: { decrement: sale.total } },
-      });
+      await reduceCustomerSpend(tx, sale.customerId, sale.total);
     }
 
     await tx.auditLog.create({

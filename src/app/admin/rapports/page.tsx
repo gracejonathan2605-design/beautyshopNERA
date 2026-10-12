@@ -62,8 +62,8 @@ export default async function ReportsPage({
       <h2 className="mt-8 font-serif text-2xl">Par paiement</h2>
       <ul className="mt-3 space-y-2">
         {byPay.map((p) => (
-          <li key={p.method} className="rounded-xl bg-cream p-3">
-            {p.method} · {formatCfa(p._sum.amount ?? 0)} · {p._count} paiement{p._count > 1 ? "s" : ""}
+          <li key={`${p.channel}-${p.method}`} className="rounded-xl bg-cream p-3">
+            {p.channel} · {p.method} · {formatCfa(p._sum.amount ?? 0)} · {p._count} paiement{p._count > 1 ? "s" : ""}
           </li>
         ))}
       </ul>

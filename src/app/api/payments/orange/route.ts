@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { orangePaymentRefused, orangePaymentStatus, orangePaymentSucceeded, readOrangeReference } from "@/lib/payments/orange-money";
 import { orangeWebhookAuthorized } from "@/lib/payments/orange-webhook";
-import { collectCompletedOrderPayment, recordPaymentRefusal } from "@/services/order.service";
+import { confirmProviderPayment, recordPaymentRefusal } from "@/services/order.service";
 import { reportError } from "@/lib/monitor";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,11 @@ export async function POST(request: Request) {
   const payToken = readPayToken(body);
   if (!payToken) return NextResponse.json({ ok: false }, { status: 400 });
   const payment = await prisma.payment.findFirst({
-    where: { reference: payToken, status: "PENDING", orderId: { not: null } },
+    where: {
+      reference: payToken,
+      orderId: { not: null },
+      OR: [{ status: "PENDING" }, { status: "FAILED", order: { status: "CANCELLED" } }],
+    },
     select: { id: true, orderId: true, order: { select: { number: true } } },
   });
   if (!payment?.orderId || !payment.order) return NextResponse.json({ ok: true, ignored: true });
@@ -36,9 +40,8 @@ export async function POST(request: Request) {
     }
     if (!orangePaymentSucceeded(status)) return NextResponse.json({ ok: true, status: status ?? "PENDING" });
     try {
-      await collectCompletedOrderPayment({
+      await confirmProviderPayment({
         orderId: payment.orderId,
-        userId: "",
         cashierName: "Orange Money",
       });
     } catch (err) {
