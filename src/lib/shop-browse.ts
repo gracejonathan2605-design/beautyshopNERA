@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { unaccentAvailable } from "@/lib/accent-search";
 import { mergeShopRayons } from "@/lib/catalog";
 import { applyUniquePublicTitles } from "@/lib/catalog-hygiene";
 import { withFlashProductSelect } from "@/lib/product-query";
@@ -184,17 +185,31 @@ export function escapeBrowseLike(term: string) {
   return term.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
-export function shopBrowseSqlWhere(filters: { q?: string; categoryIds?: string[]; vue?: BrowseView }) {
+export function shopBrowseSqlWhere(filters: {
+  q?: string;
+  categoryIds?: string[];
+  vue?: BrowseView;
+  /** Recherche sans accents (« meche » trouve « Mèche ») quand l'extension unaccent existe. */
+  foldAccents?: boolean;
+}) {
   const parts: Prisma.Sql[] = [
     Prisma.sql`p.status = 'ACTIVE' AND p."onlineVisible" = true AND p."deletedAt" IS NULL`,
   ];
   if (filters.q) {
     const like = `%${escapeBrowseLike(filters.q)}%`;
-    parts.push(Prisma.sql`(
+    parts.push(
+      filters.foldAccents
+        ? Prisma.sql`(
+      unaccent(p.name) ILIKE unaccent(${like}) ESCAPE '\\'
+      OR unaccent(coalesce(p."shortDescription", '')) ILIKE unaccent(${like}) ESCAPE '\\'
+      OR EXISTS (SELECT 1 FROM "Category" c WHERE c.id = p."categoryId" AND unaccent(c.name) ILIKE unaccent(${like}) ESCAPE '\\')
+    )`
+        : Prisma.sql`(
       p.name ILIKE ${like} ESCAPE '\\'
       OR coalesce(p."shortDescription", '') ILIKE ${like} ESCAPE '\\'
       OR EXISTS (SELECT 1 FROM "Category" c WHERE c.id = p."categoryId" AND c.name ILIKE ${like} ESCAPE '\\')
-    )`);
+    )`,
+    );
   }
   if (filters.categoryIds?.length) {
     parts.push(Prisma.sql`p."categoryId" IN (${Prisma.join(filters.categoryIds)})`);
@@ -225,7 +240,8 @@ function shopBrowseOrderSql(tri: BrowseSort) {
 }
 
 async function browseProductPage(query: BrowseQuery, categoryIds?: string[]) {
-  const whereSql = shopBrowseSqlWhere({ q: query.q, categoryIds, vue: query.vue });
+  const foldAccents = query.q ? await unaccentAvailable() : false;
+  const whereSql = shopBrowseSqlWhere({ q: query.q, categoryIds, vue: query.vue, foldAccents });
   const countRows = await prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*)::bigint AS count FROM "Product" p WHERE ${whereSql}
   `;

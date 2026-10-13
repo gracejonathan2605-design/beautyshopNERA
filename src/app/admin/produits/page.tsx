@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { productIdsMatching } from "@/lib/accent-search";
 import { requireStaff } from "@/lib/guard";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
@@ -26,9 +27,17 @@ export default async function ProductsAdminPage({
   const canCreate = hasPermission(session, "products.create");
   const canUpdate = hasPermission(session, "products.update");
   const canDelete = hasPermission(session, "products.delete");
+  const folded = query ? await productIdsMatching(query) : null;
   const where = {
     deletedAt: null,
-    ...(query ? { name: { contains: query, mode: "insensitive" as const } } : {}),
+    ...(query
+      ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" as const } },
+            ...(folded?.length ? [{ id: { in: folded } }] : []),
+          ],
+        }
+      : {}),
     ...(marque ? { brandId: marque } : {}),
     ...(rayon ? { categoryId: rayon } : {}),
     ...(vue === "ligne" ? { onlineVisible: true } : {}),
