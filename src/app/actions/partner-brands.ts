@@ -36,7 +36,7 @@ function refreshBrandPages(slug?: string) {
 }
 
 async function uniqueSlug(base: string, excludeId?: string) {
-  let slug = uniqueBrandSlug(base);
+  const slug = uniqueBrandSlug(base);
   for (let i = 0; i < 8; i++) {
     const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
     const taken = await prisma.brand.findFirst({
@@ -176,6 +176,8 @@ export async function saveBrandCollection(formData: FormData) {
 
     let collectionId = id;
     if (id) {
+      const existing = await prisma.brandCollection.findFirst({ where: { id, brandId } });
+      if (!existing) bounce(`/admin/marques/${brandId}`, "erreur", "Collection introuvable.");
       await prisma.brandCollection.update({
         where: { id },
         data: { name, slug, kind, categoryId, description, sortOrder, isActive },
@@ -220,7 +222,7 @@ export async function deleteBrandCollection(formData: FormData) {
       where: { id },
       include: { brand: { select: { slug: true } } },
     });
-    if (!collection) bounce(`/admin/marques/${brandId}`, "erreur", "Collection introuvable.");
+    if (!collection || collection.brandId !== brandId) bounce(`/admin/marques/${brandId}`, "erreur", "Collection introuvable.");
     await prisma.brandCollection.delete({ where: { id } });
     refreshBrandPages(collection.brand.slug);
     bounce(`/admin/marques/${brandId}`, "ok", "Collection supprimée.");
@@ -326,10 +328,11 @@ export async function markSettlementPaid(formData: FormData) {
     await requireStaff("brands.manage");
     const id = String(formData.get("id") ?? "").trim();
     const brandId = String(formData.get("brandId") ?? "").trim();
-    await prisma.brandSettlement.update({
-      where: { id },
+    const updated = await prisma.brandSettlement.updateMany({
+      where: { id, brandId },
       data: { status: "PAID", paidAt: new Date() },
     });
+    if (updated.count !== 1) bounce(`/admin/marques/${brandId}`, "erreur", "Relevé introuvable.");
     bounce(`/admin/marques/${brandId}`, "ok", "Reversement marqué payé.");
   } catch (err) {
     unstable_rethrow(err);

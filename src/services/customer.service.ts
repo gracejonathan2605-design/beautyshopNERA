@@ -4,6 +4,17 @@ import { getShopSettings } from "@/lib/settings";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { phoneLastNine } from "@/lib/phone-match";
 
+/** Ne descend jamais le cumul client sous zéro (remboursement, annulation). */
+export async function reduceCustomerSpend(tx: Prisma.TransactionClient, customerId: string, amount: number) {
+  const value = Math.round(amount);
+  if (!customerId || !Number.isFinite(value) || value <= 0) return;
+  await tx.$executeRaw`
+    UPDATE "Customer"
+    SET "totalSpent" = GREATEST(0, "totalSpent" - ${value})
+    WHERE id = ${customerId}
+  `;
+}
+
 export function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
 }

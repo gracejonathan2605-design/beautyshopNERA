@@ -6,7 +6,7 @@ import { saleToReceipt } from "@/lib/receipt";
 import { OrderTicketButton } from "@/components/shop/order-ticket";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { paymentInstructions } from "@/lib/payments/mobile-money";
-import { orangeCustomerPaymentError, orangePushWasSent } from "@/lib/payments/orange-money";
+import { orangeCustomerPaymentError, orangePushCustomerNotice, orangePushWasSent } from "@/lib/payments/orange-money";
 import { paymentBadgeLabel, paymentNoteIsRefusal } from "@/lib/payments/payment-help";
 import { OrderPaymentWatch } from "@/components/shop/order-payment-watch";
 import { PaymentHelpLink } from "@/components/shop/payment-help-link";
@@ -68,11 +68,10 @@ export default async function OrderPage({
         phone: order.shippingPhone ?? "",
       });
       if (pushed === "sent") orangePush = true;
-      else if (pushed === "limited") orangeNotice = "Trop de tentatives. Réessayez dans quelques minutes.";
-      else if (pushed === "failed") orangeNotice = orangeCustomerPaymentError();
+      else orangeNotice = orangePushCustomerNotice(pushed, pay.mode);
     } catch (err) {
       reportError("orange-money", err);
-      orangeNotice = orangeCustomerPaymentError();
+      orangeNotice = orangePushCustomerNotice("manual", pay.mode);
     }
   }
   if (!paid && storedRefusal && !orangeNotice && network === "ORANGE") {
@@ -160,6 +159,11 @@ export default async function OrderPage({
       ) : null}
       {erreur === "preuve" ? (
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">Indiquez la référence du transfert.</p>
+      ) : null}
+      {erreur === "photo" ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+          La photo n’a pas pu être envoyée. Utilisez une image (JPEG, PNG, WEBP ou HEIC) de moins de 8 Mo, ou envoyez seulement la référence.
+        </p>
       ) : null}
 
       {!paid ? <OrderPaymentWatch number={order.number} token={t ?? ""} state={badge === "refused" ? "refused" : "pending"} /> : null}

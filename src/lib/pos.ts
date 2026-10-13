@@ -27,6 +27,21 @@ export type HeldTicketPayload = {
   method: PaymentMethod;
 };
 
+/** Une ligne par variante : quantités et remises additionnées. */
+export function mergeSaleLines<T extends { variantId: string; quantity: number; discount?: number }>(lines: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const line of lines) {
+    const prev = byId.get(line.variantId);
+    if (!prev) {
+      byId.set(line.variantId, { ...line });
+      continue;
+    }
+    prev.quantity += line.quantity;
+    prev.discount = (prev.discount ?? 0) + (line.discount ?? 0);
+  }
+  return [...byId.values()];
+}
+
 export function isValidSaleQuantity(quantity: number) {
   return Number.isInteger(quantity) && quantity > 0 && quantity <= 99_999;
 }

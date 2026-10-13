@@ -5,8 +5,8 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { checkoutLinesFromCart, clearCart, getCart, nextCartQuantity, reorderCartMerge, saveCart, upsertCartItem } from "@/lib/cart";
 import { getCustomerSession, hashPassword } from "@/lib/auth";
-import { paymentReferenceAfterProof } from "@/lib/payments/payment-help";
-import { orangeCustomerPaymentError } from "@/lib/payments/orange-money";
+import { paymentReferenceAfterProof, CUSTOMER_REFERENCE_NOTE } from "@/lib/payments/payment-help";
+import { ORANGE_PUSH_MANUAL_HINT, orangeCustomerPaymentError } from "@/lib/payments/orange-money";
 import { createOnlineOrder, sendOrderOrangePush } from "@/services/order.service";
 import { isPaymentNetwork } from "@/lib/checkout";
 import { isValidOrderAccessToken, orderConfirmationPath } from "@/lib/order-access";
@@ -20,6 +20,7 @@ import { shopPublicError } from "@/lib/shop-public-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/monitor";
 import { uploadProductImage } from "@/lib/storage";
+import { isAllowedProductImage } from "@/lib/product-images";
 import { attachGuestOrdersByPhone, findCustomerByPhone } from "@/services/customer.service";
 
 async function availableForVariant(variantId: string) {
@@ -120,6 +121,28 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     if (fulfillment === "DELIVERY" && (!shippingAddress || !shippingCity)) {
       return { ok: false, error: "Indiquez l’adresse et la ville de livraison." };
     }
+    const localPhone = cameroonMobileLocal(phone);
+    if (localPhone) {
+      const recent = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Order"
+        WHERE status = 'PENDING'
+          AND "createdAt" > ${new Date(Date.now() - 90_000)}
+          AND right(regexp_replace(coalesce("shippingPhone", ''), '[^0-9]', '', 'g'), 9) = ${localPhone}
+        LIMIT 1
+      `;
+      if (recent.length) {
+        return {
+          ok: false,
+          error: "Une commande vient d’être enregistrée avec ce numéro. Ouvrez sa confirmation avant d’en créer une autre.",
+        };
+      }
+    }
+    if (!rateLimit(`checkout-once:${localPhone || phone}`, 1, 20_000)) {
+      return {
+        ok: false,
+        error: "Une commande est déjà en cours avec ce numéro. Patientez quelques secondes avant de réessayer.",
+      };
+    }
 
     try {
       const order = await createOnlineOrder({
@@ -157,7 +180,8 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
       revalidatePath("/compte");
       const confirmation = orderConfirmationPath(order.number);
       const orangePush = Boolean((order as { orangePush?: boolean }).orangePush);
-      redirect(network === "ORANGE" && !orangePush ? `${confirmation}&lancer=1` : confirmation);
+      const needsLaunch = network === "ORANGE" && !orangePush && order.total > 0;
+      redirect(needsLaunch ? `${confirmation}&lancer=1` : confirmation);
     } catch (err) {
       unstable_rethrow(err);
       throw err;
@@ -207,6 +231,9 @@ export async function launchOrangePayment(number: string, token: string): Promis
     if (result === "limited") {
       return { ok: false, error: "Trop de tentatives. Réessayez dans quelques minutes." };
     }
+    if (result === "manual") {
+      return { ok: false, error: ORANGE_PUSH_MANUAL_HINT };
+    }
     return { ok: false, error: orangeCustomerPaymentError() };
   } catch (err) {
     reportError("orange-money", err);
@@ -236,13 +263,22 @@ export async function submitPaymentProof(formData: FormData) {
   const pending = order.payments.find((p) => p.status === "PENDING") ?? order.payments[0];
   const back = token ? `${orderConfirmationPath(number)}` : `/commande/${encodeURIComponent(number)}`;
   if (!pending) redirect(back);
-  let proofUrl: string | null = null;
   const file = formData.get("proof");
+  if (file instanceof File && file.size > 0) {
+    if (!rateLimit(`payment-proof:${order.id}`, 6, 60 * 60 * 1000)) {
+      redirect(`${back}&erreur=photo`);
+    }
+    if (!isAllowedProductImage(file) || file.size > 8_000_000) {
+      redirect(`${back}&erreur=photo`);
+    }
+  }
+  let proofUrl: string | null = null;
   if (file instanceof File && file.size > 0) {
     try {
       proofUrl = await uploadProductImage(file, `payments/${order.id}`, 0);
     } catch (err) {
       reportError("payment-proof", err);
+      redirect(`${back}&erreur=photo`);
     }
   }
   const keptReference = paymentReferenceAfterProof(pending.reference, reference);
@@ -254,7 +290,7 @@ export async function submitPaymentProof(formData: FormData) {
       note:
         keptReference === reference
           ? pending.note
-          : [pending.note, `Référence indiquée par le client : ${reference}`].filter(Boolean).join(" · "),
+          : [pending.note, `${CUSTOMER_REFERENCE_NOTE} : ${reference}`].filter(Boolean).join(" · "),
     },
   });
   revalidatePath(`/commande/${number}`);

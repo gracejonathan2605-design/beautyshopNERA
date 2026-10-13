@@ -100,16 +100,28 @@ export async function getDashboardMetrics(range: ReportRange) {
 }
 
 export async function salesByPaymentMethod(range: ReportRange) {
-  const payments = await prisma.payment.groupBy({
-    by: ["method"],
-    where: {
-      status: "COMPLETED",
-      createdAt: { gte: range.from, lte: range.to },
-    },
-    _sum: { amount: true },
-    _count: true,
-  });
-  return payments;
+  const whereBase = {
+    status: "COMPLETED" as const,
+    createdAt: { gte: range.from, lte: range.to },
+  };
+  const [pos, online] = await Promise.all([
+    prisma.payment.groupBy({
+      by: ["method"],
+      where: { ...whereBase, saleId: { not: null } },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.payment.groupBy({
+      by: ["method"],
+      where: { ...whereBase, orderId: { not: null } },
+      _sum: { amount: true },
+      _count: true,
+    }),
+  ]);
+  return [
+    ...pos.map((row) => ({ ...row, channel: "Caisse" as const })),
+    ...online.map((row) => ({ ...row, channel: "En ligne" as const })),
+  ];
 }
 
 export async function salesByUser(range: ReportRange) {

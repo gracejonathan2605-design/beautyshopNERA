@@ -9,7 +9,7 @@ import { notifyCustomerAboutOrder, notifyCustomerPaymentReceipt, notifyStaffNewO
 import { customerStatusSentence } from "@/lib/order-timeline";
 import { paymentInstructions, startMobileMoneyCharge } from "@/lib/payments/mobile-money";
 import { orangePushWasSent } from "@/lib/payments/orange-money";
-import { paymentNoteIsRefusal } from "@/lib/payments/payment-help";
+import { paymentAwaitsStaffCheck, paymentNoteIsRefusal } from "@/lib/payments/payment-help";
 import { orangeNotifPath } from "@/lib/payments/orange-webhook";
 import { absoluteUrl } from "@/lib/site-url";
 import { reportError } from "@/lib/monitor";
@@ -17,8 +17,8 @@ import { canTransitionOrder, releasesCouponOnStatus, stockEffectForTransition } 
 import { unitPrice as priced } from "@/lib/pricing";
 import { couponDiscountAmount, couponClaimFilter, explainCouponFailure, normalizeCouponCode } from "@/lib/coupon";
 import { normalizeCartItems } from "@/lib/cart";
-import { findCustomerByPhone } from "@/services/customer.service";
-import { unpaidOrderCutoff } from "@/lib/pending-orders";
+import { findCustomerByPhone, reduceCustomerSpend } from "@/services/customer.service";
+import { shouldReleaseUnpaidOrder, unpaidOrderCutoff } from "@/lib/pending-orders";
 import { rateLimit } from "@/lib/rate-limit";
 
 const ORANGE_PUSH_NOTE = "Demande Orange Money envoyée sur le téléphone";
@@ -79,7 +79,7 @@ export async function sendOrderOrangePush(input: {
   amount: number;
   orderNumber: string;
   phone: string;
-}): Promise<"sent" | "pending" | "failed" | "limited"> {
+}): Promise<"sent" | "pending" | "failed" | "limited" | "manual"> {
   const current = await prisma.payment.findUnique({
     where: { id: input.paymentId },
     select: { id: true, status: true, note: true, reference: true },
@@ -95,7 +95,6 @@ export async function sendOrderOrangePush(input: {
   });
   if (claimed.count !== 1) return "pending";
   let declined = false;
-  let balance = true;
   try {
     const charge = await startMobileMoneyCharge({
       network: "ORANGE",
@@ -111,11 +110,12 @@ export async function sendOrderOrangePush(input: {
       });
       return "sent";
     }
-    declined = true;
-    balance = !charge.reason || !BALANCE_SKIP.has(charge.reason);
+    // Config absente, téléphone invalide ou panne : le client paie avec le code marchand.
+    // Seul un refus explicite (hors repli) devient « paiement refusé ».
+    const reason = charge.reason ?? "";
+    declined = Boolean(reason && !BALANCE_SKIP.has(reason) && reason !== "orange-money");
   } catch (err) {
     reportError("orange-money", err);
-    declined = true;
   }
   await prisma.payment.updateMany({
     where: { id: current.id, note: { startsWith: ORANGE_PUSH_PENDING_PREFIX } },
@@ -126,10 +126,11 @@ export async function sendOrderOrangePush(input: {
       paymentId: current.id,
       orderNumber: input.orderNumber,
       network: "ORANGE",
-      balance,
+      balance: true,
     });
+    return "failed";
   }
-  return "failed";
+  return "manual";
 }
 
 export async function createOnlineOrder(input: {
@@ -215,11 +216,13 @@ export async function createOnlineOrder(input: {
     }
 
     const total = Math.max(0, subtotal - discount + shippingFee);
+    const free = total === 0;
 
     const created = await tx.order.create({
       data: {
         number,
         customerId: customerId ?? undefined,
+        status: free ? "CONFIRMED" : "PENDING",
         fulfillment: input.fulfillment,
         subtotal,
         discount,
@@ -240,7 +243,8 @@ export async function createOnlineOrder(input: {
                 method: input.payment.method,
                 reference: input.payment.reference,
                 provider: input.payment.provider ?? "MANUAL",
-                status: "PENDING",
+                status: free ? "COMPLETED" : "PENDING",
+                note: free ? "Commande à 0 FCFA" : undefined,
               },
             }
           : undefined,
@@ -443,11 +447,9 @@ async function applyLockedOrderStatus(
         comment: "Retour commande",
       });
     }
-    if (order.customerId) {
-      await tx.customer.update({
-        where: { id: order.customerId },
-        data: { totalSpent: { decrement: order.total } },
-      });
+    const counted = order.payments.some((payment) => payment.status === "COMPLETED") || order.total === 0;
+    if (order.customerId && counted) {
+      await reduceCustomerSpend(tx, order.customerId, order.total);
     }
   } else if (effect === "ship") {
     for (const item of order.items) {
@@ -462,7 +464,8 @@ async function applyLockedOrderStatus(
         comment: "Expédition / livraison commande",
       });
     }
-    if (order.customerId) {
+    const counted = order.payments.some((payment) => payment.status === "COMPLETED") || order.total === 0;
+    if (order.customerId && counted) {
       await tx.customer.update({
         where: { id: order.customerId },
         data: { totalSpent: { increment: order.total }, lastPurchaseAt: new Date() },
@@ -526,6 +529,15 @@ export async function collectCompletedOrderPayment(input: {
     if (claimedPay.count !== 1) throw new Error("Ce paiement a déjà été encaissé.");
     if (current.status === "PENDING") {
       await applyLockedOrderStatus(tx, current, "CONFIRMED", input.userId, locationId);
+    } else if (
+      (current.status === "SHIPPED" || current.status === "DELIVERED") &&
+      current.customerId &&
+      current.total > 0
+    ) {
+      await tx.customer.update({
+        where: { id: current.customerId },
+        data: { totalSpent: { increment: current.total }, lastPurchaseAt: new Date() },
+      });
     }
     return current;
   });
@@ -549,31 +561,279 @@ export async function collectCompletedOrderPayment(input: {
   return order;
 }
 
+const UNPAID_RELEASE_BATCH = 40;
+
+/** Commandes encore en attente, sans paiement confirmé ni preuve client à vérifier. */
+function expiredUnpaidWhere(cutoff: Date): Prisma.OrderWhereInput {
+  return {
+    status: "PENDING",
+    total: { gt: 0 },
+    createdAt: { lte: cutoff },
+    AND: [
+      { payments: { none: { status: "COMPLETED" } } },
+      {
+        payments: {
+          none: {
+            OR: [
+              { proofUrl: { not: null } },
+              { note: { contains: "Référence indiquée par le client" } },
+              {
+                AND: [
+                  { reference: { not: null } },
+                  { reference: { notIn: ["ORANGE", "MTN", ""] } },
+                  { NOT: { reference: { startsWith: "MP" } } },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+}
+
 export async function releaseExpiredUnpaidOrders(now = new Date()) {
   const settings = await getShopSettings();
   const cutoff = unpaidOrderCutoff(now, settings.pendingOrderHours);
   if (!cutoff) return { cancelled: 0, hours: settings.pendingOrderHours };
 
-  const orders = await prisma.order.findMany({
-    where: {
-      status: "PENDING",
-      createdAt: { lte: cutoff },
-      payments: { none: { status: "COMPLETED" } },
-    },
-    select: { id: true },
-    orderBy: { createdAt: "asc" },
-    take: 40,
-  });
-
   let cancelled = 0;
-  for (const order of orders) {
+  let scanned = 0;
+  for (let round = 0; round < 4; round += 1) {
+    const orders = await prisma.order.findMany({
+      where: expiredUnpaidWhere(cutoff),
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        total: true,
+        payments: { select: { status: true, proofUrl: true, reference: true, note: true } },
+      },
+      orderBy: { createdAt: "asc" },
+      take: UNPAID_RELEASE_BATCH,
+    });
+    if (!orders.length) break;
+    scanned += orders.length;
+    let progressed = 0;
+    for (const order of orders) {
+      const awaiting = order.payments.some((payment) => paymentAwaitsStaffCheck(payment));
+      const paid = order.payments.some((payment) => payment.status === "COMPLETED");
+      if (
+        !shouldReleaseUnpaidOrder({
+          status: order.status,
+          createdAt: order.createdAt,
+          cutoff,
+          hasCompletedPayment: paid,
+          awaitingStaffCheck: awaiting,
+          total: order.total,
+        })
+      ) {
+        continue;
+      }
+      try {
+        await updateOrderStatus({ orderId: order.id, status: "CANCELLED", unpaidOnly: true });
+        cancelled += 1;
+        progressed += 1;
+      } catch {
+        /* commande déjà traitée ou transition refusée */
+      }
+    }
+    if (orders.length < UNPAID_RELEASE_BATCH || progressed === 0) break;
+  }
+  return { cancelled, hours: settings.pendingOrderHours, scanned };
+}
+
+/** Anciennes commandes à 0 FCFA encore PENDING : les confirmer au lieu de les annuler. */
+export async function confirmFreePendingOrders() {
+  const locationId = await getDefaultLocationId();
+  const orders = await prisma.order.findMany({
+    where: { status: "PENDING", total: 0 },
+    select: { id: true },
+    take: UNPAID_RELEASE_BATCH,
+  });
+  let confirmed = 0;
+  for (const row of orders) {
     try {
-      await updateOrderStatus({ orderId: order.id, status: "CANCELLED", unpaidOnly: true });
-      cancelled += 1;
+      const did = await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${row.id} FOR UPDATE`;
+        const current = await tx.order.findUnique({
+          where: { id: row.id },
+          include: { items: true, payments: true },
+        });
+        if (!current || current.status !== "PENDING" || current.total !== 0) return false;
+        await tx.payment.updateMany({
+          where: { orderId: current.id, status: "PENDING" },
+          data: { status: "COMPLETED", note: "Commande à 0 FCFA" },
+        });
+        const refreshed = {
+          ...current,
+          payments: current.payments.map((payment) =>
+            payment.status === "PENDING" ? { ...payment, status: "COMPLETED" as const } : payment,
+          ),
+        };
+        await applyLockedOrderStatus(tx, refreshed, "CONFIRMED", undefined, locationId);
+        return true;
+      });
+      if (did) confirmed += 1;
     } catch {
-      /* commande déjà traitée ou transition refusée */
+      /* déjà traitée */
     }
   }
-  return { cancelled, hours: settings.pendingOrderHours, scanned: orders.length };
+  return { confirmed };
+}
+
+function systemCancelled(log: { userId: string | null; after: Prisma.JsonValue } | null) {
+  if (!log || log.userId) return false;
+  const after = log.after;
+  if (!after || typeof after !== "object" || Array.isArray(after)) return false;
+  return (after as { status?: string }).status === "CANCELLED";
+}
+
+/**
+ * Orange (ou un autre opérateur déjà vérifié) confirme un paiement.
+ * Si le cron a annulé la commande entre-temps, on la rouvre et on réserve à nouveau le stock.
+ */
+export async function confirmProviderPayment(input: { orderId: string; cashierName: string }) {
+  const snapshot = await prisma.order.findUnique({
+    where: { id: input.orderId },
+    select: { status: true, payments: { select: { status: true } } },
+  });
+  if (!snapshot) throw new Error("Commande introuvable");
+  if (snapshot.payments.some((payment) => payment.status === "COMPLETED")) return { state: "paid" as const };
+  if (snapshot.payments.some((payment) => payment.status === "PENDING")) {
+    await collectCompletedOrderPayment({
+      orderId: input.orderId,
+      userId: "",
+      cashierName: input.cashierName,
+    });
+    return { state: "paid" as const };
+  }
+  if (snapshot.status !== "CANCELLED") return { state: "ignored" as const };
+  return reviveAutoCancelledOrder(input);
+}
+
+async function reviveAutoCancelledOrder(input: { orderId: string; cashierName: string }) {
+  const locationId = await getDefaultLocationId();
+  const result = await prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${input.orderId} FOR UPDATE`;
+      const order = await tx.order.findUnique({
+        where: { id: input.orderId },
+        include: { items: true, payments: true },
+      });
+      if (!order || order.status !== "CANCELLED") return { state: "ignored" as const };
+      if (order.payments.some((payment) => payment.status === "COMPLETED")) return { state: "paid" as const };
+      const failed = order.payments.find((payment) => payment.status === "FAILED");
+      if (!failed) return { state: "ignored" as const };
+      const log = await tx.auditLog.findFirst({
+        where: { entity: "Order", entityId: order.id, action: "ORDER_STATUS" },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!systemCancelled(log)) {
+        await tx.payment.updateMany({
+          where: { id: failed.id, status: "FAILED" },
+          data: {
+            status: "COMPLETED",
+            note: `Payé après annulation manuelle (${input.cashierName})`,
+          },
+        });
+        await tx.notification.create({
+          data: {
+            type: "PAYMENT_RECEIVED",
+            title: "Paiement reçu sur commande annulée",
+            message: `Commande ${order.number} a été payée après une annulation manuelle. Vérifiez avec le client.`,
+          },
+        });
+        return { state: "ignored" as const };
+      }
+
+      let stockOk = true;
+      for (const item of order.items) {
+        const inventory = await tx.inventory.findUnique({
+          where: { variantId_locationId: { variantId: item.variantId, locationId } },
+        });
+        const available = inventory ? inventory.onHand - inventory.reserved : 0;
+        if (available < item.quantity) stockOk = false;
+      }
+
+      const claimed = await tx.payment.updateMany({
+        where: { id: failed.id, status: "FAILED" },
+        data: {
+          status: "COMPLETED",
+          note: stockOk
+            ? `Encaissé par ${input.cashierName}`
+            : `Payé après annulation — stock insuffisant (${input.cashierName})`,
+        },
+      });
+      if (claimed.count !== 1) return { state: "ignored" as const };
+
+      if (!stockOk) {
+        await tx.notification.create({
+          data: {
+            type: "PAYMENT_RECEIVED",
+            title: "Paiement reçu, stock insuffisant",
+            message: `Commande ${order.number} payée après expiration, mais le stock ne permet pas de la rouvrir.`,
+          },
+        });
+        return { state: "paid-without-stock" as const, order };
+      }
+
+      for (const item of order.items) {
+        await applyStockChange(tx, {
+          variantId: item.variantId,
+          locationId,
+          type: "SALE_ONLINE",
+          quantity: 0,
+          reserveDelta: item.quantity,
+          reference: order.number,
+          comment: "Réservation après paiement tardif",
+        });
+      }
+      const reopened = await tx.order.updateMany({
+        where: { id: order.id, status: "CANCELLED" },
+        data: { status: "CONFIRMED" },
+      });
+      if (reopened.count !== 1) throw new Error("Cette commande a déjà changé de statut.");
+      if (order.couponCode) {
+        await tx.coupon.updateMany({
+          where: { code: order.couponCode },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          action: "ORDER_STATUS",
+          entity: "Order",
+          entityId: order.id,
+          before: { status: "CANCELLED" },
+          after: { status: "CONFIRMED", reason: "paiement tardif" },
+        },
+      });
+      return { state: "paid" as const, order };
+    },
+    { maxWait: 10_000, timeout: 20_000 },
+  );
+
+  if (result.state === "paid" && "order" in result && result.order) {
+    const revived = result.order;
+    try {
+      after(() =>
+        notifyCustomerPaymentReceipt({
+          phone: revived.shippingPhone,
+          number: revived.number,
+          total: Number(revived.total),
+          items: revived.items.map((item) => ({
+            productName: item.productName,
+            variantName: item.variantName,
+            quantity: item.quantity,
+            total: Number(item.total),
+          })),
+        }),
+      );
+    } catch (err) {
+      reportError("customer-whatsapp-paid", err);
+    }
+  }
+  return { state: result.state };
 }
 

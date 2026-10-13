@@ -242,6 +242,7 @@ export async function submitPosSale(input: {
       discount: input.discount,
       notes: input.notes,
       heldTicketId: input.heldTicketId,
+      claimAnyHeldTicket: session.isSuperAdmin,
       lines: input.lines,
       payments: input.payments,
     });
@@ -317,7 +318,7 @@ export async function parkPosTicket(input: {
     let row: { id: string; note: string | null; createdAt: Date };
     if (existingId) {
       const updated = await prisma.heldTicket.updateMany({
-        where: { id: existingId, cashierId: session.userId },
+        where: session.isSuperAdmin ? { id: existingId } : { id: existingId, cashierId: session.userId },
         data: { note, payload, cashSessionId: open?.id },
       });
       if (updated.count !== 1) {

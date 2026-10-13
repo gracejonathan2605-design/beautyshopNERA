@@ -3,6 +3,25 @@ import { whatsappChatUrl } from "@/lib/receipt";
 
 const PLACEHOLDER_REFERENCES = new Set(["ORANGE", "MTN"]);
 
+/** Présent dans la note quand le client a saisi une référence sans remplacer le jeton opérateur. */
+export const CUSTOMER_REFERENCE_NOTE = "Référence indiquée par le client";
+
+/**
+ * Le client a envoyé une preuve ou une référence : ne pas annuler la commande
+ * pendant que l’équipe vérifie le transfert. Un jeton Orange (MP…) n’est pas une preuve.
+ */
+export function paymentAwaitsStaffCheck(payment: {
+  proofUrl?: string | null;
+  reference?: string | null;
+  note?: string | null;
+}) {
+  if (payment.proofUrl?.trim()) return true;
+  if (payment.note?.includes(CUSTOMER_REFERENCE_NOTE)) return true;
+  const ref = payment.reference?.trim() ?? "";
+  if (!ref || PLACEHOLDER_REFERENCES.has(ref) || ref.startsWith("MP")) return false;
+  return true;
+}
+
 /** Garde la référence opérateur (MessageId) si le client envoie ensuite une preuve. */
 export function paymentReferenceAfterProof(current: string | null | undefined, typed: string) {
   const value = current?.trim() ?? "";
