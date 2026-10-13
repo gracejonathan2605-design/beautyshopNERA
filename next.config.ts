@@ -1,9 +1,17 @@
 import type { NextConfig } from "next";
 import { LEGACY_CATEGORY_REDIRECTS } from "./src/lib/category-seo";
 
-const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-  : null;
+function hostOf(value: string | undefined) {
+  if (!value?.trim()) return null;
+  try {
+    return new URL(value.trim()).hostname;
+  } catch {
+    // Une URL Supabase mal saisie ne doit pas casser le build : le motif *.supabase.co reste actif.
+    return null;
+  }
+}
+
+const supabaseHost = hostOf(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],

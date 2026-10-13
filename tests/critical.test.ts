@@ -66,7 +66,7 @@ describe("permissions", () => {
 
   it.skipIf(!hasDatabase)("le super admin a tout", async () => {
     const admin = await prisma.user.findFirstOrThrow({
-      where: { email: process.env.SEED_ADMIN_EMAIL ?? "raisaodin1@gmail.com" },
+      where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@nerabeaute.cm" },
       include: { role: true },
     });
     expect(hasPermission({ isSuperAdmin: admin.role.isSuperAdmin, permissions: [] }, "users.delete")).toBe(true);

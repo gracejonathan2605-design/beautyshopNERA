@@ -491,8 +491,8 @@ async function main() {
   );
 
   console.log("Seed NERA terminé.");
-  console.log(`Admin: ${adminEmail} / ${adminPassword}`);
-  console.log(`Caisse: ${cashierEmail} / ${cashierPassword}`);
+  console.log(`Admin : ${adminEmail} (mot de passe = SEED_ADMIN_PASSWORD)`);
+  console.log(`Caisse : ${cashierEmail} (mot de passe = SEED_CASHIER_PASSWORD)`);
 }
 
 main()
