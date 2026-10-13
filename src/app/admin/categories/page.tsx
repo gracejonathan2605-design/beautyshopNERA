@@ -41,13 +41,15 @@ export default async function CategoriesAdminPage({
         <strong>sous-rayons</strong>. Pour supprimer, ouvrez « Supprimer » puis tapez le nom exact. Un rayon qui
         contient encore des produits ou des sous-rayons ne peut pas être effacé.
       </p>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <form action={installNeraCatalog}>
-          <button className="rounded-full border border-[#eee0e6] bg-white px-5 py-2 text-wine">
-            Installer / mettre à jour le catalogue NERA
-          </button>
-        </form>
-      </div>
+      {hasPermission(session, "categories.create") ? (
+        <div className="mt-6 flex flex-wrap gap-3">
+          <form action={installNeraCatalog}>
+            <button className="rounded-full border border-[#eee0e6] bg-white px-5 py-2 text-wine">
+              Installer / mettre à jour le catalogue NERA
+            </button>
+          </form>
+        </div>
+      ) : null}
       <CategoriesAdmin
         roots={roots}
         childrenByParent={childrenByParent}

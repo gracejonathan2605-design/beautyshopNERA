@@ -34,7 +34,7 @@ export default async function SettingsPage({
           Google. Ils ne se modifient pas ici.
         </p>
       </div>
-      <form action={saveSettings} className="mt-6 grid gap-3 rounded-2xl border border-[#eee0e6] bg-white p-5 md:grid-cols-2">
+      <form action={saveSettings} className="mt-6 grid gap-3 rounded-2xl border border-[#eee0e6] bg-white p-5 md:grid-cols-2" inert={!canUpdate}>
         <label className="text-sm text-black/50">
           Email
           <input name="email" defaultValue={s.email} className="mt-1 w-full rounded-xl border border-[#eee0e6] px-3 py-2 text-wine" />
@@ -95,7 +95,11 @@ export default async function SettingsPage({
         <p className="text-xs text-black/45 md:col-span-2">
           Les commandes en ligne encore « en attente » sans paiement confirmé sont annulées après ce délai, et le stock réservé est libéré. 0 = désactivé. Défaut : 24 heures.
         </p>
-        <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
+        {canUpdate ? (
+          <button className="rounded-full bg-brown py-2 text-cream">Enregistrer</button>
+        ) : (
+          <p className="text-xs text-black/45 md:col-span-2">Lecture seule : seul un administrateur peut modifier ces réglages.</p>
+        )}
       </form>
 
       <section className="mt-8 rounded-2xl border border-[#eee0e6] bg-white p-5">

@@ -82,11 +82,16 @@ export default async function ProductsAdminPage({
       <p className="mt-2 text-xs text-black/45">{total} produit(s)</p>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Pour la boutique : nom, rayon, prix, <strong>photo</strong> et courte description. Une suggestion apparaît après le choix d’une photo — à utiliser, modifier ou ignorer. Sans ça, ne publiez pas en ligne.
-        Lot :{" "}
-        <Link href="/admin/produits/lot" className="text-brown underline">
-          10–15 produits
-        </Link>
-        .
+        {canCreate ? (
+          <>
+            {" "}
+            Lot :{" "}
+            <Link href="/admin/produits/lot" className="text-brown underline">
+              10–15 produits
+            </Link>
+            .
+          </>
+        ) : null}
       </p>
       {canUpdate ? <CatalogHygieneButton /> : null}
       {canCreate ? (

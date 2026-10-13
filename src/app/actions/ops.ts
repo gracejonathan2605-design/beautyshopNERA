@@ -197,7 +197,8 @@ export async function saveProductVariant(formData: FormData) {
     const variantId = String(formData.get("variantId") ?? "");
     const name = String(formData.get("name") ?? "").trim() || "Standard";
     const salePrice = parseCfaInput(String(formData.get("salePrice") ?? ""));
-    const costPrice = parseCfaInput(String(formData.get("costPrice") ?? ""));
+    const costRaw = String(formData.get("costPrice") ?? "").trim();
+    const costPrice = parseCfaInput(costRaw);
     const barcode = String(formData.get("barcode") ?? "").trim() || null;
     const promoRaw = String(formData.get("promoPrice") ?? "").trim();
     const promoPrice = promoRaw ? parseCfaInput(promoRaw) : 0;
@@ -209,7 +210,7 @@ export async function saveProductVariant(formData: FormData) {
     if (variantId) {
       const updated = await prisma.productVariant.updateMany({
         where: { id: variantId, productId },
-        data: { name, salePrice, costPrice: costPrice || undefined, barcode, promoPrice: promo },
+        data: { name, salePrice, costPrice: costRaw ? costPrice : undefined, barcode, promoPrice: promo },
       });
       if (updated.count !== 1) throw new Error("Variante introuvable pour ce produit.");
     } else {
@@ -245,9 +246,13 @@ export async function saveProductVariant(formData: FormData) {
       entityId: variantId || productId,
       after: { name, salePrice, barcode },
     });
+    updateTag("catalog");
     revalidatePath(`/admin/produits/${productId}`);
     revalidatePath("/admin/produits");
     revalidatePath("/pos");
+    revalidatePath("/boutique");
+    revalidatePath("/");
+    revalidatePath(`/produit/${product.slug}`);
     bounce(`/admin/produits/${productId}`, "ok", "Variante enregistrée.");
   } catch (err) {
     unstable_rethrow(err);
@@ -285,7 +290,9 @@ export async function saveStockPurchase(formData: FormData) {
       entityId: variantId,
       after: { quantity, supplierId, reference },
     });
+    updateTag("catalog");
     revalidatePath("/admin/stocks");
+    revalidatePath("/pos");
     bounce("/admin/stocks", "ok", `Réception de ${quantity} unité(s) enregistrée.`);
   } catch (err) {
     unstable_rethrow(err);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { updateProduct, type ProductFormState } from "@/app/actions/admin";
 import { VideoInput } from "@/components/admin/video-input";
 import { CategorySelect } from "@/components/admin/category-select";
@@ -22,6 +22,7 @@ export function ProductEditForm({
   costPrice,
   promoPrice,
   shortDescription,
+  description = "",
   isFeatured,
   isPromo,
   isNew,
@@ -43,6 +44,7 @@ export function ProductEditForm({
   costPrice: number;
   promoPrice: number | null;
   shortDescription: string;
+  description?: string;
   isFeatured: boolean;
   isPromo: boolean;
   isNew: boolean;
@@ -62,14 +64,11 @@ export function ProductEditForm({
   const [clientError, setClientError] = useState("");
   const [saving, setSaving] = useState(false);
   const [shortText, setShortText] = useState(shortDescription);
+  const [longText, setLongText] = useState(description);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const remainingPhotos = MAX_PRODUCT_PHOTOS - photoCount;
   const busy = pending || saving;
   const message = clientError || state.error;
-
-  useEffect(() => {
-    if (!pending) setSaving(false);
-  }, [pending]);
 
   return (
     <form
@@ -115,6 +114,8 @@ export function ProductEditForm({
           const fd = await prepareProductFormData(form);
           startTransition(() => {
             action(fd);
+            // Appliqué à la fin de la transition : `pending` prend le relais pendant l’action serveur.
+            setSaving(false);
           });
         } catch (err) {
           setSaving(false);
@@ -175,6 +176,15 @@ export function ProductEditForm({
         name="shortDescription"
         value={shortText}
         onChange={(event) => setShortText(event.target.value)}
+        placeholder="Petite description"
+        className="rounded-xl border px-3 py-2 md:col-span-2"
+      />
+      <textarea
+        name="description"
+        value={longText}
+        onChange={(event) => setLongText(event.target.value)}
+        rows={4}
+        placeholder="Description détaillée (facultatif, affichée sur la fiche produit)"
         className="rounded-xl border px-3 py-2 md:col-span-2"
       />
       <label className="flex items-center gap-2 text-sm">
@@ -206,7 +216,10 @@ export function ProductEditForm({
         file={photoFile}
         hintName={name}
         className="md:col-span-2"
-        onApply={(draft) => setShortText(draft.shortDescription)}
+        onApply={(draft) => {
+          setShortText(draft.shortDescription);
+          if (draft.description) setLongText(draft.description);
+        }}
       />
       {!hasVideo ? <VideoInput label={`Ajouter une vidéo (40 s / 3,5 Mo max)`} /> : null}
       <PendingSubmitButton

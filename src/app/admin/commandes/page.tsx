@@ -21,6 +21,7 @@ function formatWhen(date: Date) {
 export default async function OrdersAdminPage() {
   const session = await requireStaff("orders.view");
   const canUpdate = hasPermission(session, "orders.update");
+  const canCancel = hasPermission(session, "orders.cancel");
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -113,7 +114,10 @@ export default async function OrdersAdminPage() {
                       <form action={changeOrderStatus} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="orderId" value={o.id} />
                         <select name="status" defaultValue={o.status} className="rounded-xl border px-3 py-2 text-sm">
-                          {[o.status, ...ORDER_TRANSITIONS[o.status]].filter((s, i, a) => a.indexOf(s) === i).map((s) => (
+                          {[o.status, ...ORDER_TRANSITIONS[o.status]]
+                            .filter((s, i, a) => a.indexOf(s) === i)
+                            .filter((s) => canCancel || s === o.status || (s !== "CANCELLED" && s !== "REFUNDED"))
+                            .map((s) => (
                             <option key={s} value={s}>
                               {ORDER_STATUS_LABELS[s]}
                             </option>

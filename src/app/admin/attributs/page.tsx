@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
@@ -25,6 +26,7 @@ async function saveAttribute(formData: FormData) {
       create: { attributeId: attribute.id, value, slug },
     });
   }
+  revalidatePath("/admin/attributs");
 }
 
 export default async function AttributesPage() {
