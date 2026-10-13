@@ -118,18 +118,6 @@ export default async function OrderPage({
         align="center"
         kicker="Commande reçue"
         title="Merci, nous avons bien reçu votre commande"
-        actions={
-          !paid && network === "ORANGE" && !orangePush ? (
-            <OrangePayLaunch
-              code={pay.code}
-              name={pay.name}
-              orderNumber={order.number}
-              accessToken={t ?? ""}
-              api={pay.mode === "api"}
-              initialMessage={orangeNotice}
-            />
-          ) : null
-        }
       />
       <div className="mx-auto max-w-xl px-4 py-10">
       <div className="flex justify-center">
