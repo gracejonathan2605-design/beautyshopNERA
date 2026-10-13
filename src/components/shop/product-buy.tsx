@@ -5,7 +5,7 @@ import { addToCart } from "@/app/actions/shop";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { formatCfa } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
-import { variantAvailable } from "@/lib/stock-display";
+import { displayVariant, variantAvailable } from "@/lib/stock-display";
 
 type BuyVariant = {
   id: string;
@@ -24,7 +24,7 @@ export function ProductBuy({
   whatsappUrl?: string;
   oftenChosen?: boolean;
 }) {
-  const [id, setId] = useState(variants[0]?.id ?? "");
+  const [id, setId] = useState(displayVariant(variants)?.id ?? variants[0]?.id ?? "");
   const [qty, setQty] = useState(1);
   const selected = variants.find((v) => v.id === id) ?? variants[0];
   if (!selected) return null;

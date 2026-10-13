@@ -36,17 +36,20 @@ export async function notifyRestocksForVariant(variantId: string) {
 export async function notifyPendingRestocks() {
   const rows = await prisma.restockRequest.findMany({
     where: { notifiedAt: null },
-    select: { product: { select: { variants: { select: { id: true }, take: 1 } } } },
+    select: { productId: true, product: { select: { variants: { where: { deletedAt: null }, select: { id: true } } } } },
     take: 30,
   });
   let sent = 0;
-  const seen = new Set<string>();
+  const seenProducts = new Set<string>();
   for (const row of rows) {
-    const variantId = row.product.variants[0]?.id;
-    if (!variantId || seen.has(variantId)) continue;
-    seen.add(variantId);
-    const result = await notifyRestocksForVariant(variantId);
-    sent += result.sent;
+    if (seenProducts.has(row.productId)) continue;
+    seenProducts.add(row.productId);
+    // Une seule variante disponible suffit : notifyRestocksForVariant marque toutes les demandes du produit.
+    for (const variant of row.product.variants) {
+      const result = await notifyRestocksForVariant(variant.id);
+      sent += result.sent;
+      if (result.sent > 0) break;
+    }
   }
   return { sent };
 }

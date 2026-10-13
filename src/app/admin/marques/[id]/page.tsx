@@ -24,6 +24,8 @@ export default async function PartnerBrandDetailPage({
   const { id } = await params;
   const { ok, erreur } = await searchParams;
   const canManage = hasPermission(session, "brands.manage");
+  const canCreateProduct = hasPermission(session, "products.create");
+  const canOpenProduct = hasPermission(session, "products.update");
   const [brand, categories] = await Promise.all([
     prisma.brand.findFirst({
       where: { id, deletedAt: null },
@@ -89,9 +91,13 @@ export default async function PartnerBrandDetailPage({
         <ul className="mt-4 space-y-2">
           {brand.products.map((product) => (
             <li key={product.id} className="rounded-2xl bg-cream px-4 py-3 text-sm">
-              <Link href={`/admin/produits/${product.id}`} className="underline">
-                {product.name}
-              </Link>
+              {canOpenProduct ? (
+                <Link href={`/admin/produits/${product.id}`} className="underline">
+                  {product.name}
+                </Link>
+              ) : (
+                <span>{product.name}</span>
+              )}
               <span className="ml-2 text-black/45">
                 {product.onlineVisible ? "en ligne" : "hors ligne"} · {product.stockOwner === "PARTNER" ? "stock partenaire" : "stock NERA"}
               </span>
@@ -102,7 +108,7 @@ export default async function PartnerBrandDetailPage({
         <p className="mt-4 text-sm text-black/50">Aucun produit associé pour le moment.</p>
       )}
 
-      {canManage ? (
+      {canManage && canCreateProduct ? (
         <section className="mt-10">
           <h2 className="font-serif text-2xl">Ajouter un produit</h2>
           <p className="mt-1 text-sm text-black/50">La marque et le stock partenaire sont déjà choisis. Indiquez teinte ou taille dans chaque variante.</p>

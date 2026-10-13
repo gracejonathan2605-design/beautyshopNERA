@@ -16,6 +16,7 @@ import {
 import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } from "@/services/customer.service";
 import { formatCfa, parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { variantIdsMatching } from "@/lib/accent-search";
 import { scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
 import { canCloseCashSession, type TillSnapshot } from "@/lib/till";
 import { hasPermission } from "@/lib/permissions";
@@ -68,6 +69,7 @@ export async function searchPosProducts(query: string) {
       orderBy: { product: { name: "asc" } },
     });
   }
+  const folded = await variantIdsMatching(q);
   return prisma.productVariant.findMany({
     where: {
       ...posActiveWhere,
@@ -76,6 +78,7 @@ export async function searchPosProducts(query: string) {
         { barcode: { equals: q } },
         { name: { contains: q, mode: "insensitive" } },
         { product: { name: { contains: q, mode: "insensitive" } } },
+        ...(folded?.length ? [{ id: { in: folded } }] : []),
       ],
     },
     select,

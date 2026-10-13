@@ -66,6 +66,7 @@ export default async function ProductEditPage({
         costPrice={variant?.costPrice ?? 0}
         promoPrice={variant?.promoPrice ?? null}
         shortDescription={product.shortDescription ?? ""}
+        description={product.description ?? ""}
         isFeatured={product.isFeatured}
         isPromo={product.isPromo}
         isNew={product.isNew}

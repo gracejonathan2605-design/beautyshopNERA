@@ -262,14 +262,15 @@ export async function submitPaymentProof(formData: FormData) {
   if (!order || !allowed) redirect("/panier");
   const pending = order.payments.find((p) => p.status === "PENDING") ?? order.payments[0];
   const back = token ? `${orderConfirmationPath(number)}` : `/commande/${encodeURIComponent(number)}`;
+  const withFlag = (flag: string) => `${back}${back.includes("?") ? "&" : "?"}${flag}`;
   if (!pending) redirect(back);
   const file = formData.get("proof");
   if (file instanceof File && file.size > 0) {
     if (!rateLimit(`payment-proof:${order.id}`, 6, 60 * 60 * 1000)) {
-      redirect(`${back}&erreur=photo`);
+      redirect(withFlag("erreur=photo"));
     }
     if (!isAllowedProductImage(file) || file.size > 8_000_000) {
-      redirect(`${back}&erreur=photo`);
+      redirect(withFlag("erreur=photo"));
     }
   }
   let proofUrl: string | null = null;
@@ -278,7 +279,7 @@ export async function submitPaymentProof(formData: FormData) {
       proofUrl = await uploadProductImage(file, `payments/${order.id}`, 0);
     } catch (err) {
       reportError("payment-proof", err);
-      redirect(`${back}&erreur=photo`);
+      redirect(withFlag("erreur=photo"));
     }
   }
   const keptReference = paymentReferenceAfterProof(pending.reference, reference);
@@ -295,7 +296,7 @@ export async function submitPaymentProof(formData: FormData) {
   });
   revalidatePath(`/commande/${number}`);
   revalidatePath(`/admin/commandes/${order.id}`);
-  redirect(`${back}${back.includes("?") ? "&" : "?"}ok=preuve`);
+  redirect(withFlag("ok=preuve"));
 }
 
 export async function requestRestock(formData: FormData) {

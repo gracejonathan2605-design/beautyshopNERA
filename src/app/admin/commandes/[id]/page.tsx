@@ -24,6 +24,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const session = await requireStaff("orders.view");
   const { id } = await params;
   const canUpdate = hasPermission(session, "orders.update");
+  const canCancel = hasPermission(session, "orders.cancel");
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -148,6 +149,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <select name="status" defaultValue={order.status} className="rounded-xl border px-3 py-2 text-sm">
               {[order.status, ...ORDER_TRANSITIONS[order.status]]
                 .filter((s, i, a) => a.indexOf(s) === i)
+                .filter((s) => canCancel || s === order.status || (s !== "CANCELLED" && s !== "REFUNDED"))
                 .map((s) => (
                   <option key={s} value={s}>
                     {ORDER_STATUS_LABELS[s]}
@@ -159,18 +161,25 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
       ) : null}
 
-      <form action={updateOrderNotes} className="mt-6 rounded-2xl bg-cream p-5">
-        <h2 className="font-serif text-2xl">Notes internes</h2>
-        <input type="hidden" name="orderId" value={order.id} />
-        <textarea
-          name="notes"
-          defaultValue={order.notes ?? ""}
-          rows={3}
-          className="mt-3 w-full rounded-xl border px-3 py-2 text-sm"
-          placeholder="Note d’équipe…"
-        />
-        <button className="mt-3 rounded-full bg-brown px-4 py-2 text-sm text-cream">Enregistrer la note</button>
-      </form>
+      {canUpdate ? (
+        <form action={updateOrderNotes} className="mt-6 rounded-2xl bg-cream p-5">
+          <h2 className="font-serif text-2xl">Notes internes</h2>
+          <input type="hidden" name="orderId" value={order.id} />
+          <textarea
+            name="notes"
+            defaultValue={order.notes ?? ""}
+            rows={3}
+            className="mt-3 w-full rounded-xl border px-3 py-2 text-sm"
+            placeholder="Note d’équipe…"
+          />
+          <button className="mt-3 rounded-full bg-brown px-4 py-2 text-sm text-cream">Enregistrer la note</button>
+        </form>
+      ) : order.notes ? (
+        <section className="mt-6 rounded-2xl bg-cream p-5">
+          <h2 className="font-serif text-2xl">Notes internes</h2>
+          <p className="mt-3 whitespace-pre-line text-sm">{order.notes}</p>
+        </section>
+      ) : null}
     </div>
   );
 }

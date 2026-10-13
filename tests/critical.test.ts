@@ -2,20 +2,28 @@ import { describe, expect, it } from "vitest";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 import { prisma } from "../src/lib/prisma";
-import { applyStockChange, availableQty } from "../src/services/inventory.service";
+import { applyStockChange, availableQty, receivePurchase } from "../src/services/inventory.service";
 import { createPosSale } from "../src/services/sale.service";
 import { unitPrice } from "../src/lib/pricing";
 import { hasPermission, defaultStaffPath } from "../src/lib/permissions";
 
 describe("stock", () => {
   it.skipIf(!hasDatabase)("diminue le stock après une vente POS", async () => {
+    const user = await prisma.user.findFirstOrThrow({ where: { email: "caisse@nerabeaute.cm" } });
+    const seeded = await prisma.productVariant.findFirstOrThrow({
+      where: { sku: "MEC-BW-18" },
+      include: { inventories: true },
+    });
+    const locationId = seeded.inventories[0].locationId;
+    // Chaque exécution vend 1 unité : on réapprovisionne pour que le test reste rejouable.
+    if (availableQty(seeded.inventories[0].onHand, seeded.inventories[0].reserved) < 1) {
+      await receivePurchase({ variantId: seeded.id, locationId, quantity: 5, userId: user.id, comment: "Test" });
+    }
     const variant = await prisma.productVariant.findFirstOrThrow({
       where: { sku: "MEC-BW-18" },
       include: { inventories: true },
     });
-    const locationId = variant.inventories[0].locationId;
     const before = variant.inventories[0].onHand;
-    const user = await prisma.user.findFirstOrThrow({ where: { email: "caisse@nerabeaute.cm" } });
     await createPosSale({
       cashierId: user.id,
       locationId,
@@ -66,7 +74,7 @@ describe("permissions", () => {
 
   it.skipIf(!hasDatabase)("le super admin a tout", async () => {
     const admin = await prisma.user.findFirstOrThrow({
-      where: { email: process.env.SEED_ADMIN_EMAIL ?? "raisaodin1@gmail.com" },
+      where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@nerabeaute.cm" },
       include: { role: true },
     });
     expect(hasPermission({ isSuperAdmin: admin.role.isSuperAdmin, permissions: [] }, "users.delete")).toBe(true);

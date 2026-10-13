@@ -18,7 +18,7 @@ import { ProductOpenGraphTags } from "@/components/seo/product-open-graph";
 import { isFlashActive } from "@/lib/flash";
 import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { breadcrumbJsonLd, pageMetadata, productJsonLd, productPageTitle, productPlainText, truncateMeta } from "@/lib/seo";
-import { productInStock } from "@/lib/stock-display";
+import { displayVariant, productInStock } from "@/lib/stock-display";
 import { ProductCopy, ProductFacts } from "@/components/shop/product-copy";
 import { ProductHeroImage } from "@/components/shop/product-hero-image";
 import { ProductPhotoPlaceholder } from "@/components/shop/product-photo";
@@ -90,9 +90,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
       ? [{ id: "catalog", url: seedPhoto, alt: heading, kind: "IMAGE" as const }]
       : [];
 
-  const price = unitPrice(variants[0]);
+  const shown = displayVariant(variants) ?? variants[0];
+  const price = unitPrice(shown);
   const flash = isFlashActive(product);
-  const percent = promoPercent(variants[0].salePrice, variants[0].promoPrice);
+  const percent = promoPercent(shown.salePrice, shown.promoPrice);
   const wa = whatsappChatUrl(
     NERA_IDENTITY.phoneE164,
     `Bonjour NERA Beauté, je veux un conseil sur ${heading} (${formatCfa(price)}).`,
@@ -126,7 +127,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
           image,
           brand: product.brand?.name,
           category: product.category?.name,
-          sku: product.sku || variants[0]?.sku,
+          sku: product.sku || shown.sku,
           barcode,
           price,
           inStock,

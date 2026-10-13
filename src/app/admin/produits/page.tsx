@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { productIdsMatching } from "@/lib/accent-search";
 import { requireStaff } from "@/lib/guard";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
@@ -26,9 +27,17 @@ export default async function ProductsAdminPage({
   const canCreate = hasPermission(session, "products.create");
   const canUpdate = hasPermission(session, "products.update");
   const canDelete = hasPermission(session, "products.delete");
+  const folded = query ? await productIdsMatching(query) : null;
   const where = {
     deletedAt: null,
-    ...(query ? { name: { contains: query, mode: "insensitive" as const } } : {}),
+    ...(query
+      ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" as const } },
+            ...(folded?.length ? [{ id: { in: folded } }] : []),
+          ],
+        }
+      : {}),
     ...(marque ? { brandId: marque } : {}),
     ...(rayon ? { categoryId: rayon } : {}),
     ...(vue === "ligne" ? { onlineVisible: true } : {}),
@@ -82,11 +91,16 @@ export default async function ProductsAdminPage({
       <p className="mt-2 text-xs text-black/45">{total} produit(s)</p>
       <p className="mt-2 max-w-2xl text-sm text-black/60">
         Pour la boutique : nom, rayon, prix, <strong>photo</strong> et courte description. Une suggestion apparaît après le choix d’une photo — à utiliser, modifier ou ignorer. Sans ça, ne publiez pas en ligne.
-        Lot :{" "}
-        <Link href="/admin/produits/lot" className="text-brown underline">
-          10–15 produits
-        </Link>
-        .
+        {canCreate ? (
+          <>
+            {" "}
+            Lot :{" "}
+            <Link href="/admin/produits/lot" className="text-brown underline">
+              10–15 produits
+            </Link>
+            .
+          </>
+        ) : null}
       </p>
       {canUpdate ? <CatalogHygieneButton /> : null}
       {canCreate ? (

@@ -41,6 +41,8 @@ export default async function SuppliersPage({
                 <input name="phone" defaultValue={s.phone ?? ""} placeholder="Tél" className="rounded-lg border px-2 py-1" />
                 <input name="email" defaultValue={s.email ?? ""} placeholder="Email" className="rounded-lg border px-2 py-1" />
                 <input name="city" defaultValue={s.city ?? ""} placeholder="Ville" className="rounded-lg border px-2 py-1" />
+                <input name="address" defaultValue={s.address ?? ""} placeholder="Adresse" className="rounded-lg border px-2 py-1" />
+                <input name="notes" defaultValue={s.notes ?? ""} placeholder="Notes" className="rounded-lg border px-2 py-1" />
                 <label className="flex items-center gap-1 text-sm">
                   <input type="checkbox" name="isActive" defaultChecked={s.isActive} /> Actif
                 </label>

@@ -559,6 +559,7 @@ export async function updateProduct(
     const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
     const stockOwner = formData.get("stockOwner") === "PARTNER" ? "PARTNER" : "NERA";
     const shortDescription = String(formData.get("shortDescription") ?? "").trim() || null;
+    const descriptionField = formData.get("description");
     if (!productId || !name) return { ok: false, error: "Nom requis" };
     if (!categoryId) return { ok: false, error: "Catégorie obligatoire" };
     if (salePrice <= 0) return { ok: false, error: "Prix invalide" };
@@ -568,6 +569,8 @@ export async function updateProduct(
       include: { variants: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } }, images: true },
     });
     if (!current || current.deletedAt) return { ok: false, error: "Produit introuvable" };
+    const description =
+      descriptionField == null ? current.description : String(descriptionField).trim() || null;
     try {
       await assertUniqueBarcode(barcode, current.variants[0]?.id);
     } catch (err) {
@@ -588,7 +591,7 @@ export async function updateProduct(
       onlineVisible,
       photoCount: photoCount + incomingPhotos.length,
       shortDescription,
-      description: current.description,
+      description,
     });
     if (emptyPublish) return { ok: false, error: emptyPublish };
 
@@ -608,6 +611,7 @@ export async function updateProduct(
         name,
         categoryId,
         shortDescription,
+        description,
         isFeatured: formData.get("isFeatured") === "on",
         isPromo,
         isNew: formData.get("isNew") === "on",
@@ -627,7 +631,7 @@ export async function updateProduct(
         data: {
           salePrice,
           promoPrice,
-          costPrice: parseMoney(formData.get("costPrice")) || variant.costPrice,
+          costPrice: String(formData.get("costPrice") ?? "").trim() ? parseMoney(formData.get("costPrice")) : variant.costPrice,
           barcode,
         },
       });
@@ -637,7 +641,7 @@ export async function updateProduct(
     const publishGuard = await enforceOnlinePublishRules(productId, {
       onlineVisible,
       shortDescription,
-      description: current.description,
+      description,
       slug: current.slug,
     });
     let effectivelyOnline = onlineVisible;
@@ -653,6 +657,7 @@ export async function updateProduct(
       after: { name, salePrice },
     });
     refreshCatalog(current.slug);
+    revalidatePath(`/admin/produits/${productId}`);
     return {
       ok: true,
       name,
@@ -725,7 +730,9 @@ export async function saveStockAdjust(formData: FormData) {
     type,
     comment: String(formData.get("comment") ?? "").trim() || defaultStockMoveComment(type),
   });
+  updateTag("catalog");
   revalidatePath("/admin/stocks");
+  revalidatePath("/pos");
 }
 
 export async function changeOrderStatus(formData: FormData) {

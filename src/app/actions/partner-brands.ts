@@ -23,16 +23,14 @@ function bounce(path: string, kind: "ok" | "erreur", message: string): never {
   redirect(`${path}?${q.toString()}`);
 }
 
-function refreshBrandPages(slug?: string) {
+function refreshBrandPages(slug?: string, brandId?: string) {
   updateTag("catalog");
   revalidatePath("/admin/marques");
   revalidatePath("/marques");
   revalidatePath("/");
   revalidatePath("/boutique");
-  if (slug) {
-    revalidatePath(`/marques/${slug}`);
-    revalidatePath(`/admin/marques/${slug}`);
-  }
+  if (slug) revalidatePath(`/marques/${slug}`);
+  if (brandId) revalidatePath(`/admin/marques/${brandId}`);
 }
 
 async function uniqueSlug(base: string, excludeId?: string) {
@@ -117,7 +115,7 @@ export async function savePartnerBrand(formData: FormData) {
       entityId: brandId,
       after: { name, slug, isPartner },
     });
-    refreshBrandPages(slug);
+    refreshBrandPages(slug, brandId);
     bounce(`/admin/marques/${brandId}`, "ok", id ? "Marque mise à jour." : `${name} ajoutée.`);
   } catch (err) {
     unstable_rethrow(err);
@@ -145,7 +143,7 @@ export async function deletePartnerBrand(formData: FormData) {
       entityId: id,
       after: { name: brand.name },
     });
-    refreshBrandPages(brand.slug);
+    refreshBrandPages(brand.slug, id);
     bounce("/admin/marques", "ok", `${brand.name} retirée.`);
   } catch (err) {
     unstable_rethrow(err);
@@ -201,7 +199,7 @@ export async function saveBrandCollection(formData: FormData) {
         });
       }
     }
-    refreshBrandPages(brand.slug);
+    refreshBrandPages(brand.slug, brandId);
     bounce(`/admin/marques/${brandId}`, "ok", id ? "Collection mise à jour." : "Collection créée.");
   } catch (err) {
     unstable_rethrow(err);
@@ -224,7 +222,7 @@ export async function deleteBrandCollection(formData: FormData) {
     });
     if (!collection || collection.brandId !== brandId) bounce(`/admin/marques/${brandId}`, "erreur", "Collection introuvable.");
     await prisma.brandCollection.delete({ where: { id } });
-    refreshBrandPages(collection.brand.slug);
+    refreshBrandPages(collection.brand.slug, brandId);
     bounce(`/admin/marques/${brandId}`, "ok", "Collection supprimée.");
   } catch (err) {
     unstable_rethrow(err);
