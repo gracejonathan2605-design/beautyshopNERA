@@ -18,7 +18,7 @@ export type PosLineCalc = {
 };
 
 export type HeldTicketPayload = {
-  lines: { variant: PosVariant; quantity: number; discount: number }[];
+  lines: { variant: PosVariant; quantity: number; unitPrice?: number; discount: number }[];
   ticketDiscount: number;
   customerId?: string;
   customerPhone: string;
@@ -27,19 +27,26 @@ export type HeldTicketPayload = {
   method: PaymentMethod;
 };
 
-/** Une ligne par variante : quantités et remises additionnées. */
-export function mergeSaleLines<T extends { variantId: string; quantity: number; discount?: number }>(lines: T[]): T[] {
+/** Fusionne les quantités et remises seulement pour une même variante au même prix. */
+export function mergeSaleLines<
+  T extends { variantId: string; quantity: number; unitPrice?: number; discount?: number },
+>(lines: T[]): T[] {
   const byId = new Map<string, T>();
   for (const line of lines) {
-    const prev = byId.get(line.variantId);
+    const key = JSON.stringify([line.variantId, line.unitPrice ?? null]);
+    const prev = byId.get(key);
     if (!prev) {
-      byId.set(line.variantId, { ...line });
+      byId.set(key, { ...line });
       continue;
     }
     prev.quantity += line.quantity;
     prev.discount = (prev.discount ?? 0) + (line.discount ?? 0);
   }
   return [...byId.values()];
+}
+
+export function isValidSaleUnitPrice(price: number) {
+  return Number.isInteger(price) && price > 0 && price <= 2_147_483_647;
 }
 
 export function isValidSaleQuantity(quantity: number) {

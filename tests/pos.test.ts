@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildCheckoutPayments,
   clampDiscount,
+  isValidSaleUnitPrice,
+  mergeSaleLines,
   pickExactScanMatch,
   pickSearchEnterMatch,
   scanMatchDecision,
@@ -31,6 +33,36 @@ describe("remises caisse", () => {
   it("plafonne la remise à la ligne", () => {
     expect(clampDiscount(99999, 4000)).toBe(4000);
     expect(ticketTotals([{ unitPrice: 2000, quantity: 1, discount: 8000 }], 0).total).toBe(0);
+  });
+});
+
+describe("prix de vente caisse", () => {
+  it("calcule le ticket et l’encaissement avec le prix saisi", () => {
+    const totals = ticketTotals([{ unitPrice: 7000, quantity: 1, discount: 0 }]);
+    expect(totals.total).toBe(7000);
+    expect(settlePosPayments([{ method: "CASH", amount: 7000 }], totals.total)).toEqual([
+      { method: "CASH", amount: 7000 },
+    ]);
+  });
+
+  it("garde séparées les lignes d’une même variante vendues à des prix différents", () => {
+    const lines = mergeSaleLines([
+      { variantId: "variant-1", quantity: 1, unitPrice: 5000 },
+      { variantId: "variant-1", quantity: 1, unitPrice: 7000 },
+      { variantId: "variant-1", quantity: 2, unitPrice: 7000 },
+    ]);
+    expect(lines).toEqual([
+      { variantId: "variant-1", quantity: 1, unitPrice: 5000 },
+      { variantId: "variant-1", quantity: 3, unitPrice: 7000, discount: 0 },
+    ]);
+  });
+
+  it("refuse les prix non entiers, nuls, négatifs ou hors limite", () => {
+    expect(isValidSaleUnitPrice(7000)).toBe(true);
+    expect(isValidSaleUnitPrice(0)).toBe(false);
+    expect(isValidSaleUnitPrice(-1)).toBe(false);
+    expect(isValidSaleUnitPrice(7000.5)).toBe(false);
+    expect(isValidSaleUnitPrice(2_147_483_648)).toBe(false);
   });
 });
 

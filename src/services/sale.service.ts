@@ -5,7 +5,14 @@ import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
 import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
-import { clampDiscount, isValidSaleQuantity, mergeSaleLines, settlePosPayments, ticketTotals } from "@/lib/pos";
+import {
+  clampDiscount,
+  isValidSaleQuantity,
+  isValidSaleUnitPrice,
+  mergeSaleLines,
+  settlePosPayments,
+  ticketTotals,
+} from "@/lib/pos";
 import { cashReturnTillExpenseAmount } from "@/lib/till";
 import { availableQty } from "@/lib/stock-display";
 import { lockCashSessionRow, lockOpenCashSession, resolveTillExpenseCategoryId } from "@/services/cash.service";
@@ -14,6 +21,7 @@ import { reduceCustomerSpend } from "@/services/customer.service";
 export type SaleLineInput = {
   variantId: string;
   quantity: number;
+  unitPrice?: number;
   discount?: number;
 };
 
@@ -50,7 +58,10 @@ export async function createPosSale(input: {
       const variant = byId.get(line.variantId);
       if (!variant) throw new Error("Variante introuvable ou inactive");
       if (!isValidSaleQuantity(line.quantity)) throw new Error("Quantité invalide");
-      const unitPrice = priced(variant);
+      const unitPrice = line.unitPrice ?? priced(variant);
+      if (!isValidSaleUnitPrice(unitPrice)) {
+        throw new Error(`Prix de vente invalide pour ${variant.product.name}.`);
+      }
       const gross = unitPrice * line.quantity;
       const discount = clampDiscount(line.discount ?? 0, gross);
       pricedLines.push({
