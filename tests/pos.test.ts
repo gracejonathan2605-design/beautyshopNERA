@@ -177,6 +177,15 @@ describe("entrée recherche caisse", () => {
     const gloss = { sku: "GLOSS-01", barcode: null as string | null };
     expect(pickSearchEnterMatch([gloss], "611000000099", "gloss")).toBeNull();
     expect(pickSearchEnterMatch([gloss], "gloss", "gloss")?.sku).toBe("GLOSS-01");
-    expect(pickSearchEnterMatch([gloss], "GLOSS-01", "autre")?.sku).toBe("GLOSS-01");
+    expect(pickSearchEnterMatch([gloss], "GLOSS-01", "autre")).toBeNull();
+  });
+
+  it("n’ajoute pas automatiquement un code-barres partagé", () => {
+    const matches = [
+      { sku: "A", barcode: "999" },
+      { sku: "B", barcode: "999" },
+    ];
+    expect(pickSearchEnterMatch(matches, "999", "999")).toBeNull();
+    expect(pickSearchEnterMatch(matches, "a", "a")?.sku).toBe("A");
   });
 });

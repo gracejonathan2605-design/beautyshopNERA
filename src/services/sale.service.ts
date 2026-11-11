@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { applyStockChange } from "@/services/inventory.service";
 import { formatRef, nextSequence } from "@/lib/sequences";
 import { getShopSettings } from "@/lib/settings";
-import { writeAudit } from "@/lib/audit";
 import { unitPrice as priced } from "@/lib/pricing";
 import {
   clampDiscount,
@@ -41,7 +40,7 @@ export async function createPosSale(input: {
   if (!input.lines.length) throw new Error("Le panier est vide");
   const lines = mergeSaleLines(input.lines);
 
-  const result = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const settings = await getShopSettings(tx);
     const seq = await nextSequence(tx, "sale");
     const number = formatRef(settings.prefixes.sale, seq.year, seq.value);
@@ -181,18 +180,17 @@ export async function createPosSale(input: {
       });
     }
 
+    await tx.auditLog.create({
+      data: {
+        userId: input.cashierId,
+        action: "SALE_CREATE",
+        entity: "Sale",
+        entityId: sale.id,
+        after: { number: sale.number, total: sale.total },
+      },
+    });
     return sale;
   }, { maxWait: 10_000, timeout: 20_000 });
-
-  await writeAudit({
-    userId: input.cashierId,
-    action: "SALE_CREATE",
-    entity: "Sale",
-    entityId: result.id,
-    after: { number: result.number, total: result.total },
-  });
-
-  return result;
 }
 
 

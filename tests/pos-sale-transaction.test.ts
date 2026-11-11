@@ -34,6 +34,7 @@ describe("transaction d’encaissement", () => {
       },
       inventory: { findUnique: vi.fn().mockResolvedValue({ onHand: 3, reserved: 0 }) },
       sale: { create: vi.fn().mockResolvedValue(sale) },
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
     };
     mocks.applyStockChange.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 5086)));
     mocks.writeAudit.mockResolvedValue(undefined);
@@ -60,5 +61,37 @@ describe("transaction d’encaissement", () => {
     expect(mocks.transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 10_000, timeout: 20_000 });
     expect(mocks.applyStockChange).toHaveBeenCalledOnce();
     expect(tx.sale.create.mock.calls[0][0].data.total).toBe(7000);
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: "cashier-1",
+        action: "SALE_CREATE",
+        entity: "Sale",
+        entityId: "sale-1",
+        after: { number: "POS-2026-000001", total: 7000 },
+      },
+    });
+    expect(mocks.writeAudit).not.toHaveBeenCalled();
+  });
+
+  it("fait échouer la transaction si l’écriture du journal échoue", async () => {
+    const tx = {
+      productVariant: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "variant-1", name: "Default", sku: "SKU", salePrice: 5000, promoPrice: null, product: { name: "Sérum" } },
+        ]),
+      },
+      inventory: { findUnique: vi.fn().mockResolvedValue({ onHand: 3, reserved: 0 }) },
+      sale: { create: vi.fn().mockResolvedValue({ id: "sale-1", number: "POS-2026-000001", total: 5000 }) },
+      auditLog: { create: vi.fn().mockRejectedValue(new Error("Journal indisponible")) },
+    };
+    mocks.applyStockChange.mockResolvedValue(undefined);
+    mocks.transaction.mockImplementation((run) => run(tx));
+    await expect(createPosSale({
+      cashierId: "cashier-1",
+      locationId: "location-1",
+      lines: [{ variantId: "variant-1", quantity: 1 }],
+      payments: [{ method: "CASH", amount: 5000 }],
+    })).rejects.toThrow("Journal indisponible");
+    expect(tx.auditLog.create).toHaveBeenCalledOnce();
   });
 });
