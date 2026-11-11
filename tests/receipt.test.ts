@@ -54,6 +54,24 @@ describe("ticket de caisse", () => {
     expect(text).toContain("676935195");
   });
 
+  it("affiche sur le ticket le prix réellement saisi en caisse", () => {
+    const receipt = saleToReceipt(
+      {
+        number: "POS-2026-0002",
+        createdAt: new Date("2026-08-24T10:00:00Z"),
+        subtotal: 7000,
+        discount: 0,
+        total: 7000,
+        items: [{ productName: "Sérum", quantity: 1, unitPrice: 7000, total: 7000 }],
+        payments: [{ method: "CASH", amount: 7000 }],
+      },
+      shop,
+    );
+    expect(receipt.items[0].unitPrice).toBe(7000);
+    expect(receipt.total).toBe(7000);
+    expect(buildReceiptText(receipt)).toContain("1 x 7 000 FCFA");
+  });
+
   it("ouvre WhatsApp avec le texte du ticket", () => {
     const url = whatsappReceiptUrl("Bonjour NERA", "690123456");
     expect(url).toContain("https://wa.me/237690123456");

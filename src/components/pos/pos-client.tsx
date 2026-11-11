@@ -23,6 +23,7 @@ import { PosRefundPanel } from "@/components/pos/pos-refund-panel";
 import { PendingSubmitButton } from "@/components/admin/form-pending";
 import {
   buildCheckoutPayments,
+  isValidSaleUnitPrice,
   pickExactScanMatch,
   pickSearchEnterMatch,
   ticketTotals,
@@ -30,7 +31,7 @@ import {
   type PosVariant,
 } from "@/lib/pos";
 
-type Line = { variant: PosVariant; quantity: number; discount: number };
+type Line = { variant: PosVariant; quantity: number; unitPrice: number; discount: number };
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "CARD", "OTHER"];
 
@@ -84,7 +85,7 @@ export function PosClient({
     () =>
       ticketTotals(
         cart.map((line) => ({
-          unitPrice: unitPrice(line.variant),
+          unitPrice: line.unitPrice,
           quantity: line.quantity,
           discount: line.discount,
         })),
@@ -152,7 +153,7 @@ export function PosClient({
           line.variant.id === variant.id ? { ...line, quantity: nextQty } : line,
         );
       }
-      return [...current, { variant, quantity: 1, discount: 0 }];
+      return [...current, { variant, quantity: 1, unitPrice: unitPrice(variant), discount: 0 }];
     });
     if (blocked) {
       setError(`Stock max atteint (${max}) pour ${variant.product.name}`);
@@ -175,6 +176,12 @@ export function PosClient({
   function setLineDiscount(variantId: string, discount: number) {
     setCart((current) =>
       current.map((line) => (line.variant.id === variantId ? { ...line, discount } : line)),
+    );
+  }
+
+  function setLinePrice(variantId: string, price: number) {
+    setCart((current) =>
+      current.map((line) => (line.variant.id === variantId ? { ...line, unitPrice: price } : line)),
     );
   }
 
@@ -233,6 +240,10 @@ export function PosClient({
       setError("Ouvrez d’abord la caisse (fond du tiroir).");
       return;
     }
+    if (cart.some((line) => !isValidSaleUnitPrice(line.unitPrice))) {
+      setError("Indiquez un prix de vente valide pour chaque produit.");
+      return;
+    }
     if (pay.remaining > 0) {
       setError(`Il reste ${formatCfa(pay.remaining)} à encaisser.`);
       return;
@@ -248,6 +259,7 @@ export function PosClient({
           lines: cart.map((line) => ({
             variantId: line.variant.id,
             quantity: line.quantity,
+            unitPrice: line.unitPrice,
             discount: line.discount || undefined,
           })),
           payments: pay.payments,
@@ -321,7 +333,12 @@ export function PosClient({
       }
       resumedHeldTicketId.current = result.ticket.id;
       const payload = result.ticket.payload;
-      setCart(payload.lines ?? []);
+      setCart(
+        (payload.lines ?? []).map((line) => ({
+          ...line,
+          unitPrice: line.unitPrice ?? unitPrice(line.variant),
+        })),
+      );
       setTicketDiscount(payload.ticketDiscount ?? 0);
       setCustomerName(payload.customerName ?? "");
       setCustomerPhone(payload.customerPhone ?? "");
@@ -518,14 +535,13 @@ export function PosClient({
             ) : null}
             <ul className="mt-4 space-y-3">
               {cart.map((line) => {
-                const price = unitPrice(line.variant);
-                const gross = price * line.quantity;
+                const gross = line.unitPrice * line.quantity;
                 return (
                   <li key={line.variant.id} className="text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <span className="min-w-0">
                         <span className="block truncate">{line.variant.product.name}</span>
-                        <span className="text-black/40">{formatCfa(price)}</span>
+                        <span className="text-black/40">Prix indicatif : {formatCfa(unitPrice(line.variant))}</span>
                       </span>
                       <span className="flex items-center gap-2">
                         <button type="button" className="h-7 w-7 rounded-full border" onClick={() => setQty(line.variant.id, line.quantity - 1)}>
@@ -537,6 +553,17 @@ export function PosClient({
                         </button>
                       </span>
                     </div>
+                    <label className="mt-1 flex items-center gap-2 text-xs text-black/50">
+                      Prix de vente (FCFA)
+                      <input
+                        inputMode="numeric"
+                        value={line.unitPrice || ""}
+                        onChange={(e) => setLinePrice(line.variant.id, parseCfaInput(e.target.value))}
+                        placeholder="0"
+                        aria-label={`Prix de vente de ${line.variant.product.name}`}
+                        className="w-28 rounded-lg border border-[#eee0e6] px-2 py-1"
+                      />
+                    </label>
                     <label className="mt-1 flex items-center gap-2 text-xs text-black/50">
                       Remise ligne
                       <input

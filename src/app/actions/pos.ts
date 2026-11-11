@@ -220,7 +220,7 @@ export async function submitPosSale(input: {
   discount?: number;
   notes?: string;
   heldTicketId?: string;
-  lines: { variantId: string; quantity: number; discount?: number }[];
+  lines: { variantId: string; quantity: number; unitPrice?: number; discount?: number }[];
   payments: { method: PaymentMethod; amount: number }[];
 }): Promise<PosSaleResult> {
   try {
