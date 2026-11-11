@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatCfa, parseCfaInput } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import {
+  browsePosProducts,
   discardHeldTicket,
   openRegister,
   closeRegister,
@@ -27,6 +28,7 @@ import {
   pickSearchEnterMatch,
   ticketTotals,
   type HeldTicketPayload,
+  type PosCategory,
   type PosVariant,
 } from "@/lib/pos";
 
@@ -36,6 +38,7 @@ const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "CARD", "OTHER"];
 
 export function PosClient({
   initial,
+  categories,
   openSession,
   occupiedBy,
   occupiedSessionId,
@@ -45,7 +48,8 @@ export function PosClient({
   canRefund,
   initialHeld,
 }: {
-  initial: PosVariant[];
+  initial: { items: PosVariant[]; hasMore: boolean };
+  categories: PosCategory[];
   openSession: { id: string; openingFloat: number; openedByName?: string } | null;
   occupiedBy?: string | null;
   occupiedSessionId?: string | null;
@@ -60,9 +64,17 @@ export function PosClient({
   const [tab, setTab] = useState<"vente" | "retour">("vente");
   const [scanMode, setScanMode] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState(initial);
+  const [results, setResults] = useState(initial.items);
   const [resultsForQuery, setResultsForQuery] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [browsePage, setBrowsePage] = useState(0);
+  const [resultsForBrowse, setResultsForBrowse] = useState<{ categoryId: string | null; page: number }>({
+    categoryId: null,
+    page: 0,
+  });
+  const [hasMore, setHasMore] = useState(initial.hasMore);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [cart, setCart] = useState<Line[]>([]);
   const [ticketDiscount, setTicketDiscount] = useState(0);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
@@ -80,6 +92,23 @@ export function PosClient({
   const [flash, setFlash] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [searching, startSearch] = useTransition();
+  const browsing = !query.trim();
+  const currentResults =
+    resultsForQuery === query &&
+    (!browsing || (resultsForBrowse.categoryId === categoryId && resultsForBrowse.page === browsePage));
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const rootCategories = categories.filter((category) => !category.parentId || !categoryById.has(category.parentId));
+  const categoryPath: PosCategory[] = [];
+  const visited = new Set<string>();
+  let pathId = categoryId;
+  while (pathId && !visited.has(pathId)) {
+    visited.add(pathId);
+    const category = categoryById.get(pathId);
+    if (!category) break;
+    categoryPath.unshift(category);
+    pathId = category.parentId;
+  }
+  const subcategories = categories.filter((category) => category.parentId === categoryId && categoryId !== null);
 
   const totals = useMemo(
     () =>
@@ -124,9 +153,18 @@ export function PosClient({
       startSearch(async () => {
         const q = query;
         try {
-          const found = await searchPosProducts(q);
+          if (!q.trim()) {
+            const found = await browsePosProducts(categoryId, browsePage);
+            if (cancelled) return;
+            setResults(found.items);
+            setHasMore(found.hasMore);
+            setResultsForBrowse({ categoryId, page: browsePage });
+          } else {
+            const found = await searchPosProducts(q);
+            if (cancelled) return;
+            setResults(found);
+          }
           if (cancelled) return;
-          setResults(found);
           setResultsForQuery(q);
           setSearchError(null);
         } catch {
@@ -138,7 +176,15 @@ export function PosClient({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, scanMode, initial]);
+  }, [query, scanMode, initial, categoryId, browsePage, searchAttempt]);
+
+  function selectCategory(id: string | null) {
+    setScanMode(false);
+    setQuery("");
+    setCategoryId(id);
+    setBrowsePage(0);
+    setSearchError(null);
+  }
 
   function available(variant: PosVariant) {
     return variant.inventories.reduce((sum, row) => sum + (row.onHand - row.reserved), 0);
@@ -448,7 +494,58 @@ export function PosClient({
             </form>
           ) : null}
           <section>
-            <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-serif text-2xl text-wine">Rayons</h2>
+            <p className="mt-1 text-sm text-black/55">Choisissez un rayon pour voir ses articles et ses sous-rayons.</p>
+            <nav aria-label="Rayons de la caisse" className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                aria-pressed={categoryId === null && !query.trim()}
+                onClick={() => selectCategory(null)}
+                className={`rounded-full px-3 py-2 text-sm ${categoryId === null && !query.trim() ? "bg-brown text-cream" : "bg-blush text-wine"}`}
+              >
+                Tous les articles
+              </button>
+              {rootCategories.map((category) => (
+                <button
+                  type="button"
+                  key={category.id}
+                  aria-pressed={categoryPath[0]?.id === category.id && !query.trim()}
+                  onClick={() => selectCategory(category.id)}
+                  className={`rounded-full px-3 py-2 text-sm ${categoryPath[0]?.id === category.id && !query.trim() ? "bg-brown text-cream" : "bg-blush text-wine"}`}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </nav>
+            {categoryPath.length > 0 && !query.trim() ? (
+              <div className="mt-3">
+                <nav aria-label="Rayon sélectionné" className="flex flex-wrap items-center gap-2 text-sm">
+                  {categoryPath.map((category, index) => (
+                    <span key={category.id}>
+                      {index > 0 ? " / " : ""}
+                      <button type="button" className="text-wine underline" onClick={() => selectCategory(category.id)}>
+                        {category.name}
+                      </button>
+                    </span>
+                  ))}
+                </nav>
+                {subcategories.length ? (
+                  <nav aria-label="Sous-rayons de la caisse" className="mt-2 flex flex-wrap gap-2">
+                    {subcategories.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => selectCategory(category.id)}
+                        className="rounded-full border border-wine/30 px-3 py-1 text-sm text-wine"
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  </nav>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 aria-pressed={scanMode}
@@ -467,7 +564,13 @@ export function PosClient({
             <input
               ref={scanRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (!scanMode && e.target.value.trim()) {
+                  setCategoryId(null);
+                  setBrowsePage(0);
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
                 e.preventDefault();
@@ -490,19 +593,38 @@ export function PosClient({
             />
             {!scanMode ? (
               <p className="mt-2 text-xs text-black/50">
-                Recherchez par nom, référence ou partie du code-barres. Touchez la photo pour ajouter.
+                La recherche porte sur tous les rayons : nom, référence ou partie du code-barres. Touchez un article pour l’ajouter.
               </p>
             ) : null}
-            {!scanMode && searchError ? <p className="mt-2 text-sm text-red-800" role="alert">{searchError}</p> : null}
-            {!scanMode && !searchError && resultsForQuery === query && !searching && results.length === 0 ? (
-              <p className="mt-2 text-sm text-black/55" role="status">Aucun produit trouvé. Essayez une autre référence ou un autre nom.</p>
+            {!scanMode && searchError ? (
+              <div className="mt-2 text-sm text-red-800" role="alert">
+                <p>{searchError}</p>
+                <button
+                  type="button"
+                  className="mt-1 underline"
+                  onClick={() => {
+                    setSearchError(null);
+                    setSearchAttempt((attempt) => attempt + 1);
+                  }}
+                >
+                  Réessayer
+                </button>
+              </div>
             ) : null}
-            {!scanMode && resultsForQuery === query && results.length === 30 ? (
+            {!scanMode && !searchError && (searching || !currentResults) ? (
+              <p className="mt-2 text-sm text-black/55" role="status">Chargement des articles…</p>
+            ) : null}
+            {!scanMode && !searchError && currentResults && !searching && results.length === 0 ? (
+              <p className="mt-2 text-sm text-black/55" role="status">
+                {browsing ? "Aucun article dans ce rayon." : "Aucun produit trouvé. Essayez une autre référence ou un autre nom."}
+              </p>
+            ) : null}
+            {!scanMode && !browsing && currentResults && results.length === 30 ? (
               <p className="mt-2 text-xs text-black/50">30 résultats affichés au maximum. Précisez la recherche si nécessaire.</p>
             ) : null}
             {flash ? <p className="mt-2 text-sm text-wine">{flash}</p> : null}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {(!scanMode && !searchError && resultsForQuery === query ? results : []).map((variant) => {
+              {(!scanMode && !searchError && currentResults ? results : []).map((variant) => {
                 const qty = available(variant);
                 const out = qty <= 0;
                 const photo = variant.images?.[0] ?? variant.product.images?.[0];
@@ -536,6 +658,27 @@ export function PosClient({
                 );
               })}
             </div>
+            {!scanMode && browsing && !searchError && currentResults && (browsePage > 0 || hasMore) ? (
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  disabled={browsePage === 0 || searching}
+                  onClick={() => setBrowsePage((page) => page - 1)}
+                  className="rounded-full border border-wine px-4 py-2 text-sm text-wine disabled:opacity-40"
+                >
+                  Précédent
+                </button>
+                <span className="text-sm text-black/55">Page {browsePage + 1}</span>
+                <button
+                  type="button"
+                  disabled={!hasMore || searching}
+                  onClick={() => setBrowsePage((page) => page + 1)}
+                  className="rounded-full bg-brown px-4 py-2 text-sm text-cream disabled:opacity-40"
+                >
+                  Voir les articles suivants
+                </button>
+              </div>
+            ) : null}
           </section>
           <aside className="rounded-[1.7rem] border border-[#eee0e6] bg-white p-5">
             <h2 className="font-serif text-2xl text-wine">Ticket en cours</h2>

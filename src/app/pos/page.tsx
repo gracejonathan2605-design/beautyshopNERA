@@ -1,5 +1,5 @@
 import { requireStaff } from "@/lib/guard";
-import { searchPosProducts } from "@/app/actions/pos";
+import { browsePosProducts } from "@/app/actions/pos";
 import { getOpenSessionForUser, getOccupiedCashSession, getTillSnapshot, getLastClosedSessionForUser } from "@/services/cash.service";
 import { listHeldTickets } from "@/services/held-ticket.service";
 import { PosClient } from "@/components/pos/pos-client";
@@ -27,8 +27,13 @@ export default async function PosPage({
     : q.ok
       ? ({ kind: "ok" as const, text: q.ok })
       : null;
-  const [products, open, settings, expenseCategories, heldRows, lastClosed] = await Promise.all([
-    searchPosProducts(""),
+  const [products, categories, open, settings, expenseCategories, heldRows, lastClosed] = await Promise.all([
+    browsePosProducts(),
+    prisma.category.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, parentId: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
+    }),
     getOpenSessionForUser(session.userId),
     getShopSettings(),
     prisma.expenseCategory.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
@@ -85,6 +90,7 @@ export default async function PosPage({
           ) : null}
           <PosClient
             initial={products}
+            categories={categories}
             openSession={open ? { id: open.id, openingFloat: open.openingFloat, openedByName } : null}
             occupiedBy={open ? null : openedByName || null}
             occupiedSessionId={occupied?.id ?? null}
