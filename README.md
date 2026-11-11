@@ -98,7 +98,7 @@ PostgreSQL 16 doit écouter sur `127.0.0.1:5432` (utilisateur `nera` / base `ner
 - Admin : `/admin`
 - Connexion staff : `/login`
 
-En caisse, recherchez un article par son nom, sa référence (SKU) ou tout ou partie de son code-barres. Les photos, variantes et stocks facilitent son identification ; précisez la recherche si 30 résultats s'affichent. Le mode scan exige un code-barres ou une référence exacte et signale les codes-barres en double.
+En caisse, choisissez un rayon puis, si nécessaire, un sous-rayon. Les articles du rayon et de ses sous-rayons sont affichés par pages ; utilisez « Voir les articles suivants » pour parcourir la suite. « Tous les articles » inclut aussi ceux sans rayon. La recherche par nom, référence (SKU) ou partie du code-barres porte sur tous les rayons ; précisez-la si 30 résultats s'affichent. Les photos, variantes et stocks facilitent l'identification. Le mode scan exige un code-barres ou une référence exacte et signale les codes-barres en double.
 
 Le stock est **unique** : une vente POS ou une commande en ligne mouvemente le même inventaire, en transaction.
 

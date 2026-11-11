@@ -17,7 +17,7 @@ import { createCustomerRecord, findOrCreateWalkInCustomer, lookupPosCustomer } f
 import { formatCfa, parseCfaInput } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { variantIdsMatching } from "@/lib/accent-search";
-import { scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
+import { posCategoryDescendantIds, scanMatchDecision, type HeldTicketPayload } from "@/lib/pos";
 import { canCloseCashSession, type TillSnapshot } from "@/lib/till";
 import { hasPermission } from "@/lib/permissions";
 import { isMissingHeldTicketStore, listHeldTickets, type HeldTicketRow } from "@/services/held-ticket.service";
@@ -55,6 +55,40 @@ const posActiveWhere = {
 async function posLocationId(userId: string) {
   const open = await getOpenSessionForUser(userId);
   return open?.register.locationId ?? null;
+}
+
+export async function browsePosProducts(categoryId: string | null = null, page = 0) {
+  const session = await requireStaff("pos.access");
+  if (!Number.isSafeInteger(page) || page < 0 || page > 100_000) {
+    throw new Error("Page de catalogue invalide.");
+  }
+  const locationId = await posLocationId(session.userId);
+  let categoryIds: string[] | undefined;
+  if (categoryId !== null) {
+    const categories = await prisma.category.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, parentId: true },
+    });
+    if (!categories.some((category) => category.id === categoryId)) {
+      throw new Error("Rayon introuvable. Actualisez la caisse.");
+    }
+    categoryIds = posCategoryDescendantIds(categories, categoryId);
+  }
+  const pageSize = 24;
+  const rows = await prisma.productVariant.findMany({
+    where: {
+      ...posActiveWhere,
+      product: {
+        ...posActiveWhere.product,
+        ...(categoryIds ? { categoryId: { in: categoryIds } } : {}),
+      },
+    },
+    select: posVariantSelect(locationId),
+    orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
+    skip: page * pageSize,
+    take: pageSize + 1,
+  });
+  return { items: rows.slice(0, pageSize), hasMore: rows.length > pageSize };
 }
 
 export async function searchPosProducts(query: string) {

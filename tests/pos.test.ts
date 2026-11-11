@@ -4,6 +4,7 @@ import {
   clampDiscount,
   isValidSaleUnitPrice,
   mergeSaleLines,
+  posCategoryDescendantIds,
   pickExactScanMatch,
   pickSearchEnterMatch,
   scanMatchDecision,
@@ -178,6 +179,17 @@ describe("entrée recherche caisse", () => {
     expect(pickSearchEnterMatch([gloss], "611000000099", "gloss")).toBeNull();
     expect(pickSearchEnterMatch([gloss], "gloss", "gloss")?.sku).toBe("GLOSS-01");
     expect(pickSearchEnterMatch([gloss], "GLOSS-01", "autre")).toBeNull();
+  });
+
+  describe("hiérarchie des rayons", () => {
+    it("suit toutes les profondeurs sans boucler en cas de cycle", () => {
+      expect(posCategoryDescendantIds([
+        { id: "a", name: "A", parentId: "c" },
+        { id: "b", name: "B", parentId: "a" },
+        { id: "c", name: "C", parentId: "b" },
+        { id: "d", name: "D", parentId: null },
+      ], "a")).toEqual(["a", "b", "c"]);
+    });
   });
 
   it("n’ajoute pas automatiquement un code-barres partagé", () => {

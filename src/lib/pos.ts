@@ -1,5 +1,22 @@
 import type { PaymentMethod } from "@prisma/client";
 
+export type PosCategory = { id: string; name: string; parentId: string | null };
+
+export function posCategoryDescendantIds(categories: PosCategory[], rootId: string) {
+  const found = new Set([rootId]);
+  const pending = [rootId];
+  while (pending.length) {
+    const parentId = pending.pop();
+    for (const category of categories) {
+      if (category.parentId === parentId && !found.has(category.id)) {
+        found.add(category.id);
+        pending.push(category.id);
+      }
+    }
+  }
+  return [...found];
+}
+
 export type PosVariant = {
   id: string;
   name: string;
