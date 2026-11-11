@@ -7,6 +7,7 @@ export type PosVariant = {
   barcode: string | null;
   salePrice: number;
   promoPrice: number | null;
+  images?: { url: string }[];
   product: { name: string; images?: { url: string }[] };
   inventories: { onHand: number; reserved: number }[];
 };
@@ -87,18 +88,20 @@ export function pickExactScanMatch<T extends { sku: string; barcode: string | nu
   );
 }
 
-/** Entrée recherche : exact, ou unique résultat seulement s’il correspond à la requête courante (évite un ajout stale). */
+/** Entrée recherche : uniquement un résultat non ambigu de la recherche courante. */
 export function pickSearchEnterMatch<T extends { sku: string; barcode: string | null }>(
   results: T[],
   query: string,
   resultsForQuery: string,
 ): T | null {
-  const exact = pickExactScanMatch(results, query);
-  if (exact) return exact;
-  if (results.length === 1 && resultsForQuery.trim() === query.trim() && query.trim()) {
-    return results[0];
-  }
-  return null;
+  const needle = query.trim();
+  if (!needle || resultsForQuery.trim() !== needle) return null;
+  const exact = results.filter(
+    (item) => item.barcode === needle || item.sku.toLowerCase() === needle.toLowerCase(),
+  );
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return null;
+  return results.length === 1 ? results[0] : null;
 }
 
 export function scanMatchDecision<T extends { sku: string; barcode: string | null }>(

@@ -24,7 +24,6 @@ import { PendingSubmitButton } from "@/components/admin/form-pending";
 import {
   buildCheckoutPayments,
   isValidSaleUnitPrice,
-  pickExactScanMatch,
   pickSearchEnterMatch,
   ticketTotals,
   type HeldTicketPayload,
@@ -63,6 +62,7 @@ export function PosClient({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(initial);
   const [resultsForQuery, setResultsForQuery] = useState("");
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [cart, setCart] = useState<Line[]>([]);
   const [ticketDiscount, setTicketDiscount] = useState(0);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
@@ -119,15 +119,26 @@ export function PosClient({
 
   useEffect(() => {
     if (scanMode) return;
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       startSearch(async () => {
         const q = query;
-        setResults(await searchPosProducts(q));
-        setResultsForQuery(q);
+        try {
+          const found = await searchPosProducts(q);
+          if (cancelled) return;
+          setResults(found);
+          setResultsForQuery(q);
+          setSearchError(null);
+        } catch {
+          if (!cancelled) setSearchError("Recherche indisponible. Réessayez en modifiant la recherche.");
+        }
       });
     }, 250);
-    return () => window.clearTimeout(timer);
-  }, [query, scanMode]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, scanMode, initial]);
 
   function available(variant: PosVariant) {
     return variant.inventories.reduce((sum, row) => sum + (row.onHand - row.reserved), 0);
@@ -216,21 +227,18 @@ export function PosClient({
     if (!code || pending) return;
     setError(null);
     start(async () => {
-      const scanned = await scanPosBarcode(code);
-      if (scanned.ok) {
-        add(scanned.variant);
-        setQuery("");
-        scanRef.current?.focus();
-        return;
+      try {
+        const scanned = await scanPosBarcode(code);
+        if (scanned.ok) {
+          add(scanned.variant);
+          setQuery("");
+          scanRef.current?.focus();
+          return;
+        }
+        setError(scanned.error);
+      } catch {
+        setError("Scan indisponible. Vérifiez la connexion puis réessayez.");
       }
-      const fallback = pickExactScanMatch(results, code);
-      if (fallback) {
-        add(fallback);
-        setQuery("");
-        scanRef.current?.focus();
-        return;
-      }
-      setError(scanned.error);
     });
   }
 
@@ -465,6 +473,7 @@ export function PosClient({
                 e.preventDefault();
                 if (scanMode) onScanEnter();
                 else {
+                  if (searching || searchError) return;
                   const pick = pickSearchEnterMatch(results, query, resultsForQuery);
                   if (pick) {
                     add(pick);
@@ -473,16 +482,30 @@ export function PosClient({
                 }
               }}
               placeholder={scanMode ? "Scannez un code-barres puis Entrée" : "Nom, SKU ou code-barres — Entrée pour ajouter"}
+              aria-label={scanMode ? "Scanner un code-barres" : "Rechercher un produit par nom, référence ou code-barres"}
               aria-busy={searching}
               className={`mt-3 w-full rounded-2xl border bg-white px-4 py-3 ${
                 scanMode ? "border-gold ring-2 ring-gold/30" : "border-[#eee0e6]"
               }`}
             />
+            {!scanMode ? (
+              <p className="mt-2 text-xs text-black/50">
+                Recherchez par nom, référence ou partie du code-barres. Touchez la photo pour ajouter.
+              </p>
+            ) : null}
+            {!scanMode && searchError ? <p className="mt-2 text-sm text-red-800" role="alert">{searchError}</p> : null}
+            {!scanMode && !searchError && resultsForQuery === query && !searching && results.length === 0 ? (
+              <p className="mt-2 text-sm text-black/55" role="status">Aucun produit trouvé. Essayez une autre référence ou un autre nom.</p>
+            ) : null}
+            {!scanMode && resultsForQuery === query && results.length === 30 ? (
+              <p className="mt-2 text-xs text-black/50">30 résultats affichés au maximum. Précisez la recherche si nécessaire.</p>
+            ) : null}
             {flash ? <p className="mt-2 text-sm text-wine">{flash}</p> : null}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {results.map((variant) => {
+              {(!scanMode && !searchError && resultsForQuery === query ? results : []).map((variant) => {
                 const qty = available(variant);
                 const out = qty <= 0;
+                const photo = variant.images?.[0] ?? variant.product.images?.[0];
                 return (
                   <button
                     type="button"
@@ -491,19 +514,22 @@ export function PosClient({
                     onClick={() => add(variant)}
                     className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold disabled:opacity-45"
                   >
-                    {variant.product.images?.[0] ? (
+                    {photo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={variant.product.images[0].url}
+                        src={photo.url}
                         alt=""
                         loading="lazy"
                         className="mb-2 h-24 w-full rounded-xl object-cover"
                       />
-                    ) : null}
+                    ) : (
+                      <div className="mb-2 flex h-24 items-center justify-center rounded-xl bg-blush text-xs text-black/45">Sans photo</div>
+                    )}
                     <p className="font-medium text-wine">{variant.product.name}</p>
                     <p className="text-sm text-black/50">
-                      {variant.name} · {variant.sku}
+                      {variant.name} · Réf. {variant.sku}
                     </p>
+                    {variant.barcode ? <p className="mt-1 text-xs text-black/50">Code-barres : {variant.barcode}</p> : null}
                     <p className="mt-2">{formatCfa(unitPrice(variant))}</p>
                     <p className="mt-1 text-xs text-black/40">{out ? "Rupture" : `Stock ${qty}`}</p>
                   </button>

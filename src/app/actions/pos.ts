@@ -32,6 +32,7 @@ function posVariantSelect(locationId?: string | null) {
     barcode: true,
     salePrice: true,
     promoPrice: true,
+    images: { where: { kind: "IMAGE" as const }, orderBy: { sortOrder: "asc" as const }, take: 1, select: { url: true } },
     product: {
       select: {
         name: true,
@@ -70,20 +71,34 @@ export async function searchPosProducts(query: string) {
     });
   }
   const folded = await variantIdsMatching(q);
-  return prisma.productVariant.findMany({
+  const exact = await prisma.productVariant.findMany({
     where: {
       ...posActiveWhere,
+      OR: [{ sku: { equals: q, mode: "insensitive" } }, { barcode: { equals: q } }],
+    },
+    select,
+    take: 30,
+    orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
+  });
+  if (exact.length === 30) return exact;
+  const other = await prisma.productVariant.findMany({
+    where: {
+      ...posActiveWhere,
+      id: { notIn: exact.map((variant) => variant.id) },
       OR: [
         { sku: { contains: q, mode: "insensitive" } },
-        { barcode: { equals: q } },
+        { barcode: { contains: q, mode: "insensitive" } },
         { name: { contains: q, mode: "insensitive" } },
         { product: { name: { contains: q, mode: "insensitive" } } },
+        { product: { sku: { contains: q, mode: "insensitive" } } },
         ...(folded?.length ? [{ id: { in: folded } }] : []),
       ],
     },
     select,
-    take: 30,
+    take: 30 - exact.length,
+    orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
   });
+  return [...exact, ...other];
 }
 
 export async function scanPosBarcode(code: string) {
