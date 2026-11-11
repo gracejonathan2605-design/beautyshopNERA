@@ -182,7 +182,7 @@ export async function createPosSale(input: {
     }
 
     return sale;
-  });
+  }, { maxWait: 10_000, timeout: 20_000 });
 
   await writeAudit({
     userId: input.cashierId,
