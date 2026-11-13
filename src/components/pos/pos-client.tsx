@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import { formatCfa, parseCfaInput } from "@/lib/money";
 import { unitPrice } from "@/lib/pricing";
 import {
@@ -20,7 +22,6 @@ import { PaymentMethod } from "@prisma/client";
 import { PAYMENT_LABELS, saleToReceipt, type ReceiptData, type ReceiptShop } from "@/lib/receipt";
 import { ReceiptTicket } from "@/components/pos/receipt-ticket";
 import { PosCustomerCard, type PosCustomerCardData } from "@/components/pos/pos-customer-card";
-import { PosRefundPanel } from "@/components/pos/pos-refund-panel";
 import { PendingSubmitButton } from "@/components/admin/form-pending";
 import {
   buildCheckoutPayments,
@@ -33,6 +34,10 @@ import {
 } from "@/lib/pos";
 
 type Line = { variant: PosVariant; quantity: number; unitPrice: number; discount: number };
+
+const PosRefundPanel = dynamic(() =>
+  import("@/components/pos/pos-refund-panel").then((module) => module.PosRefundPanel),
+);
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "CARD", "OTHER"];
 
@@ -637,11 +642,13 @@ export function PosClient({
                     className="rounded-[1.4rem] border border-[#eee0e6] bg-white p-4 text-left hover:border-gold disabled:opacity-45"
                   >
                     {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={photo.url}
                         alt=""
-                        loading="lazy"
+                        width={640}
+                        height={240}
+                        sizes="(max-width: 640px) calc(100vw - 4rem), 40vw"
+                        quality={64}
                         className="mb-2 h-24 w-full rounded-xl object-cover"
                       />
                     ) : (
