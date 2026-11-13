@@ -7,6 +7,28 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nera
+          POSTGRES_PASSWORD: nera_ci_password
+          POSTGRES_DB: nera_beaute
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nera -d nera_beaute"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: ******localhost:5432/nera_beaute?schema=public
+      DIRECT_URL: ******localhost:5432/nera_beaute?schema=public
+      AUTH_SECRET: ci-only-secret-not-for-deployment
+      APP_URL: http://localhost:3000
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-only-anon-key
+      RATE_LIMIT_INTEGRATION: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,4 +37,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      - run: npm run db:deploy
       - run: npm test
+      - run: npm run build

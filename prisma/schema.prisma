@@ -125,6 +125,15 @@ model Permission {
   rolePermissions RolePermission[]
 }
 
+model RateLimitWindow {
+  key             String   @id
+  windowStartedAt DateTime
+  count           Int
+  updatedAt       DateTime @updatedAt
+
+  @@index([windowStartedAt])
+}
+
 model Role {
   id              String           @id @default(cuid())
   name            String           @unique

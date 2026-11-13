@@ -55,7 +55,14 @@ Crée/met à jour `product-images`. L’admin produits envoie les images via le 
 
 ## Vercel
 
-Le SQL Supabase est géré par `prisma migrate deploy` au build. Si Vercel affiche **Ready** mais le site est blanc ou 404 :
+Le build Vercel compile l’application et génère le client Prisma; il ne modifie plus la base. Appliquer les migrations séparément depuis un environnement de déploiement sécurisé, avant de promouvoir la version applicative :
+
+```bash
+npm run db:deploy
+npm run db:catalog -- --soft
+```
+
+Les migrations doivent rester compatibles avec la version actuellement déployée (ajout/extension d’abord, suppression ultérieure). `db:deploy` échoue si les migrations ne peuvent pas être appliquées; un build réussi ne signifie pas que la base a été migrée. Si Vercel affiche **Ready** mais le site est blanc ou 404 :
 
 1. **Protection des déploiements** : Settings → Deployment Protection → désactiver *Vercel Authentication* (Preview **et** Production) si la boutique doit être publique.
 2. **Domaine de production** : Settings → Domains → assigner le domaine au dernier déploiement Production.
@@ -69,12 +76,12 @@ Contrôle : `https://<domaine>/api/health` doit renvoyer `"ok": true` et `"db": 
 
 ## Checklist de mise en service (à faire une fois)
 
-1. **Base** : `DATABASE_URL` / `DIRECT_URL` renseignées ; le build Vercel applique les migrations (`scripts/migrate-deploy.ts`).
+1. **Base** : `DATABASE_URL` / `DIRECT_URL` renseignées ; appliquer `npm run db:deploy` avant de promouvoir un déploiement.
 2. **Comptes staff** : `npx prisma db seed` depuis un poste avec le `.env` de production (variables `SEED_*`). Changer ensuite les mots de passe dans Admin → Utilisateurs. Le seed n’affiche jamais les mots de passe.
 3. **Photos** : `npm run supabase:setup` (crée le bucket `product-images`) puis exécuter `supabase/rls.sql` dans l’éditeur SQL Supabase.
 4. **Sécurité** : `AUTH_SECRET` long et aléatoire (`openssl rand -base64 48`), `CRON_SECRET` différent.
 5. **Orange Money** : sans les variables `ORANGE_MONEY_*`, la boutique propose le **code marchand** (paiement manuel) et le personnel confirme le paiement dans Admin → Commandes. Avec les variables, le push Orange est envoyé automatiquement ; le webhook `/api/payments/orange?k=…` est signé par `ORANGE_MONEY_WEBHOOK_SECRET` (ou `AUTH_SECRET`).
-6. **MTN MoMo** : paiement manuel par défaut (code marchand). Le webhook `/api/payments/momo` n’accepte que l’en-tête `x-payment-secret: $PAYMENT_WEBHOOK_SECRET`.
+6. **MTN MoMo** : paiement manuel par défaut (code marchand). Le webhook `/api/payments/momo` exige l’en-tête `x-payment-secret: $PAYMENT_WEBHOOK_SECRET`, ainsi qu’un payload `orderNumber`, `status: "COMPLETED"` et `amount` entier exactement égal au total de la commande. Il ne valide qu’un paiement MTN encore en attente; le verrou transactionnel du paiement rend les notifications répétées idempotentes. Le contrat de signature propre au fournisseur n’étant pas configuré dans l’application, ne pas exposer cette route sans le secret partagé et un fournisseur de confiance.
 7. **Alertes WhatsApp équipe** : Green API (`GREEN_API_ID`, `GREEN_API_TOKEN`, `ORDER_WHATSAPP_TO`, ou les mêmes champs dans Admin → Paramètres). Sans cela, aucune alerte mais le site fonctionne.
 8. **Paramètres boutique** : Admin → Paramètres (code marchand Orange, compte MTN, délai des commandes impayées, pied de ticket, mentions légales NUI/RCCM).
 9. **Vérification finale** : `/api/health`, connexion `/login`, ouverture de caisse `/pos`, une commande test depuis la boutique jusqu’à `/commande/[numéro]`.
@@ -91,6 +98,16 @@ npm run dev
 
 PostgreSQL 16 doit écouter sur `127.0.0.1:5432` (utilisateur `nera` / base `nera_beaute`).
 
+## Mesures de performance
+
+Avant de modifier les index ou la recherche, mesurer les latences p50/p95 du catalogue sur une base de préproduction :
+
+```bash
+PERF_ALLOW_READONLY_DB=true npm run measure:catalog
+```
+
+Le protocole de mesure mobile (Lighthouse, routes et métriques à comparer) est dans [`docs/performance-measurement.md`](docs/performance-measurement.md).
+
 ## Surfaces
 
 - Boutique : `/`
@@ -103,3 +120,5 @@ En caisse, choisissez un rayon puis, si nécessaire, un sous-rayon. Les articles
 Le stock est **unique** : une vente POS ou une commande en ligne mouvemente le même inventaire, en transaction.
 
 Les paiements Mobile Money / carte en ligne sont saisis manuellement pour l’instant (adaptateur prêt, pas de faux prestataire).
+
+Les limites de tentatives de connexion, commande et paiement sont stockées dans PostgreSQL sous forme de compteurs atomiques à fenêtre glissante, avec une clé hachée et un nettoyage quotidien par le cron. En cas d’indisponibilité de la base, les actions protégées sont limitées par défaut (pas de contournement mémoire).

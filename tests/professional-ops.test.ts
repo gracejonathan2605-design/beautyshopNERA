@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { splitPartnerAmounts } from "../src/lib/partner-settlement";
 import { customerStepIndex } from "../src/lib/order-timeline";
-import { rateLimit, resetRateLimit } from "../src/lib/rate-limit";
+import { rateLimitAllowed, rateLimitKeyHash } from "../src/lib/rate-limit";
 import { paymentInstructions } from "../src/lib/payments/mobile-money";
 import { orangePaymentSucceeded, orangePushWasSent, orangeSubscriberMsisdn, orangeUssdHref } from "../src/lib/payments/orange-money";
 
@@ -46,11 +46,11 @@ describe("suivi commande", () => {
 });
 
 describe("limite de débit", () => {
-  it("bloque après le quota", () => {
-    resetRateLimit("demo");
-    expect(rateLimit("demo", 2, 1000, 1)).toBe(true);
-    expect(rateLimit("demo", 2, 1000, 2)).toBe(true);
-    expect(rateLimit("demo", 2, 1000, 3)).toBe(false);
+  it("autorise jusqu’au quota et n’enregistre pas les identifiants en clair", () => {
+    expect(rateLimitAllowed(1, 2)).toBe(true);
+    expect(rateLimitAllowed(2, 2)).toBe(true);
+    expect(rateLimitAllowed(3, 2)).toBe(false);
+    expect(rateLimitKeyHash("staff-login:demo@example.com")).not.toContain("demo@example.com");
   });
 });
 

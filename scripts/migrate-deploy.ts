@@ -37,12 +37,7 @@ async function main() {
     last = result.text;
     if (!isPoolSaturated(last)) break;
   }
-  if (isPoolSaturated(last)) {
-    console.warn(
-      "migrate deploy : pool Postgres saturé après plusieurs essais. Aucune migration n’est appliquée dans ce build ; next build continue.",
-    );
-    return;
-  }
+  if (isPoolSaturated(last)) console.error("migrate deploy : connexion indisponible après plusieurs essais.");
   process.exit(1);
 }
 
