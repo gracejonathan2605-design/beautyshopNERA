@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import "./globals.css";
 import { AnalyticsConsent } from "@/components/shop/analytics-consent";
 import { GA_MEASUREMENT_ID, GTM_ID } from "@/lib/analytics";
@@ -56,7 +57,7 @@ export const metadata: Metadata = {
     : {}),
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   let mediaOrigin = "";
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {

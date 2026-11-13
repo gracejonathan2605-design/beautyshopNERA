@@ -1,4 +1,4 @@
-type PendingPayment = { id: string; provider: string; status: string };
+type PendingPayment = { id: string; provider: string | null; status: string };
 
 export function parseMomoWebhook(body: unknown) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
