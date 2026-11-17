@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Outfit } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
 import { AnalyticsConsent } from "@/components/shop/analytics-consent";
 import { GA_MEASUREMENT_ID, GTM_ID } from "@/lib/analytics";
@@ -7,14 +7,6 @@ import { NERA_IDENTITY } from "@/lib/nera-identity";
 import { getSiteUrl } from "@/lib/site-url";
 
 export { GA_MEASUREMENT_ID, GTM_ID };
-
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-cormorant",
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -65,7 +57,7 @@ export const metadata: Metadata = {
     : {}),
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   let mediaOrigin = "";
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -75,7 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     mediaOrigin = "";
   }
   return (
-    <html lang="fr-CM" className={`${outfit.variable} ${cormorant.variable} h-full`}>
+    <html lang="fr-CM" className="h-full">
       <body className="min-h-full bg-background text-foreground antialiased">
         <AnalyticsConsent />
         {mediaOrigin ? (

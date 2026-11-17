@@ -34,7 +34,7 @@ export async function GET(request: Request, context: { params: Promise<{ number:
   if (!payment) return NextResponse.json({ state: "pending" });
   const reference = payment.reference?.trim() ?? "";
   const canAskOrange = payment.provider !== "MTN" && reference && !PLACEHOLDERS.has(reference);
-  if (!rateLimit(`om-status:${number}`, 20, 60_000)) {
+  if (!(await rateLimit(`om-status:${number}`, 20, 60_000))) {
     const state = paymentNoteIsRefusal(payment.note) ? "refused" : "pending";
     return NextResponse.json({ state });
   }

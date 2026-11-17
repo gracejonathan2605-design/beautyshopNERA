@@ -147,10 +147,12 @@ describe("pool Prisma", () => {
     );
   });
 
-  it("réessaie migrate deploy hors pooler saturé", () => {
+  it("garde les migrations hors du build et échoue si elles ne passent pas", () => {
     const script = readFileSync("scripts/migrate-deploy.ts", "utf8");
     expect(script).toContain("DIRECT_URL");
     expect(script).toContain("EMAXCONNSESSION");
-    expect(readFileSync("vercel.json", "utf8")).toContain("scripts/migrate-deploy.ts");
+    expect(script).toContain("process.exit(1)");
+    expect(readFileSync("package.json", "utf8")).not.toMatch(/"build":[^\n]*migrate-deploy/);
+    expect(readFileSync("vercel.json", "utf8")).toContain('"buildCommand": "npm run build"');
   });
 });

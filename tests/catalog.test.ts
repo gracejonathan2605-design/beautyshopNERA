@@ -115,7 +115,7 @@ describe("catalogue NERA", () => {
     expect(chrome).not.toContain("getNavCategories");
     expect(chrome).toContain("StaffToolbarClient");
     expect(readFileSync("src/app/(shop)/layout.tsx", "utf8")).toContain("revalidate = 60");
-    expect(readFileSync("package.json", "utf8")).toContain("sync-catalog.ts --soft");
+    expect(readFileSync("package.json", "utf8")).toContain('"db:catalog": "tsx scripts/sync-catalog.ts"');
     expect(readFileSync("src/lib/catalog-ensure.ts", "utf8")).toContain("ensureNeraCatalog");
     expect(readFileSync("src/lib/catalog-ensure.ts", "utf8")).not.toContain("applyCatalogHygiene");
   });

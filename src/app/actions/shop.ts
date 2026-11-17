@@ -104,7 +104,7 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
     if (!cameroonMobileLocal(phone)) {
       return { ok: false, error: "Indiquez un numéro mobile camerounais, par exemple 6XX XX XX XX." };
     }
-    if (!rateLimit(`checkout:${phone}`, 5, 10 * 60 * 1000)) {
+    if (!(await rateLimit(`checkout:${phone}`, 5, 10 * 60 * 1000))) {
       return { ok: false, error: "Trop de commandes sur ce numéro. Réessayez dans quelques minutes." };
     }
 
@@ -137,7 +137,7 @@ export async function checkoutOrder(_prev: CheckoutState | null, formData: FormD
         };
       }
     }
-    if (!rateLimit(`checkout-once:${localPhone || phone}`, 1, 20_000)) {
+    if (!(await rateLimit(`checkout-once:${localPhone || phone}`, 1, 20_000))) {
       return {
         ok: false,
         error: "Une commande est déjà en cours avec ce numéro. Patientez quelques secondes avant de réessayer.",
@@ -213,7 +213,7 @@ export async function launchOrangePayment(number: string, token: string): Promis
   if (!payment || payment.provider === "MTN") {
     return { ok: false, error: "Ce paiement n’est pas un Orange Money." };
   }
-  if (!rateLimit(`om-push:${trimmed}`, 4, 10 * 60 * 1000)) {
+  if (!(await rateLimit(`om-push:${trimmed}`, 4, 10 * 60 * 1000))) {
     return { ok: false, error: "Trop de tentatives. Réessayez dans quelques minutes." };
   }
   try {
@@ -266,7 +266,7 @@ export async function submitPaymentProof(formData: FormData) {
   if (!pending) redirect(back);
   const file = formData.get("proof");
   if (file instanceof File && file.size > 0) {
-    if (!rateLimit(`payment-proof:${order.id}`, 6, 60 * 60 * 1000)) {
+    if (!(await rateLimit(`payment-proof:${order.id}`, 6, 60 * 60 * 1000))) {
       redirect(withFlag("erreur=photo"));
     }
     if (!isAllowedProductImage(file) || file.size > 8_000_000) {
@@ -304,7 +304,7 @@ export async function requestRestock(formData: FormData) {
   const phone = String(formData.get("phone") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
   if (!productId || !phone) redirect(slug ? `/produit/${slug}` : "/boutique");
-  if (!rateLimit(`restock:${phone}`, 6, 60 * 60 * 1000)) {
+  if (!(await rateLimit(`restock:${phone}`, 6, 60 * 60 * 1000))) {
     redirect(slug ? `/produit/${slug}?erreur=relance` : "/boutique");
   }
   const existing = await prisma.restockRequest.findFirst({

@@ -2,6 +2,8 @@
 
 :root {
   /* Ivoire, or et vin — maison de beauté, pas une vitrine discount */
+  --font-outfit: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  --font-cormorant: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --background: #f6f1ea;
   --foreground: #1c1418;
   --gold: #a68456;

@@ -26,7 +26,7 @@ export async function loginStaff(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin");
-  if (!rateLimit(`staff-login:${email || "anon"}`, 8, 15 * 60 * 1000)) failStaffLogin(next, "busy");
+  if (!(await rateLimit(`staff-login:${email || "anon"}`, 8, 15 * 60 * 1000))) failStaffLogin(next, "busy");
   let user;
   try {
     user = await prisma.user.findUnique({
@@ -69,7 +69,7 @@ export async function loginCustomer(formData: FormData) {
   const next = String(formData.get("next") ?? "/compte");
   const fail = `/compte/connexion?error=1&next=${encodeURIComponent(next)}`;
   const busy = `/compte/connexion?error=busy&next=${encodeURIComponent(next)}`;
-  if (!rateLimit(`customer-login:${email || "anon"}`, 8, 15 * 60 * 1000)) redirect(busy);
+  if (!(await rateLimit(`customer-login:${email || "anon"}`, 8, 15 * 60 * 1000))) redirect(busy);
   let customer;
   try {
     customer = await prisma.customer.findUnique({ where: { email } });

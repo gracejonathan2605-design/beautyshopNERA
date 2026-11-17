@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tsx scripts/migrate-deploy.ts && prisma generate && tsx scripts/sync-catalog.ts --soft && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -13,6 +13,7 @@
     "db:seed": "prisma db seed",
     "db:catalog": "tsx scripts/sync-catalog.ts",
     "db:catalog-hygiene": "tsx scripts/cleanup-live-catalog.ts",
+    "measure:catalog": "tsx scripts/measure-catalog.ts",
     "db:reset": "prisma migrate reset --force",
     "db:deploy": "tsx scripts/migrate-deploy.ts",
     "supabase:setup": "tsx scripts/setup-supabase.ts",

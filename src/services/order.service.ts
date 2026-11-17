@@ -88,7 +88,7 @@ export async function sendOrderOrangePush(input: {
   if (orangePushWasSent(current)) return "sent";
   const pendingAge = orangePushPendingAge(current.note);
   if (pendingAge !== null && pendingAge < 45_000) return "pending";
-  if (!rateLimit(`om-push:${current.id}`, 8, 10 * 60 * 1000)) return "limited";
+  if (!(await rateLimit(`om-push:${current.id}`, 8, 10 * 60 * 1000))) return "limited";
   const claimed = await prisma.payment.updateMany({
     where: { id: current.id, status: "PENDING", note: current.note },
     data: { note: `${ORANGE_PUSH_PENDING_PREFIX} ${Date.now()}` },
@@ -506,6 +506,7 @@ async function applyLockedOrderStatus(
 
 export async function collectCompletedOrderPayment(input: {
   orderId: string;
+  paymentId?: string;
   userId: string;
   cashierName: string;
 }) {
@@ -517,7 +518,9 @@ export async function collectCompletedOrderPayment(input: {
       include: { items: true, payments: true },
     });
     if (!current) throw new Error("Commande introuvable");
-    const pending = current.payments.find((p) => p.status === "PENDING");
+    const pending = current.payments.find(
+      (p) => p.status === "PENDING" && (!input.paymentId || p.id === input.paymentId),
+    );
     if (!pending) throw new Error("Aucun paiement en attente sur cette commande");
     const claimedPay = await tx.payment.updateMany({
       where: { id: pending.id, status: "PENDING" },
@@ -836,4 +839,3 @@ async function reviveAutoCancelledOrder(input: { orderId: string; cashierName: s
   }
   return { state: result.state };
 }
-
