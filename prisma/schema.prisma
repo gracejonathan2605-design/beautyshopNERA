@@ -541,6 +541,7 @@ model OrderItem {
   sku         String
   quantity    Int
   unitPrice   Int
+  unitCost    Int?
   total       Int
 }
 
@@ -579,6 +580,7 @@ model SaleItem {
   sku         String
   quantity    Int
   unitPrice   Int
+  unitCost    Int?
   discount    Int            @default(0)
   total       Int
 }

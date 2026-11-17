@@ -1,4 +1,5 @@
-import { rangeFromPreset, type ReportRange } from "@/services/reports.service";
+import type { ReportRange } from "@/services/reports.service";
+import { salesReportRange } from "@/lib/sales-report";
 
 export const REPORT_PRESETS = [
   { id: "today", label: "Aujourd’hui" },
@@ -16,10 +17,16 @@ export function parseReportQuery(sp: { preset?: string; from?: string; to?: stri
   from?: string;
   to?: string;
   range: ReportRange;
+  error?: string;
 } {
   const allowed = new Set(REPORT_PRESETS.map((p) => p.id));
   const preset = (allowed.has(sp.preset as ReportPresetId) ? sp.preset : "month") as ReportPresetId;
   const from = sp.from?.trim() || undefined;
   const to = sp.to?.trim() || undefined;
-  return { preset, from, to, range: rangeFromPreset(preset, from, to) };
+  const range = salesReportRange(preset, from, to);
+  return {
+    preset, from, to,
+    range: range ?? salesReportRange("today")!,
+    ...(range ? {} : { error: "Choisissez une période valide, avec une date de début avant la date de fin." }),
+  };
 }

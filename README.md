@@ -6,6 +6,14 @@ Système unique (boutique en ligne + POS + administration) pour **NERA Beauté &
 
 Next.js 16 · TypeScript · Tailwind CSS · PostgreSQL (Supabase) · Prisma · Auth JWT httpOnly · Storage Supabase · Zod
 
+## Rapports de vente
+
+Dans **Admin → Rapports**, choisissez le jour, la semaine, le mois ou une période personnalisée pour voir les ventes, les dépenses et le bénéfice ou la perte par jour et au total. Les journées sont calculées à l’heure du Cameroun. Le résultat soustrait des ventes le coût des articles vendus et les autres dépenses enregistrées ; la catégorie « Achat marchandises » est exclue des dépenses pour éviter de compter deux fois les achats.
+
+Le prix d’achat est conservé sur chaque nouvelle vente ou commande au moment de sa création. Pour les anciennes lignes, le prix actuel est utilisé et signalé : le prix historique ne peut pas être reconstitué automatiquement. Un coût nul est également signalé. Les ventes de stock partenaire utilisent le coût saisi, sans calcul des commissions ou reversements : consultez les relevés partenaires pour ceux-ci.
+
+Les ventes caisse terminées et les commandes expédiées ou livrées sont comptées à leur date de création, frais de livraison et remises compris. Les ventes annulées ou remboursées sont retirées rétroactivement ; les sorties de caisse automatiques correspondantes ne sont pas déduites à nouveau. Les retours sans remise en stock, autres pertes et frais non enregistrés ne sont pas pris en compte. Le résultat reste donc une estimation, pas un état comptable définitif.
+
 ## Secrets
 
 Ne commitez **jamais** :

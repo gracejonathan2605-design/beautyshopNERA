@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireStaff } from "@/lib/guard";
 import { defaultStaffPath, hasPermission } from "@/lib/permissions";
-import { getDashboardMetrics, rangeFromPreset } from "@/services/reports.service";
+import { getDashboardMetrics, getSalesProfitReport } from "@/services/reports.service";
+import { salesReportRange } from "@/lib/sales-report";
 import { formatCfa } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { availableQty } from "@/services/inventory.service";
@@ -13,7 +14,8 @@ export default async function AdminHomePage() {
   if (!hasPermission(session, "dashboard.view")) {
     redirect(defaultStaffPath(session));
   }
-  const m = await getDashboardMetrics(rangeFromPreset("today"));
+  const range = salesReportRange("today")!;
+  const [m, report] = await Promise.all([getDashboardMetrics(range), getSalesProfitReport(range)]);
   const [alerts, lowStock] = await Promise.all([
     prisma.notification.findMany({
       where: { isRead: false, OR: [{ userId: null }, { userId: session.userId }] },
@@ -56,7 +58,7 @@ export default async function AdminHomePage() {
     ["POS", formatCfa(m.posRevenue)],
     ["En ligne", formatCfa(m.onlineRevenue)],
     ["Panier moyen", formatCfa(m.averageBasket)],
-    ["Bénéfice estimé", formatCfa(m.profit)],
+    ["Bénéfice estimé", formatCfa(report.totals.profit)],
     ["Alertes stock", String(m.lowStockCount)],
   ];
   return (

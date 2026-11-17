@@ -1,5 +1,6 @@
 import { startOfDay, startOfMonth, startOfWeek, subDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
+import { summarizeSalesReport } from "@/lib/sales-report";
 
 export type ReportRange = {
   from: Date;
@@ -23,6 +24,40 @@ export function rangeFromPreset(preset: string, from?: string, to?: string): Rep
 }
 
 const ONLINE_REVENUE_STATUSES = ["SHIPPED", "DELIVERED"] as const;
+
+export async function getSalesProfitReport(range: ReportRange) {
+  const dates = { gte: range.from, lte: range.to };
+  const itemSelect = {
+    quantity: true,
+    unitCost: true,
+    variant: { select: { costPrice: true, product: { select: { stockOwner: true } } } },
+  } as const;
+  const [sales, orders, expenses] = await Promise.all([
+    prisma.sale.findMany({
+      where: { status: "COMPLETED", createdAt: dates },
+      select: { createdAt: true, total: true, items: { select: itemSelect } },
+    }),
+    prisma.order.findMany({
+      where: { status: { in: [...ONLINE_REVENUE_STATUSES] }, createdAt: dates },
+      select: { createdAt: true, total: true, items: { select: itemSelect } },
+    }),
+    prisma.expense.findMany({
+      where: { date: dates },
+      select: { date: true, amount: true, description: true, cashSessionId: true, category: { select: { slug: true } } },
+    }),
+  ]);
+  const candidates = expenses.flatMap((expense) => {
+    const match = expense.cashSessionId && expense.description?.match(/^(?:Remboursement|Annulation) (.+)$/);
+    return match ? [match[1]] : [];
+  });
+  const reversed = candidates.length
+    ? await prisma.sale.findMany({
+        where: { number: { in: candidates }, status: { in: ["CANCELLED", "REFUNDED"] } },
+        select: { number: true },
+      })
+    : [];
+  return summarizeSalesReport([...sales, ...orders], expenses, new Set(reversed.map((sale) => sale.number)));
+}
 
 export async function getDashboardMetrics(range: ReportRange) {
   const { from, to } = range;
