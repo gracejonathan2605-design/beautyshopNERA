@@ -29,7 +29,7 @@ describe("transaction d’encaissement", () => {
     const tx = {
       productVariant: {
         findMany: vi.fn().mockResolvedValue([
-          { id: "variant-1", name: "Default", sku: "SKU", salePrice: 5000, promoPrice: null, product: { name: "Sérum" } },
+          { id: "variant-1", name: "Default", sku: "SKU", salePrice: 5000, costPrice: 3000, promoPrice: null, product: { name: "Sérum" } },
         ]),
       },
       inventory: { findUnique: vi.fn().mockResolvedValue({ onHand: 3, reserved: 0 }) },
@@ -61,6 +61,7 @@ describe("transaction d’encaissement", () => {
     expect(mocks.transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 10_000, timeout: 20_000 });
     expect(mocks.applyStockChange).toHaveBeenCalledOnce();
     expect(tx.sale.create.mock.calls[0][0].data.total).toBe(7000);
+    expect(tx.sale.create.mock.calls[0][0].data.items.create[0].unitCost).toBe(3000);
     expect(tx.auditLog.create).toHaveBeenCalledWith({
       data: {
         userId: "cashier-1",

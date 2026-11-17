@@ -19,7 +19,7 @@ describe("période rapports", () => {
     expect(parseReportQuery({ preset: "today" }).preset).toBe("today");
     const custom = parseReportQuery({ preset: "custom", from: "2026-08-01", to: "2026-08-10" });
     expect(custom.range.from.getTime()).toBeLessThan(custom.range.to.getTime());
-    expect(custom.range.to.getHours()).toBe(23);
+    expect(custom.range.to.toISOString()).toBe("2026-08-10T22:59:59.999Z");
     expect(orderNumberFromAlert("Commande NERA-2026-000012 — 15000 FCFA")).toBe("NERA-2026-000012");
     expect(orderNumberFromAlert("Commande NERA-2026-000012 : Orange Money refusé (solde insuffisant).")).toBe(
       "NERA-2026-000012",

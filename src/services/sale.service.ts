@@ -51,7 +51,7 @@ export async function createPosSale(input: {
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
 
-    const pricedLines: { variantId: string; quantity: number; unitPrice: number; discount: number; productName: string; variantName: string; sku: string }[] = [];
+    const pricedLines: { variantId: string; quantity: number; unitPrice: number; unitCost: number; discount: number; productName: string; variantName: string; sku: string }[] = [];
 
     for (const line of lines) {
       const variant = byId.get(line.variantId);
@@ -67,6 +67,7 @@ export async function createPosSale(input: {
         variantId: variant.id,
         quantity: line.quantity,
         unitPrice,
+        unitCost: variant.costPrice,
         discount,
         productName: variant.product.name,
         variantName: variant.name,
@@ -85,6 +86,7 @@ export async function createPosSale(input: {
       sku: line.sku,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
+      unitCost: line.unitCost,
       discount: line.discount,
       total: line.unitPrice * line.quantity - line.discount,
     }));

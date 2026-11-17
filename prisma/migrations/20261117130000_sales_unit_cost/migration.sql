@@ -1,0 +1,2 @@
+ALTER TABLE "SaleItem" ADD COLUMN "unitCost" INTEGER;
+ALTER TABLE "OrderItem" ADD COLUMN "unitCost" INTEGER;

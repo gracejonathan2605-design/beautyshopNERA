@@ -198,6 +198,7 @@ export async function createOnlineOrder(input: {
         sku: variant.sku,
         quantity: line.quantity,
         unitPrice,
+        unitCost: variant.costPrice,
         total: unitPrice * line.quantity,
       });
     }
