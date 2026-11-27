@@ -12,7 +12,13 @@ export function rateLimitAllowed(count: number, limit: number) {
   return count <= limit;
 }
 
-export async function rateLimit(key: string, limit: number, windowMs: number, now = Date.now()) {
+export async function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+  now = Date.now(),
+  options: { failOpen?: boolean } = {},
+) {
   if (!key || !Number.isSafeInteger(limit) || limit < 1 || !Number.isSafeInteger(windowMs) || windowMs < 1) {
     throw new Error("Limite de débit invalide.");
   }
@@ -40,7 +46,8 @@ export async function rateLimit(key: string, limit: number, windowMs: number, no
     return row ? rateLimitAllowed(row.count, limit) : false;
   } catch (error) {
     reportError("rate-limit", error);
-    return false;
+    // Une panne du stockage ne doit pas bloquer les connexions (le mot de passe reste exigé).
+    return options.failOpen === true;
   }
 }
 
